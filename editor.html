@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeSync | Editor</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/editor.css">
+    <!-- Monaco Editor styles -->
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/editor/editor.main.css">
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div class="editor-layout">
+        
+        <!-- Header -->
+        <header class="editor-header">
+            <div class="header-left">
+                <a href="dashboard.html" class="brand-small" title="Back to Dashboard">
+                    <i class="fa-solid fa-fire-flame-curved"></i>
+                </a>
+                <div class="room-info">
+                    <h3 id="room-name" class="skeleton-loader">Loading...</h3>
+                    <div class="room-code-badge" onclick="appRooms.copyRoomLink()" title="Copy Invite Link">
+                        <span id="room-code">------</span> <i class="fa-solid fa-link"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-center">
+                <div class="language-selector">
+                    <i class="fa-brands fa-js" id="lang-icon" style="color:var(--accent-primary);"></i>
+                    <select id="lang-select" onchange="appEditor.changeLanguage(this.value)">
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="html">HTML/CSS</option>
+                        <option value="typescript">TypeScript</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="active-users" id="active-users">
+                    <!-- Avatars injected here -->
+                    <div class="avatar skeleton-loader" style="width:30px; height:30px;"></div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="appRooms.copyRoomLink()">
+                    <i class="fa-solid fa-user-plus"></i> Share
+                </button>
+                <button class="btn btn-run" id="btn-run" onclick="appEditor.runCode()">
+                    <i class="fa-solid fa-play"></i> Run Code
+                </button>
+                <button class="btn-icon header-icon" id="btn-toggle-chat" onclick="appEditor.togglePanel('chat')" title="Toggle Chat (Ctrl+K)"><i class="fa-solid fa-message"></i></button>
+                <button class="btn-icon header-icon exit-btn" onclick="appRooms.leaveRoom()" title="Leave Room"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="workspace">
+            
+            <!-- Left Tools Panel -->
+            <aside class="tools-panel" id="panel-tools">
+                <div class="panel-header">
+                    <h4>Settings</h4>
+                    <button class="btn-icon" onclick="appEditor.togglePanel('tools')"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="panel-content">
+                    
+                    <div class="tool-group">
+                        <label>Theme</label>
+                        <select class="tool-input" id="theme-select" onchange="appEditor.changeTheme(this.value)">
+                            <option value="vs-dark">VS Dark+</option>
+                            <option value="hc-black">High Contrast</option>
+                            <option value="vs">Light (Ew)</option>
+                        </select>
+                    </div>
+
+                    <div class="tool-group">
+                        <label>Font Size</label>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <button class="btn-icon" style="background:#222;" onclick="appEditor.changeFontSize(-1)"><i class="fa-solid fa-minus"></i></button>
+                            <span id="font-size-disp">16px</span>
+                            <button class="btn-icon" style="background:#222;" onclick="appEditor.changeFontSize(1)"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="tool-group">
+                        <label>Editor Settings</label>
+                        <label class="check-label"><input type="checkbox" checked onchange="appEditor.toggleSetting('minimap', this.checked)"> Minimap</label>
+                        <label class="check-label"><input type="checkbox" onchange="appEditor.toggleSetting('wordWrap', this.checked)"> Word Wrap</label>
+                    </div>
+                    
+                    <div class="tool-group" style="margin-top:2rem;">
+                        <label>Shortcuts</label>
+                        <div class="shortcut-item"><span>Run Code</span> <kbd>Ctrl+Enter</kbd></div>
+                        <div class="shortcut-item"><span>Toggle Chat</span> <kbd>Ctrl+K</kbd></div>
+                        <div class="shortcut-item"><span>Toggle Console</span> <kbd>Ctrl+`</kbd></div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Editor -->
+            <main class="editor-container">
+                <button class="toggle-floating left" onclick="appEditor.togglePanel('tools')" title="Toggle Tools"><i class="fa-solid fa-gear"></i></button>
+                <div id="monaco-container"></div>
+                <button class="toggle-floating right" onclick="appEditor.togglePanel('chat')" title="Toggle Chat"><i class="fa-solid fa-message"></i></button>
+            </main>
+
+            <!-- Right Chat Panel -->
+            <aside class="chat-panel" id="panel-chat">
+                <div class="panel-header">
+                    <h4>Room Chat (<span id="chat-count">0</span>)</h4>
+                    <button class="btn-icon" onclick="appEditor.togglePanel('chat')"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="system-msg">Connecting to chat...</div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <div class="typing-indicator" id="typing-indicator">Someone is typing<span>.</span><span>.</span><span>.</span></div>
+                    <div class="chat-input-box">
+                        <textarea id="chat-input" placeholder="Type a message... (Shift+Enter for new line)" rows="1"></textarea>
+                        <button class="btn-send" onclick="appChat.sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+
+        <!-- Bottom Console -->
+        <div class="console-panel collapsed" id="panel-console">
+            <div class="console-drag-handle" id="console-handle"></div>
+            <div class="console-header">
+                <h4><i class="fa-solid fa-terminal"></i> Console Output</h4>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-icon" title="Clear" onclick="appEditor.clearConsole()"><i class="fa-solid fa-ban"></i></button>
+                    <button class="btn-icon" title="Toggle" onclick="appEditor.toggleConsole()"><i class="fa-solid fa-chevron-down" id="console-toggle-icon"></i></button>
+                </div>
+            </div>
+            <div class="console-output" id="console-output">
+                <div style="color:var(--text-muted); font-style:italic;">Ready. Press 'Run Code' or Ctrl+Enter to execute.</div>
+            </div>
+            <div class="console-input">
+                <span class="prompt">&gt;</span>
+                <input type="text" id="console-eval" placeholder="Evaluate JavaScript inline...">
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Hidden sandboxed iframe for code execution -->
+    <iframe id="sandbox-frame" sandbox="allow-scripts" style="display:none;"></iframe>
+
+    <!-- Monaco Editor loader -->
+    <script>var require = { paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs' } };</script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/editor/editor.main.nls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/editor/editor.main.js"></script>
+
+    <!-- App Modules -->
+    <script type="module" src="js/rooms.js"></script>
+    <script type="module" src="js/chat.js"></script>
+    <script type="module" src="js/editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeSync | Sign In</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+    <div class="global-bg"></div>
+    <div id="toast-container"></div>
+
+    <div class="auth-wrapper">
+        <!-- Left Panel: Decorative / Animation -->
+        <div class="auth-panel auth-left">
+            <div class="auth-left-content">
+                <a href="index.html" class="brand" style="margin-bottom: 2rem;">
+                    <i class="fa-solid fa-fire-flame-curved"></i> CodeSync
+                </a>
+                <h1 class="text-gradient">Build Faster.<br>Together.</h1>
+                
+                <div class="floating-badges">
+                    <div class="badge badge-orange glass-card"><i class="fa-solid fa-bolt"></i> Real-time Sync</div>
+                    <div class="badge badge-orange glass-card" style="animation-delay: 1s;"><i class="fa-solid fa-code"></i> Monaco Editor</div>
+                    <div class="badge badge-orange glass-card" style="animation-delay: 2s;"><i class="fa-solid fa-server"></i> Firebase Powered</div>
+                </div>
+
+                <div class="demo-editor glass-card">
+                    <div class="demo-header">
+                        <span class="dot" style="background:#ff5f56"></span>
+                        <span class="dot" style="background:#ffbd2e"></span>
+                        <span class="dot" style="background:#27c93f"></span>
+                        <span style="margin-left: 10px; font-family:var(--font-mono); font-size:0.8rem; color:#888;">collaboration.js</span>
+                    </div>
+                    <div class="demo-body" id="typing-demo">
+                        <!-- JS injects typing here -->
+                    </div>
+                </div>
+            </div>
+            <!-- Subtle particles -->
+            <div class="auth-particles"></div>
+        </div>
+
+        <!-- Right Panel: Auth Form -->
+        <div class="auth-panel auth-right">
+            <div class="auth-form-container glass-card">
+                
+                <div class="mobile-brand brand">
+                    <i class="fa-solid fa-fire-flame-curved"></i> CodeSync
+                </div>
+
+                <!-- Tabs -->
+                <div class="auth-tabs">
+                    <button class="tab-btn active" onclick="appAuth.switchTab('signin')" id="tab-signin">Sign In</button>
+                    <button class="tab-btn" onclick="appAuth.switchTab('signup')" id="tab-signup">Sign Up</button>
+                    <div class="tab-indicator" id="tab-indicator"></div>
+                </div>
+
+                <!-- Google Button -->
+                <button class="btn btn-google" id="btn-google" onclick="appAuth.googleSignIn()">
+                    <i class="fa-brands fa-google"></i> <span>Continue with Google</span>
+                </button>
+
+                <div class="divider">or continue with email</div>
+
+                <!-- Sign In Form -->
+                <form id="form-signin" class="auth-form active" onsubmit="event.preventDefault(); appAuth.emailSignIn();">
+                    <div class="input-group">
+                        <input type="email" id="in-email" class="input-control" required placeholder=" ">
+                        <label for="in-email">Email Address</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="in-password" class="input-control" required placeholder=" ">
+                        <label for="in-password">Password</label>
+                        <i class="fa-solid fa-eye-slash pw-toggle" onclick="appAuth.togglePassword('in-password', this)"></i>
+                    </div>
+                    
+                    <div style="text-align: right; margin-bottom: 1.5rem;">
+                        <a class="forgot-link" onclick="appAuth.showForgot()">Forgot Password?</a>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary full-width" id="btn-signin">Sign In</button>
+                    <div class="form-footer">
+                        Don't have an account? <a onclick="appAuth.switchTab('signup')">Sign Up</a>
+                    </div>
+                </form>
+
+                <!-- Sign Up Form -->
+                <form id="form-signup" class="auth-form" style="display:none;" onsubmit="event.preventDefault(); appAuth.emailSignUp();">
+                    <div class="input-group">
+                        <input type="text" id="up-name" class="input-control" required placeholder=" ">
+                        <label for="up-name">Full Name</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="email" id="up-email" class="input-control" required placeholder=" ">
+                        <label for="up-email">Email Address</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="up-password" class="input-control" required placeholder=" " onkeyup="appAuth.checkStrength(this.value)">
+                        <label for="up-password">Password</label>
+                        <i class="fa-solid fa-eye-slash pw-toggle" onclick="appAuth.togglePassword('up-password', this)"></i>
+                    </div>
+                    
+                    <!-- Password Strength Meter -->
+                    <div class="strength-meter">
+                        <div class="strength-bars">
+                            <div class="bar" id="str-1"></div>
+                            <div class="bar" id="str-2"></div>
+                            <div class="bar" id="str-3"></div>
+                            <div class="bar" id="str-4"></div>
+                        </div>
+                        <div class="strength-label" id="str-label">Weak</div>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="password" id="up-confirm" class="input-control" required placeholder=" ">
+                        <label for="up-confirm">Confirm Password</label>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
+                        <input type="checkbox" id="terms" required style="accent-color: var(--accent-primary);">
+                        <label for="terms" style="color:var(--text-muted)">I agree to the <a href="#">Terms of Service</a></label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary full-width" id="btn-signup">Create Account</button>
+                    <div class="form-footer">
+                        Already have an account? <a onclick="appAuth.switchTab('signin')">Sign In</a>
+                    </div>
+                </form>
+
+                <!-- Forgot Password Form -->
+                <form id="form-forgot" class="auth-form" style="display:none;" onsubmit="event.preventDefault(); appAuth.resetPassword();">
+                    <h3 style="margin-bottom: 1rem; text-align: center;">Reset Password</h3>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Enter your email and we'll send you a link to reset your password.</p>
+                    
+                    <div class="input-group">
+                        <input type="email" id="forgot-email" class="input-control" required placeholder=" ">
+                        <label for="forgot-email">Email Address</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary full-width" id="btn-forgot">Send Reset Link</button>
+                    <div class="form-footer">
+                        Remembered it? <a onclick="appAuth.hideForgot()">Back to Sign In</a>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+</body>
+</html>
