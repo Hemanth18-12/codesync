@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeSync | Premium Collaborative Editor</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- CSS VARIABLES & THEME --- */
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-darker: #050505;
+            --bg-card: rgba(26, 26, 26, 0.6);
+            --bg-chat: rgba(17, 17, 17, 0.85);
+            --accent-orange: #ff6b00;
+            --accent-orange-light: #ff8c00;
+            --accent-orange-glow: rgba(255, 107, 0, 0.4);
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --error-red: #ff4444;
+            --success-green: #00C851;
+            
+            --font-ui: 'Inter', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+        }
+
+        /* --- GLOBAL RESET & BASE --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-ui);
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden; /* Prevent body scroll, manage within app */
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-darker); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-orange); }
+
+        /* Animated Background Mesh */
+        .bg-mesh {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(255, 107, 0, 0.05), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(255, 140, 0, 0.03), transparent 25%);
+            z-index: -1;
+            pointer-events: none;
+            animation: meshMove 20s infinite alternate ease-in-out;
+        }
+
+        @keyframes meshMove {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        /* --- SPLASH SCREEN --- */
+        #splash-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .logo-container {
+            font-size: 3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: pulseLogo 2s infinite;
+        }
+
+        .logo-icon {
+            color: var(--accent-orange);
+            filter: drop-shadow(0 0 10px var(--accent-orange-glow));
+        }
+
+        @keyframes pulseLogo {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 15px var(--accent-orange)); }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        /* --- COMPONENTS --- */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: var(--accent-orange-glow);
+            box-shadow: 0 8px 32px 0 var(--accent-orange-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-family: var(--font-ui);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-orange-light);
+            box-shadow: 0 0 15px var(--accent-orange-glow);
+            transform: scale(1.02);
+        }
+
+        .btn:hover:not(.btn-primary) {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        input[type="text"] {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-family: var(--font-ui);
+            font-size: 1rem;
+            width: 100%;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 10px var(--accent-orange-glow);
+        }
+
+        /* --- LANDING PAGE --- */
+        #landing-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 2rem;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            max-width: 600px;
+        }
+
+        .action-cards {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action-cards .glass-card {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* --- APP INTERFACE (MAIN) --- */
+        #app-interface {
+            display: none; /* Hidden initially */
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background: var(--bg-darker);
+        }
+
+        /* Header */
+        .app-header {
+            height: 60px;
+            background: rgba(10, 10, 10, 0.8);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .header-brand { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px;}
+        .header-brand i { color: var(--accent-orange); }
+        
+        .room-badge {
+            background: rgba(255, 107, 0, 0.1);
+            border: 1px solid rgba(255, 107, 0, 0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .room-badge:hover { background: rgba(255, 107, 0, 0.2); }
+
+        .header-controls { display: flex; align-items: center; gap: 15px; }
+        
+        select.dropdown {
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            outline: none;
+            font-family: var(--font-ui);
+        }
+
+        /* Main Workspace Area */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Editor Section */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #monaco-editor {
+            flex: 1;
+            width: 100%;
+        }
+
+        /* Code Runner Console */
+        .console-panel {
+            height: 200px;
+            background: #000;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: height 0.3s ease;
+        }
+
+        .console-header {
+            padding: 5px 15px;
+            background: #111;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        #console-output {
+            flex: 1;
+            padding: 10px 15px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .console-log { color: #fff; }
+        .console-error { color: var(--error-red); }
+
+        /* Sidebar (Users & Chat) */
+        .sidebar {
+            width: 300px;
+            background: var(--bg-chat);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            z-index: 20;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Active Users */
+        .active-users-list {
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .user-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: #333;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            border: 2px solid var(--accent-orange);
+            box-shadow: 0 0 10px var(--accent-orange-glow);
+            position: relative;
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-msg {
+            background: rgba(255,255,255,0.05);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            animation: fadeIn 0.3s ease;
+        }
+        .chat-msg .author { font-weight: 600; color: var(--accent-orange-light); margin-bottom: 4px; font-size: 0.8rem;}
+        .chat-msg .time { font-size: 0.7rem; color: var(--text-muted); float: right; }
+
+        .chat-input-area {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            color: #fff;
+            outline: none;
+        }
+        .chat-input-area input:focus { border-color: var(--accent-orange); }
+
+        .btn-icon {
+            background: var(--accent-orange);
+            color: #fff;
+            border: none;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover { transform: scale(1.1); box-shadow: 0 0 10px var(--accent-orange-glow); }
+
+        /* Toasts */
+        #toast-container {
+            position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            background: rgba(0, 0, 0, 0.9); border: 1px solid var(--accent-orange);
+            color: #fff; padding: 12px 20px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex; align-items: center; gap: 10px;
+            animation: slideInRight 0.3s ease forwards;
+        }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-mesh"></div>
+
+    <!-- 1. SPLASH SCREEN -->
+    <div id="splash-screen">
+        <div class="logo-container">
+            <i class="fa-solid fa-fire-flame-curved logo-icon"></i>
+            CodeSync
+        </div>
+        <p style="margin-top: 15px; color: var(--text-muted); font-family: var(--font-mono);">Initializing workspace...</p>
+    </div>
+
+    <!-- 2. LANDING PAGE -->
+    <div id="landing-page" style="display: none;">
+        <div class="hero">
+            <h1>CodeSync</h1>
+            <p>The ultra-premium real-time collaborative code editor. Build together, seamlessly.</p>
+        </div>
+        
+        <div class="action-cards">
+            <!-- Create Room Card -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-plus" style="color: var(--accent-orange);"></i> New Workspace</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">Start a fresh collaborative session.</p>
+                <button class="btn btn-primary" onclick="app.createRoom()" style="justify-content: center;">
+                    Create Room
+                </button>
+            </div>
+
+            <!-- Join Room Card -->
+            <div class="glass-card">
+                <h3><i class="fa-solid fa-link" style="color: var(--accent-orange);"></i> Join Workspace</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">Enter a 6-digit code to join.</p>
+                <input type="text" id="join-room-input" placeholder="e.g. 123456" maxlength="6" style="text-align: center; font-family: var(--font-mono); letter-spacing: 2px;">
+                <button class="btn" onclick="app.joinRoomFromInput()" style="justify-content: center;">
+                    Join Room
+                </button>
+            </div>
+        </div>
+
+        <!-- Auth Status on Landing -->
+        <div style="margin-top: 3rem;">
+            <p id="auth-status-text" style="color: var(--text-muted); margin-bottom: 10px;">You are not signed in.</p>
+            <button id="auth-btn" class="btn" onclick="app.toggleAuth()">
+                <i class="fa-brands fa-google"></i> Sign In with Google
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. MAIN APP INTERFACE -->
+    <div id="app-interface">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="header-brand">
+                    <i class="fa-solid fa-fire-flame-curved"></i> CodeSync
+                </div>
+                <div class="room-badge" onclick="app.copyRoomCode()" title="Click to copy">
+                    <i class="fa-solid fa-hashtag"></i> <span id="display-room-code">------</span>
+                    <i class="fa-solid fa-copy" style="font-size: 0.8rem; opacity: 0.7; margin-left: 5px;"></i>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text-muted);">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success-green); box-shadow: 0 0 5px var(--success-green);"></div>
+                    <span id="users-count">1</span> Online
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <button class="btn btn-primary" onclick="app.runCode()" style="padding: 5px 12px; font-size: 0.9rem;">
+                    <i class="fa-solid fa-play"></i> Run Code
+                </button>
+                <select id="language-select" class="dropdown" onchange="app.changeLanguage()">
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="html">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                </select>
+                <select id="theme-select" class="dropdown" onchange="app.changeTheme()">
+                    <option value="vs-dark">Dark+</option>
+                    <option value="hc-black">High Contrast</option>
+                    <option value="vs">Light (Eww)</option>
+                </select>
+                <button class="btn" onclick="app.leaveRoom()" style="padding: 5px 12px; font-size: 0.9rem; border-color: rgba(255,255,255,0.1);">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Leave
+                </button>
+            </div>
+        </header>
+
+        <!-- Workspace -->
+        <div class="workspace">
+            
+            <!-- Editor & Console -->
+            <div class="editor-container">
+                <div id="monaco-editor"></div>
+                
+                <div class="console-panel">
+                    <div class="console-header">
+                        <span><i class="fa-solid fa-terminal"></i> Output</span>
+                        <button class="btn" onclick="app.clearConsole()" style="padding: 2px 8px; font-size: 0.8rem; border:none;">Clear</button>
+                    </div>
+                    <div id="console-output"></div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <span>Active Users</span>
+                    <i class="fa-solid fa-users" style="color: var(--text-muted);"></i>
+                </div>
+                <div class="active-users-list" id="active-users-list">
+                    <!-- Avatars injected here -->
+                </div>
+
+                <div class="sidebar-header" style="border-top: 1px solid var(--border-color); border-bottom: none; margin-top: auto;">
+                    <span>Room Chat</span>
+                    <i class="fa-solid fa-comments" style="color: var(--text-muted);"></i>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages injected here -->
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="app.handleChatKeyPress(event)">
+                    <button class="btn-icon" onclick="app.sendChatMessage()">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <!-- --- SCRIPTS --- -->
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    
+    <!-- Application Logic as a Module to support Firebase imports -->
+    <script type="module">
+        /**
+         * ==========================================
+         *  FIREBASE CONFIGURATION PLACEHOLDERS
+         *  Replace these with your actual Firebase 
+         *  project credentials.
+         * ==========================================
+         */
+        const FIREBASE_CONFIG = {
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, push, serverTimestamp, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // State Management
+        const state = {
+            app: null,
+            auth: null,
+            db: null,
+            user: null,
+            roomId: null,
+            editor: null,
+            isLocalChange: false,
+            codeUpdateTimeout: null,
+            usersRef: null,
+            codeRef: null,
+            chatRef: null
+        };
+
+        // Main Application Controller (Exposed to window for inline onclick handlers)
+        window.app = {
+            
+            init: async function() {
+                // Initialize Firebase
+                try {
+                    // Check if config is still default
+                    if (FIREBASE_CONFIG.apiKey === "YOUR_API_KEY_HERE") {
+                        console.warn("Firebase config is default. Database features will be simulated.");
+                        this.simulateMode = true;
+                    } else {
+                        state.app = initializeApp(FIREBASE_CONFIG);
+                        state.auth = getAuth(state.app);
+                        state.db = getDatabase(state.app);
+                        
+                        // Setup Auth Listener
+                        onAuthStateChanged(state.auth, (user) => {
+                            state.user = user;
+                            this.updateAuthUI();
+                        });
+                    }
+                } catch(e) {
+                    console.error("Firebase init failed:", e);
+                    this.simulateMode = true;
+                }
+
+                // Simulate fake user if in simulate mode or not signed in
+                if (!state.user) {
+                    state.user = { 
+                        uid: 'guest_' + Math.floor(Math.random()*1000), 
+                        displayName: 'Guest ' + Math.floor(Math.random()*100),
+                        photoURL: null
+                    };
+                }
+
+                // Initialize Monaco Editor
+                this.initMonaco();
+
+                // Hide splash after a short delay
+                setTimeout(() => {
+                    document.getElementById('splash-screen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('splash-screen').style.display = 'none';
+                        document.getElementById('landing-page').style.display = 'flex';
+                    }, 500);
+                }, 1500);
+
+                // Setup Keyboard Shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        e.preventDefault();
+                        this.runCode();
+                    }
+                });
+            },
+
+            updateAuthUI: function() {
+                const statusText = document.getElementById('auth-status-text');
+                const authBtn = document.getElementById('auth-btn');
+                if (state.auth && state.auth.currentUser) {
+                    statusText.textContent = `Signed in as ${state.auth.currentUser.displayName}`;
+                    authBtn.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out';
+                    state.user = state.auth.currentUser;
+                } else {
+                    statusText.textContent = 'You are not signed in.';
+                    authBtn.innerHTML = '<i class="fa-brands fa-google"></i> Sign In with Google';
+                    // Re-assign guest user if signed out
+                    state.user = { 
+                        uid: 'guest_' + Math.floor(Math.random()*1000), 
+                        displayName: 'Guest ' + Math.floor(Math.random()*100)
+                    };
+                }
+            },
+
+            toggleAuth: async function() {
+                if (this.simulateMode) {
+                    this.showToast("Authentication requires Firebase config.", "error");
+                    return;
+                }
+
+                if (state.auth.currentUser) {
+                    await signOut(state.auth);
+                    this.showToast("Signed out successfully.");
+                } else {
+                    const provider = new GoogleAuthProvider();
+                    try {
+                        await signInWithPopup(state.auth, provider);
+                        this.showToast("Signed in successfully!", "success");
+                    } catch(e) {
+                        this.showToast("Sign in failed: " + e.message, "error");
+                    }
+                }
+            },
+
+            initMonaco: function() {
+                require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+                require(['vs/editor/editor.main'], () => {
+                    state.editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                        value: '// Welcome to CodeSync\n// Write your code here...\n\nconsole.log("Hello, World!");',
+                        language: 'javascript',
+                        theme: 'vs-dark',
+                        automaticLayout: true,
+                        fontFamily: 'Fira Code',
+                        fontSize: 14,
+                        minimap: { enabled: false },
+                        padding: { top: 20 }
+                    });
+
+                    // Listen for local changes to sync
+                    state.editor.onDidChangeModelContent((e) => {
+                        if (!state.isLocalChange) {
+                            this.syncCode();
+                        }
+                    });
+                });
+            },
+
+            createRoom: function() {
+                const newRoomId = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
+                this.joinRoom(newRoomId);
+            },
+
+            joinRoomFromInput: function() {
+                const input = document.getElementById('join-room-input').value;
+                if (input.length === 6) {
+                    this.joinRoom(input);
+                } else {
+                    this.showToast("Please enter a valid 6-digit room code.", "error");
+                }
+            },
+
+            joinRoom: function(roomId) {
+                state.roomId = roomId;
+                document.getElementById('display-room-code').textContent = roomId;
+                document.getElementById('landing-page').style.display = 'none';
+                document.getElementById('app-interface').style.display = 'flex';
+                
+                this.showToast(`Joined Room: ${roomId}`, "success");
+                
+                if (!this.simulateMode) {
+                    this.setupFirebaseListeners();
+                } else {
+                    this.setupSimulatedRoom();
+                }
+            },
+
+            leaveRoom: function() {
+                if (!this.simulateMode && state.usersRef && state.user) {
+                    remove(ref(state.db, `rooms/${state.roomId}/users/${state.user.uid}`));
+                }
+                state.roomId = null;
+                document.getElementById('app-interface').style.display = 'none';
+                document.getElementById('landing-page').style.display = 'flex';
+                this.clearConsole();
+                if(state.editor) state.editor.setValue("");
+                document.getElementById('chat-messages').innerHTML = '';
+            },
+
+            copyRoomCode: function() {
+                navigator.clipboard.writeText(state.roomId).then(() => {
+                    this.showToast("Room code copied to clipboard!", "success");
+                });
+            },
+
+            changeLanguage: function() {
+                const lang = document.getElementById('language-select').value;
+                monaco.editor.setModelLanguage(state.editor.getModel(), lang);
+                if(!this.simulateMode && state.roomId) {
+                    set(ref(state.db, `rooms/${state.roomId}/meta/language`), lang);
+                }
+            },
+
+            changeTheme: function() {
+                const theme = document.getElementById('theme-select').value;
+                monaco.editor.setTheme(theme);
+            },
+
+            // --- Real-time Sync Logic ---
+            syncCode: function() {
+                if (this.simulateMode || !state.roomId) return;
+                
+                // Debounce the update
+                clearTimeout(state.codeUpdateTimeout);
+                state.codeUpdateTimeout = setTimeout(() => {
+                    const content = state.editor.getValue();
+                    set(ref(state.db, `rooms/${state.roomId}/code`), content);
+                }, 300); // 300ms debounce
+            },
+
+            setupFirebaseListeners: function() {
+                state.codeRef = ref(state.db, `rooms/${state.roomId}/code`);
+                state.chatRef = ref(state.db, `rooms/${state.roomId}/chat`);
+                state.usersRef = ref(state.db, `rooms/${state.roomId}/users`);
+                const metaRef = ref(state.db, `rooms/${state.roomId}/meta`);
+
+                // Listen for Code Changes
+                onValue(state.codeRef, (snapshot) => {
+                    const code = snapshot.val();
+                    if (code !== null && code !== state.editor.getValue()) {
+                        state.isLocalChange = true;
+                        
+                        // Preserve cursor position during remote update
+                        const position = state.editor.getPosition();
+                        state.editor.setValue(code);
+                        if(position) state.editor.setPosition(position);
+                        
+                        // Reset flag after a small delay to allow Monaco to process
+                        setTimeout(() => { state.isLocalChange = false; }, 50);
+                    }
+                });
+
+                // Listen for Meta (Language) Changes
+                onValue(metaRef, (snapshot) => {
+                    const meta = snapshot.val();
+                    if(meta && meta.language) {
+                        const select = document.getElementById('language-select');
+                        if(select.value !== meta.language) {
+                            select.value = meta.language;
+                            monaco.editor.setModelLanguage(state.editor.getModel(), meta.language);
+                        }
+                    }
+                });
+
+                // User Presence
+                const myUserRef = ref(state.db, `rooms/${state.roomId}/users/${state.user.uid}`);
+                set(myUserRef, {
+                    name: state.user.displayName,
+                    color: this.stringToColor(state.user.displayName),
+                    joinedAt: serverTimestamp()
+                });
+                onDisconnect(myUserRef).remove();
+
+                onValue(state.usersRef, (snapshot) => {
+                    const users = snapshot.val() || {};
+                    this.updateUsersList(users);
+                });
+
+                // Chat Messages
+                onValue(state.chatRef, (snapshot) => {
+                    const messages = snapshot.val() || {};
+                    document.getElementById('chat-messages').innerHTML = '';
+                    Object.values(messages).forEach(msg => this.renderChatMessage(msg));
+                    const chatBox = document.getElementById('chat-messages');
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                });
+            },
+
+            setupSimulatedRoom: function() {
+                // Provide local simulation for UI demonstration
+                const mockUsers = {};
+                mockUsers[state.user.uid] = { name: state.user.displayName, color: this.stringToColor(state.user.displayName) };
+                this.updateUsersList(mockUsers);
+                this.renderChatMessage({ sender: "System", text: "Joined local simulated room. Firebase config missing.", timestamp: Date.now() });
+            },
+
+            updateUsersList: function(usersObj) {
+                const container = document.getElementById('active-users-list');
+                container.innerHTML = '';
+                const count = Object.keys(usersObj).length;
+                document.getElementById('users-count').textContent = count;
+
+                for (let uid in usersObj) {
+                    const u = usersObj[uid];
+                    const initial = u.name ? u.name.charAt(0).toUpperCase() : '?';
+                    const div = document.createElement('div');
+                    div.className = 'user-avatar';
+                    div.style.borderColor = u.color;
+                    div.title = u.name;
+                    div.textContent = initial;
+                    container.appendChild(div);
+                }
+            },
+
+            // --- Chat Logic ---
+            handleChatKeyPress: function(e) {
+                if (e.key === 'Enter') this.sendChatMessage();
+            },
+
+            sendChatMessage: function() {
+                const input = document.getElementById('chat-input');
+                const text = input.value.trim();
+                if (!text) return;
+
+                if (!this.simulateMode && state.roomId) {
+                    push(state.chatRef, {
+                        sender: state.user.displayName,
+                        text: text,
+                        timestamp: Date.now()
+                    });
+                } else {
+                    // Local simulation
+                    this.renderChatMessage({ sender: state.user.displayName, text: text, timestamp: Date.now() });
+                    const chatBox = document.getElementById('chat-messages');
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+                input.value = '';
+            },
+
+            renderChatMessage: function(msg) {
+                const container = document.getElementById('chat-messages');
+                const div = document.createElement('div');
+                div.className = 'chat-msg';
+                
+                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                div.innerHTML = `
+                    <div class="author">${msg.sender} <span class="time">${timeStr}</span></div>
+                    <div class="text">${msg.text}</div>
+                `;
+                container.appendChild(div);
+            },
+
+            // --- Code Runner Logic ---
+            runCode: function() {
+                const lang = document.getElementById('language-select').value;
+                if (lang !== 'javascript') {
+                    this.showToast("Only JavaScript execution is currently supported in browser.", "error");
+                    return;
+                }
+
+                this.clearConsole();
+                const code = state.editor.getValue();
+                const outputDiv = document.getElementById('console-output');
+
+                // Overload console.log
+                const originalLog = console.log;
+                const originalError = console.error;
+                
+                let outputStr = "";
+                
+                console.log = (...args) => {
+                    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ');
+                    outputDiv.innerHTML += `<div class="console-log">${this.escapeHTML(msg)}</div>`;
+                    originalLog.apply(console, args);
+                    outputDiv.scrollTop = outputDiv.scrollHeight;
+                };
+
+                console.error = (...args) => {
+                    const msg = args.map(a => String(a)).join(' ');
+                    outputDiv.innerHTML += `<div class="console-error">${this.escapeHTML(msg)}</div>`;
+                    originalError.apply(console, args);
+                    outputDiv.scrollTop = outputDiv.scrollHeight;
+                };
+
+                try {
+                    // Safe execution context
+                    outputDiv.innerHTML += `<div style="color:var(--text-muted)">> Executing code...</div>`;
+                    const runner = new Function(code);
+                    runner();
+                } catch (err) {
+                    console.error("Runtime Error:", err.message);
+                } finally {
+                    // Restore original console
+                    console.log = originalLog;
+                    console.error = originalError;
+                }
+            },
+
+            clearConsole: function() {
+                document.getElementById('console-output').innerHTML = '';
+            },
+
+            // --- Utilities ---
+            showToast: function(message, type = "info") {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                
+                let icon = '<i class="fa-solid fa-circle-info"></i>';
+                if(type === 'success') {
+                    icon = '<i class="fa-solid fa-circle-check" style="color: var(--success-green);"></i>';
+                    toast.style.borderColor = 'var(--success-green)';
+                } else if(type === 'error') {
+                    icon = '<i class="fa-solid fa-circle-exclamation" style="color: var(--error-red);"></i>';
+                    toast.style.borderColor = 'var(--error-red)';
+                }
+
+                toast.innerHTML = `${icon} <span>${message}</span>`;
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.animation = 'fadeOut 0.3s ease forwards';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            },
+
+            stringToColor: function(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+                return '#' + '00000'.substring(0, 6 - c.length) + c;
+            },
+
+            escapeHTML: function(str) {
+                return str.replace(/[&<>'"]/g, tag => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+                }[tag]));
+            }
+        };
+
+        // Initialize application on load
+        window.onload = () => app.init();
+
+    </script>
+</body>
+</html>
