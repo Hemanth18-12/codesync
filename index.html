@@ -3,1020 +3,1928 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeSync | Premium Collaborative Editor</title>
+    <title>CodeSync v2.0 | Ultra-Premium Collaborative Editor</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- FontAwesome for Icons -->
+    <!-- Icons (FontAwesome) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 
     <style>
-        /* --- CSS VARIABLES & THEME --- */
+        /* ==========================================================================
+           1. CSS VARIABLES & DESIGN SYSTEM
+           ========================================================================== */
         :root {
-            --bg-dark: #0a0a0a;
-            --bg-darker: #050505;
-            --bg-card: rgba(26, 26, 26, 0.6);
-            --bg-chat: rgba(17, 17, 17, 0.85);
-            --accent-orange: #ff6b00;
-            --accent-orange-light: #ff8c00;
-            --accent-orange-glow: rgba(255, 107, 0, 0.4);
-            --text-main: #ffffff;
-            --text-muted: #888888;
-            --border-color: rgba(255, 255, 255, 0.1);
-            --error-red: #ff4444;
-            --success-green: #00C851;
+            /* Color Palette */
+            --bg-base: #000000;
+            --bg-surface: #0a0a0a;
+            --bg-elevated: #111111;
+            --bg-glass: rgba(26, 26, 26, 0.4);
+            --bg-glass-heavy: rgba(17, 17, 17, 0.85);
             
-            --font-ui: 'Inter', sans-serif;
-            --font-mono: 'Fira Code', monospace;
+            --accent-primary: #ff6b00;
+            --accent-secondary: #ff8c00;
+            --accent-tertiary: #ffa500;
+            --accent-glow: rgba(255, 107, 0, 0.25);
+            --accent-glow-strong: rgba(255, 107, 0, 0.5);
+            
+            --text-primary: #ffffff;
+            --text-secondary: #e0e0e0;
+            --text-tertiary: #999999;
+            
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.15);
+            --border-accent: rgba(255, 107, 0, 0.4);
+            
+            --success: #00ff88;
+            --error: #ff4444;
+            --info: #4488ff;
+
+            /* Typography */
+            --font-sans: 'Inter', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            /* Shadows & Effects */
+            --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+            --shadow-accent: 0 0 20px var(--accent-glow);
+            --shadow-accent-hover: 0 0 30px var(--accent-glow-strong);
+            
+            /* Transitions */
+            --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        /* --- GLOBAL RESET & BASE --- */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* ==========================================================================
+           2. GLOBAL RESETS & UTILITIES
+           ========================================================================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: var(--font-ui);
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            overflow: hidden; /* Prevent body scroll, manage within app */
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            flex-direction: column;
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-darker); }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent-orange); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
 
-        /* Animated Background Mesh */
-        .bg-mesh {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: 
-                radial-gradient(circle at 15% 50%, rgba(255, 107, 0, 0.05), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(255, 140, 0, 0.03), transparent 25%);
-            z-index: -1;
-            pointer-events: none;
-            animation: meshMove 20s infinite alternate ease-in-out;
-        }
-
-        @keyframes meshMove {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 100% 100%; }
-        }
-
-        /* --- SPLASH SCREEN --- */
-        #splash-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-dark);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease;
-        }
-
-        .logo-container {
-            font-size: 3rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            animation: pulseLogo 2s infinite;
-        }
-
-        .logo-icon {
-            color: var(--accent-orange);
-            filter: drop-shadow(0 0 10px var(--accent-orange-glow));
-        }
-
-        @keyframes pulseLogo {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 15px var(--accent-orange)); }
-            100% { transform: scale(1); opacity: 0.8; }
-        }
-
-        /* --- COMPONENTS --- */
-        .glass-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-        }
-
-        .glass-card:hover {
-            border-color: var(--accent-orange-glow);
-            box-shadow: 0 8px 32px 0 var(--accent-orange-glow);
-            transform: translateY(-2px);
-        }
-
-        .btn {
-            background: transparent;
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-family: var(--font-ui);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
-        }
-
-        .btn-primary {
-            background: var(--accent-orange);
-            border-color: var(--accent-orange);
-            color: #fff;
-        }
-
-        .btn-primary:hover {
-            background: var(--accent-orange-light);
-            box-shadow: 0 0 15px var(--accent-orange-glow);
-            transform: scale(1.02);
-        }
-
-        .btn:hover:not(.btn-primary) {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        input[type="text"] {
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            font-family: var(--font-ui);
-            font-size: 1rem;
-            width: 100%;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--accent-orange);
-            box-shadow: 0 0 10px var(--accent-orange-glow);
-        }
-
-        /* --- LANDING PAGE --- */
-        #landing-page {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            padding: 2rem;
-            text-align: center;
-            z-index: 10;
-        }
-
-        .hero h1 {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(to right, #fff, #888);
+        /* Typography Utilities */
+        .text-gradient {
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-
-        .hero p {
-            font-size: 1.2rem;
-            color: var(--text-muted);
-            margin-bottom: 3rem;
-            max-width: 600px;
-        }
-
-        .action-cards {
-            display: flex;
-            gap: 2rem;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .action-cards .glass-card {
-            width: 300px;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        /* --- APP INTERFACE (MAIN) --- */
-        #app-interface {
-            display: none; /* Hidden initially */
-            flex-direction: column;
-            height: 100vh;
-            width: 100vw;
-            background: var(--bg-darker);
-        }
-
-        /* Header */
-        .app-header {
-            height: 60px;
-            background: rgba(10, 10, 10, 0.8);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
-            backdrop-filter: blur(10px);
-        }
-
-        .header-left { display: flex; align-items: center; gap: 20px; }
-        .header-brand { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px;}
-        .header-brand i { color: var(--accent-orange); }
         
-        .room-badge {
-            background: rgba(255, 107, 0, 0.1);
-            border: 1px solid rgba(255, 107, 0, 0.3);
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .room-badge:hover { background: rgba(255, 107, 0, 0.2); }
-
-        .header-controls { display: flex; align-items: center; gap: 15px; }
-        
-        select.dropdown {
-            background: rgba(0,0,0,0.5);
-            color: #fff;
-            border: 1px solid var(--border-color);
-            padding: 4px 8px;
-            border-radius: 4px;
-            outline: none;
-            font-family: var(--font-ui);
+        .text-gradient-orange {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-tertiary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        /* Main Workspace Area */
-        .workspace {
-            display: flex;
-            flex: 1;
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            box-shadow: var(--shadow-glass);
+            position: relative;
             overflow: hidden;
-            position: relative;
+        }
+        
+        .glass-panel::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
         }
 
-        /* Editor Section */
-        .editor-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
+        .glass-panel.accent-border:hover {
+            border-color: var(--border-accent);
+            box-shadow: var(--shadow-accent);
         }
 
-        #monaco-editor {
-            flex: 1;
-            width: 100%;
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 0.75rem 1.5rem; border-radius: 8px; font-family: var(--font-sans);
+            font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all var(--transition-bounce);
+            text-decoration: none; border: 1px solid transparent; outline: none;
+        }
+        .btn:active { transform: scale(0.97); }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #fff; border-color: var(--accent-primary);
+            box-shadow: 0 4px 15px rgba(255, 107, 0, 0.2);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px); box-shadow: var(--shadow-accent-hover);
+            filter: brightness(1.1);
         }
 
-        /* Code Runner Console */
-        .console-panel {
-            height: 200px;
-            background: #000;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            transition: height 0.3s ease;
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05); color: var(--text-primary);
+            border-color: var(--border-strong);
         }
-
-        .console-header {
-            padding: 5px 15px;
-            background: #111;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        #console-output {
-            flex: 1;
-            padding: 10px 15px;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .console-log { color: #fff; }
-        .console-error { color: var(--error-red); }
-
-        /* Sidebar (Users & Chat) */
-        .sidebar {
-            width: 300px;
-            background: var(--bg-chat);
-            border-left: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            backdrop-filter: blur(10px);
-            z-index: 20;
-            transition: transform 0.3s ease;
-        }
-
-        .sidebar-header {
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Active Users */
-        .active-users-list {
-            padding: 10px;
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .user-avatar {
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            background: #333;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold;
-            font-size: 0.8rem;
-            border: 2px solid var(--accent-orange);
-            box-shadow: 0 0 10px var(--accent-orange-glow);
-            position: relative;
-        }
-
-        /* Chat Messages */
-        .chat-messages {
-            flex: 1;
-            padding: 15px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .chat-msg {
-            background: rgba(255,255,255,0.05);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            animation: fadeIn 0.3s ease;
-        }
-        .chat-msg .author { font-weight: 600; color: var(--accent-orange-light); margin-bottom: 4px; font-size: 0.8rem;}
-        .chat-msg .time { font-size: 0.7rem; color: var(--text-muted); float: right; }
-
-        .chat-input-area {
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            gap: 8px;
-        }
-
-        .chat-input-area input {
-            flex: 1;
-            padding: 8px 12px;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px;
-            color: #fff;
-            outline: none;
-        }
-        .chat-input-area input:focus { border-color: var(--accent-orange); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
 
         .btn-icon {
-            background: var(--accent-orange);
-            color: #fff;
-            border: none;
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
+            width: 36px; height: 36px; padding: 0; border-radius: 50%;
+            background: rgba(255,255,255,0.05); color: var(--text-secondary);
+            border: 1px solid var(--border-subtle); display: inline-flex;
+            align-items: center; justify-content: center; cursor: pointer;
+            transition: all var(--transition-fast);
         }
-        .btn-icon:hover { transform: scale(1.1); box-shadow: 0 0 10px var(--accent-orange-glow); }
+        .btn-icon:hover { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); transform: scale(1.1); box-shadow: var(--shadow-accent); }
 
-        /* Toasts */
-        #toast-container {
-            position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-            display: flex; flex-direction: column; gap: 10px;
+        /* Inputs */
+        .input-group { position: relative; margin-bottom: 1.5rem; width: 100%; }
+        .input-control {
+            width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--border-strong);
+            color: var(--text-primary); padding: 1rem 1rem 1rem 2.5rem; border-radius: 12px;
+            font-family: var(--font-sans); font-size: 1rem; transition: all var(--transition-base);
         }
-        .toast {
-            background: rgba(0, 0, 0, 0.9); border: 1px solid var(--accent-orange);
-            color: #fff; padding: 12px 20px; border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            display: flex; align-items: center; gap: 10px;
-            animation: slideInRight 0.3s ease forwards;
+        .input-control:focus { outline: none; border-color: var(--accent-primary); box-shadow: inset 0 0 0 1px var(--accent-primary), var(--shadow-accent); }
+        .input-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); transition: color var(--transition-base); }
+        .input-control:focus + .input-icon, .input-control:focus ~ .input-icon { color: var(--accent-primary); }
+
+        /* SPA Layout */
+        .page { display: none; opacity: 0; transition: opacity var(--transition-base); min-height: 100vh; }
+        .page.active { display: flex; flex-direction: column; opacity: 1; animation: pageFadeIn 0.4s ease-out; }
+
+        /* Background Effects */
+        .global-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2;
+            background: radial-gradient(circle at 15% 50%, rgba(255, 107, 0, 0.03), transparent 40%),
+                        radial-gradient(circle at 85% 30%, rgba(255, 140, 0, 0.02), transparent 40%);
+            pointer-events: none;
         }
+
+        /* ==========================================================================
+           3. ANIMATIONS
+           ========================================================================== */
+        @keyframes pageFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 107, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0); } }
+        @keyframes borderDraw { from { stroke-dashoffset: 1000; } to { stroke-dashoffset: 0; } }
+        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+        @keyframes bounceDown { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } 60% { transform: translateY(-5px); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
         
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+        .animate-on-scroll { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+        .animate-on-scroll.is-visible { opacity: 1; transform: translateY(0); }
+        .delay-1 { transition-delay: 0.1s; } .delay-2 { transition-delay: 0.2s; } .delay-3 { transition-delay: 0.3s; }
 
+        /* ==========================================================================
+           4. PAGE 1: LANDING PAGE
+           ========================================================================== */
+        /* Public Navbar */
+        .public-nav {
+            position: fixed; top: 0; left: 0; right: 0; height: 80px; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 5%;
+            background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-subtle);
+            transition: all var(--transition-base);
+        }
+        .public-nav.scrolled { background: rgba(5, 5, 5, 0.85); box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .brand { font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-primary); text-decoration: none;}
+        .brand i { color: var(--accent-primary); font-size: 1.8rem; filter: drop-shadow(0 0 8px var(--accent-glow)); }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-weight: 500; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--accent-primary); }
+
+        /* Hero Section */
+        #hero-section {
+            height: 100vh; position: relative; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center; padding: 0 20px;
+            overflow: hidden;
+        }
+        #particle-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .hero-content { z-index: 1; max-width: 900px; }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 20px;
+            background: rgba(255, 107, 0, 0.1); border: 1px solid var(--border-accent);
+            color: var(--accent-secondary); font-size: 0.85rem; font-weight: 600; margin-bottom: 2rem;
+            animation: pulseGlow 2s infinite;
+        }
+        .hero-title { font-size: clamp(3rem, 6vw, 5rem); font-weight: 800; line-height: 1.1; margin-bottom: 1.5rem; letter-spacing: -0.03em; }
+        .hero-subtitle { font-size: clamp(1.1rem, 2vw, 1.3rem); color: var(--text-tertiary); margin-bottom: 3rem; max-width: 600px; margin-inline: auto; line-height: 1.6; }
+        .hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .scroll-indicator { position: absolute; bottom: 40px; color: var(--text-tertiary); font-size: 1.5rem; animation: bounceDown 2s infinite; cursor: pointer; }
+
+        /* Features Section */
+        #features-section { padding: 100px 5%; background: var(--bg-surface); position: relative; }
+        .section-header { text-align: center; margin-bottom: 4rem; }
+        .section-title { font-size: 2.5rem; margin-bottom: 1rem; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; max-width: 1200px; margin: 0 auto; }
+        
+        .feature-card {
+            perspective: 1000px; height: 250px; cursor: pointer;
+        }
+        .feature-card-inner {
+            position: relative; width: 100%; height: 100%; text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d;
+        }
+        .feature-card:hover .feature-card-inner { transform: rotateY(180deg); }
+        .feature-card-front, .feature-card-back {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;
+        }
+        .feature-card-back { transform: rotateY(180deg); background: rgba(255, 107, 0, 0.05); border-color: var(--accent-primary); }
+        .feature-icon {
+            width: 60px; height: 60px; border-radius: 16px; background: rgba(255, 255, 255, 0.05);
+            display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+            color: var(--accent-primary); margin-bottom: 1.5rem; transition: all 0.3s;
+        }
+        .feature-card:hover .feature-icon { transform: scale(1.1); box-shadow: var(--shadow-accent); background: rgba(255, 107, 0, 0.1); }
+        .feature-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .feature-desc { color: var(--text-tertiary); font-size: 0.95rem; line-height: 1.5; }
+
+        /* How It Works Timeline */
+        #timeline-section { padding: 100px 5%; max-width: 1000px; margin: 0 auto; }
+        .timeline { position: relative; padding-left: 3rem; margin-top: 4rem; }
+        .timeline::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--border-strong);
+        }
+        .timeline-progress {
+            position: absolute; left: 0; top: 0; width: 2px; background: var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary); transition: height 0.5s ease-out; height: 0%;
+        }
+        .timeline-item { position: relative; margin-bottom: 4rem; display: flex; align-items: center; gap: 3rem; }
+        .timeline-dot {
+            position: absolute; left: -3rem; transform: translateX(-50%); width: 20px; height: 20px;
+            border-radius: 50%; background: var(--bg-surface); border: 2px solid var(--border-strong);
+            z-index: 2; transition: all 0.3s;
+        }
+        .timeline-item.active .timeline-dot { border-color: var(--accent-primary); background: var(--accent-primary); box-shadow: var(--shadow-accent); }
+        .timeline-content { flex: 1; }
+        .timeline-mockup { flex: 1; height: 250px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 12px; transform: translateX(50px); opacity: 0; transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .timeline-item.active .timeline-mockup { transform: translateX(0); opacity: 1; }
+        .timeline-step { color: var(--accent-primary); font-family: var(--font-mono); font-size: 0.85rem; margin-bottom: 0.5rem; display: block; }
+
+        /* Stats & Testimonials */
+        #stats-section { padding: 80px 5%; background: linear-gradient(0deg, var(--bg-base) 0%, var(--bg-surface) 100%); }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 1000px; margin: 0 auto; text-align: center; }
+        .stat-number { font-size: 3.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(255,255,255,0.1); }
+        .stat-label { color: var(--accent-secondary); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 0.9rem; }
+
+        /* Footer */
+        footer { padding: 60px 5% 30px; border-top: 1px solid var(--border-subtle); background: var(--bg-base); }
+        .footer-content { display: flex; justify-content: space-between; align-items: flex-start; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; gap: 2rem; }
+        .footer-brand { max-width: 300px; }
+        .footer-links { display: flex; gap: 4rem; }
+        .footer-col h4 { font-size: 1rem; margin-bottom: 1.5rem; color: var(--text-primary); }
+        .footer-col ul { list-style: none; }
+        .footer-col ul li { margin-bottom: 0.8rem; }
+        .footer-col ul li a { color: var(--text-tertiary); text-decoration: none; transition: color 0.2s; }
+        .footer-col ul li a:hover { color: var(--accent-primary); }
+        .footer-bottom { text-align: center; padding-top: 30px; margin-top: 40px; border-top: 1px solid var(--border-subtle); color: var(--text-tertiary); font-size: 0.9rem; }
+
+        /* ==========================================================================
+           5. PAGE 2: AUTH PAGE
+           ========================================================================== */
+        #page-auth { background: var(--bg-base); height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .auth-container { display: flex; width: 100%; max-width: 1200px; height: 80vh; min-height: 600px; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.8); }
+        
+        .auth-left { flex: 1; background: var(--bg-elevated); padding: 3rem; display: flex; flex-direction: column; justify-content: center; position: relative; border-right: 1px solid var(--border-subtle); }
+        .code-typing-container { font-family: var(--font-mono); font-size: 1rem; line-height: 1.6; color: var(--text-secondary); background: rgba(0,0,0,0.3); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-strong); height: 300px; overflow: hidden; }
+        .cursor-blink { display: inline-block; width: 10px; height: 1em; background: var(--accent-primary); animation: blink 1s step-end infinite; vertical-align: middle; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .auth-right { flex: 1; background: var(--bg-surface); padding: 4rem; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .auth-form-wrapper { width: 100%; max-width: 380px; }
+        .auth-header { text-align: center; margin-bottom: 2.5rem; }
+        .auth-header h2 { font-size: 2rem; margin-bottom: 0.5rem; }
+        .auth-header p { color: var(--text-tertiary); }
+        
+        .btn-google { width: 100%; background: #ffffff; color: #000; font-weight: 600; padding: 1rem; margin-bottom: 1.5rem; }
+        .btn-google img { width: 20px; height: 20px; }
+        .btn-google:hover { background: #f0f0f0; box-shadow: 0 4px 15px rgba(255,255,255,0.2); transform: translateY(-2px); }
+        
+        .divider { display: flex; align-items: center; text-align: center; color: var(--text-tertiary); font-size: 0.85rem; margin-bottom: 1.5rem; }
+        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-strong); }
+        .divider::before { margin-right: .5em; } .divider::after { margin-left: .5em; }
+
+        .auth-footer { margin-top: 1.5rem; text-align: center; color: var(--text-tertiary); font-size: 0.9rem; }
+        .auth-footer a { color: var(--accent-primary); text-decoration: none; font-weight: 600; cursor: pointer; }
+        .auth-footer a:hover { text-decoration: underline; }
+
+        /* ==========================================================================
+           6. PAGE 3: DASHBOARD
+           ========================================================================== */
+        #page-dashboard { background: var(--bg-base); flex-direction: row !important; height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar { width: 280px; background: var(--bg-elevated); border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; padding: 1.5rem; z-index: 10; transition: width 0.3s; }
+        .user-profile { display: flex; align-items: center; gap: 15px; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--border-subtle); }
+        .avatar-container { position: relative; }
+        .avatar { width: 48px; height: 48px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; border: 2px solid var(--accent-primary); object-fit: cover; }
+        .status-dot { position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background: var(--success); border-radius: 50%; border: 2px solid var(--bg-elevated); }
+        .user-info h4 { font-size: 1rem; margin-bottom: 2px; }
+        .user-info p { font-size: 0.8rem; color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+
+        .nav-menu { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 0.8rem 1rem; color: var(--text-secondary); text-decoration: none; border-radius: 8px; font-weight: 500; transition: all 0.2s; cursor: pointer; border: 1px solid transparent; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+        .nav-item.active { background: rgba(255, 107, 0, 0.1); color: var(--accent-primary); border-color: rgba(255, 107, 0, 0.2); }
+        .nav-item i { width: 20px; text-align: center; }
+        
+        .sidebar-footer { padding-top: 1rem; border-top: 1px solid var(--border-subtle); }
+        .btn-logout { width: 100%; justify-content: flex-start; color: var(--text-tertiary); }
+        .btn-logout:hover { color: var(--error); background: rgba(255, 68, 68, 0.1); }
+
+        /* Dashboard Content */
+        .dashboard-content { flex: 1; overflow-y: auto; padding: 2rem 3rem; background: var(--bg-surface); }
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .dashboard-header h1 { font-size: 2rem; font-weight: 700; }
+        
+        /* Stats Row */
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+        .stat-card { padding: 1.5rem; border-top: 3px solid var(--accent-primary); display: flex; align-items: center; gap: 1.5rem; }
+        .stat-card-icon { width: 50px; height: 50px; border-radius: 12px; background: rgba(255, 107, 0, 0.1); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .stat-card-info h3 { font-size: 1.8rem; margin-bottom: 4px; }
+        .stat-card-info p { color: var(--text-tertiary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Rooms Sections */
+        .section-header-dash { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem; }
+        .rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+        
+        .room-card { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+        .room-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .room-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;}
+        .room-code { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-secondary); background: rgba(255, 107, 0, 0.1); padding: 2px 8px; border-radius: 4px; cursor: pointer; }
+        .room-code:hover { background: rgba(255, 107, 0, 0.2); }
+        .lang-badge { font-size: 0.8rem; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; }
+        .room-meta { display: flex; justify-content: space-between; color: var(--text-tertiary); font-size: 0.85rem; margin-top: auto; }
+        .room-actions { display: flex; gap: 8px; margin-top: 1rem; }
+        .room-actions .btn { flex: 1; padding: 0.5rem; font-size: 0.9rem; }
+
+        .empty-state { text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px dashed var(--border-strong); }
+        .empty-icon { font-size: 3rem; color: var(--text-tertiary); margin-bottom: 1rem; opacity: 0.5; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 1000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content { width: 100%; max-width: 450px; padding: 2rem; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .modal-close { background: none; border: none; color: var(--text-tertiary); font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
+        .modal-close:hover { color: var(--error); }
+        select.input-control { appearance: none; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E"); background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.65rem auto; }
+
+        /* ==========================================================================
+           7. PAGE 4: EDITOR PAGE
+           ========================================================================== */
+        #page-editor { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #1e1e1e; /* VS Code dark default */ }
+        
+        /* Editor Header */
+        .editor-header { height: 50px; background: #252526; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 0.9rem; z-index: 10; }
+        .ed-header-left { display: flex; align-items: center; gap: 15px; }
+        .ed-brand { color: var(--accent-primary); font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;}
+        .ed-room-info { display: flex; align-items: center; gap: 10px; padding-left: 15px; border-left: 1px solid #444; }
+        .ed-header-center { flex: 1; display: flex; justify-content: center; }
+        .ed-users-stack { display: flex; margin-left: 10px; }
+        .ed-users-stack .avatar { width: 28px; height: 28px; font-size: 0.8rem; border: 1px solid #252526; margin-left: -8px; transition: transform 0.2s; }
+        .ed-users-stack .avatar:hover { transform: translateY(-3px); z-index: 10 !important; }
+        .ed-header-right { display: flex; align-items: center; gap: 10px; }
+
+        /* Editor Main Area */
+        .editor-main { flex: 1; display: flex; overflow: hidden; position: relative; }
+        
+        /* Tools Panel (Left) */
+        .ed-tools { width: 50px; background: #333333; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 15px; border-right: 1px solid #252526; z-index: 5;}
+        .tool-icon { color: #858585; font-size: 1.2rem; cursor: pointer; transition: color 0.2s; position: relative; }
+        .tool-icon:hover, .tool-icon.active { color: var(--text-primary); }
+        .tool-icon.active::before { content: ''; position: absolute; left: -15px; top: -5px; bottom: -5px; width: 2px; background: var(--accent-primary); }
+
+        /* Monaco Container */
+        .ed-container { flex: 1; display: flex; flex-direction: column; position: relative; }
+        #monaco-container { flex: 1; width: 100%; transition: border-color 0.3s; }
+        #monaco-container.focused { box-shadow: inset 0 0 0 1px var(--accent-primary); }
+        
+        /* Cursor Styling (Injected dynamically, but base styles here) */
+        .remote-cursor { position: absolute; width: 2px; height: 1.2em; pointer-events: none; z-index: 5; }
+        .remote-cursor-flag { position: absolute; top: -1.2em; left: 0; padding: 2px 4px; font-size: 10px; color: white; border-radius: 2px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+        .remote-cursor:hover .remote-cursor-flag { opacity: 1; }
+
+        /* Chat Panel (Right) */
+        .ed-chat { width: 300px; background: #252526; border-left: 1px solid #333; display: flex; flex-direction: column; transition: transform 0.3s, width 0.3s; z-index: 5;}
+        .ed-chat.collapsed { transform: translateX(100%); width: 0; border: none; }
+        .chat-header { padding: 10px 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 0.9rem;}
+        .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .chat-msg { font-size: 0.85rem; max-width: 90%; }
+        .chat-msg.self { align-self: flex-end; }
+        .chat-msg.self .msg-bubble { background: var(--accent-primary); color: #fff; border-bottom-right-radius: 2px; }
+        .chat-msg.other .msg-bubble { background: #333; border-bottom-left-radius: 2px; }
+        .msg-info { display: flex; justify-content: space-between; font-size: 0.75rem; color: #888; margin-bottom: 4px; }
+        .msg-bubble { padding: 8px 12px; border-radius: 8px; word-wrap: break-word; }
+        .chat-input-wrapper { padding: 10px; border-top: 1px solid #333; display: flex; gap: 8px; }
+        .chat-input-wrapper input { flex: 1; background: #3c3c3c; border: 1px solid transparent; color: #fff; padding: 6px 10px; border-radius: 4px; outline: none; font-family: var(--font-sans); }
+        .chat-input-wrapper input:focus { border-color: var(--accent-primary); }
+        .typing-indicator { padding: 0 15px 10px; font-size: 0.75rem; color: var(--accent-secondary); font-style: italic; display: none; }
+
+        /* Console Panel (Bottom) */
+        .ed-console { height: 0; background: #1e1e1e; border-top: 1px solid #333; display: flex; flex-direction: column; transition: height 0.3s; overflow: hidden; z-index: 10;}
+        .ed-console.open { height: 250px; }
+        .console-header { padding: 5px 15px; background: #252526; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+        .console-output { flex: 1; padding: 10px 15px; overflow-y: auto; font-family: var(--font-mono); font-size: 0.85rem; white-space: pre-wrap; background: #000; }
+        .console-log { color: #d4d4d4; border-bottom: 1px solid #222; padding: 2px 0; }
+        .console-error { color: #f48771; border-bottom: 1px solid #222; padding: 2px 0; }
+
+        /* ==========================================================================
+           8. PAGE 5: HOW TO USE GUIDE
+           ========================================================================== */
+        #page-guide { background: var(--bg-surface); min-height: 100vh; padding: 80px 5%; }
+        .guide-container { max-width: 800px; margin: 0 auto; }
+        .stepper { display: flex; justify-content: space-between; margin-bottom: 3rem; position: relative; }
+        .stepper::before { content: ''; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: var(--border-strong); z-index: 1; }
+        .step { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 60px; }
+        .step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-surface); border: 2px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-weight: bold; transition: all 0.3s; }
+        .step.active .step-num { border-color: var(--accent-primary); background: var(--accent-primary); box-shadow: var(--shadow-accent); }
+        .step.completed .step-num { border-color: var(--success); background: var(--success); color: #000; }
+        .step-label { font-size: 0.75rem; color: var(--text-tertiary); text-align: center; }
+        .step.active .step-label { color: var(--text-primary); }
+
+        .guide-content-wrapper { position: relative; min-height: 400px; overflow: hidden; }
+        .guide-slide { position: absolute; top: 0; left: 0; width: 100%; opacity: 0; transform: translateX(50px); transition: all 0.4s ease; pointer-events: none; }
+        .guide-slide.active { opacity: 1; transform: translateX(0); pointer-events: auto; position: relative; }
+        
+        .guide-nav { display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid var(--border-subtle); padding-top: 2rem; }
+
+        /* ==========================================================================
+           9. GLOBAL COMPONENTS (Toasts, Loaders)
+           ========================================================================== */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;}
+        .toast {
+            background: var(--bg-glass-heavy); backdrop-filter: blur(10px);
+            border-left: 4px solid var(--info); padding: 12px 20px; border-radius: 8px;
+            box-shadow: var(--shadow-glass); display: flex; align-items: center; gap: 12px;
+            min-width: 250px; animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            position: relative; overflow: hidden;
+        }
+        .toast.success { border-color: var(--success); }
+        .toast.error { border-color: var(--error); }
+        .toast-progress { position: absolute; bottom: 0; left: 0; height: 2px; background: inherit; width: 100%; animation: shrink linear forwards; }
+        .toast.success .toast-progress { background: var(--success); }
+        .toast.error .toast-progress { background: var(--error); }
+        .toast.info .toast-progress { background: var(--info); }
+        
+        @keyframes slideInRight { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+
+        .loader-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg-base); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 10000;
+            transition: opacity 0.5s;
+        }
+        .loader-spinner {
+            width: 50px; height: 50px; border: 3px solid rgba(255, 107, 0, 0.2);
+            border-top-color: var(--accent-primary); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%);
+            background-size: 200% 100%; animation: shimmer 1.5s infinite;
+            border-radius: 8px; color: transparent !important; border: none !important;
+        }
+
+        /* ==========================================================================
+           10. MEDIA QUERIES
+           ========================================================================== */
+        @media (max-width: 900px) {
+            #page-dashboard { flex-direction: column !important; }
+            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-subtle); flex-direction: row; align-items: center; padding: 1rem; overflow-x: auto;}
+            .user-profile { margin-bottom: 0; margin-right: 2rem; border: none; background: transparent; padding: 0;}
+            .nav-menu { flex-direction: row; }
+            .nav-item { padding: 0.5rem; }
+            .nav-item span { display: none; }
+            .sidebar-footer { border: none; padding: 0; margin-left: auto; }
+            
+            .auth-container { flex-direction: column; height: auto; min-height: 100vh; border-radius: 0; }
+            .auth-left { display: none; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="bg-mesh"></div>
+    <!-- Global Background Mesh -->
+    <div class="global-bg"></div>
 
-    <!-- 1. SPLASH SCREEN -->
-    <div id="splash-screen">
-        <div class="logo-container">
-            <i class="fa-solid fa-fire-flame-curved logo-icon"></i>
-            CodeSync
-        </div>
-        <p style="margin-top: 15px; color: var(--text-muted); font-family: var(--font-mono);">Initializing workspace...</p>
+    <!-- Initial Loader -->
+    <div id="initial-loader" class="loader-overlay">
+        <div class="loader-spinner"></div>
+        <div class="text-gradient-orange" style="font-weight: bold; letter-spacing: 2px;">CODESYNC</div>
     </div>
 
-    <!-- 2. LANDING PAGE -->
-    <div id="landing-page" style="display: none;">
-        <div class="hero">
-            <h1>CodeSync</h1>
-            <p>The ultra-premium real-time collaborative code editor. Build together, seamlessly.</p>
-        </div>
-        
-        <div class="action-cards">
-            <!-- Create Room Card -->
-            <div class="glass-card">
-                <h3><i class="fa-solid fa-plus" style="color: var(--accent-orange);"></i> New Workspace</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">Start a fresh collaborative session.</p>
-                <button class="btn btn-primary" onclick="app.createRoom()" style="justify-content: center;">
-                    Create Room
-                </button>
-            </div>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
 
-            <!-- Join Room Card -->
-            <div class="glass-card">
-                <h3><i class="fa-solid fa-link" style="color: var(--accent-orange);"></i> Join Workspace</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">Enter a 6-digit code to join.</p>
-                <input type="text" id="join-room-input" placeholder="e.g. 123456" maxlength="6" style="text-align: center; font-family: var(--font-mono); letter-spacing: 2px;">
-                <button class="btn" onclick="app.joinRoomFromInput()" style="justify-content: center;">
-                    Join Room
-                </button>
+    <!-- ==========================================================================
+         PAGE 1: LANDING PAGE
+         ========================================================================== -->
+    <div id="page-landing" class="page">
+        <nav class="public-nav" id="public-nav">
+            <div class="brand">
+                <i class="fa-solid fa-fire-flame-curved"></i>
+                <span>CodeSync</span>
             </div>
-        </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How it Works</a>
+                <button class="btn btn-primary" onclick="app.navigate('auth')">Sign In</button>
+            </div>
+        </nav>
 
-        <!-- Auth Status on Landing -->
-        <div style="margin-top: 3rem;">
-            <p id="auth-status-text" style="color: var(--text-muted); margin-bottom: 10px;">You are not signed in.</p>
-            <button id="auth-btn" class="btn" onclick="app.toggleAuth()">
-                <i class="fa-brands fa-google"></i> Sign In with Google
-            </button>
+        <section id="hero-section">
+            <canvas id="particle-canvas"></canvas>
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fa-solid fa-bolt"></i> v2.0 is now live
+                </div>
+                <h1 class="hero-title">Code Together.<br><span class="text-gradient">Ship Faster.</span> Build Anything.</h1>
+                <p class="hero-subtitle">The ultra-premium real-time collaborative code editor designed for modern development teams. Experience zero-latency sync and integrated tooling.</p>
+                <div class="hero-ctas">
+                    <button class="btn btn-primary" style="padding: 1rem 2.5rem; font-size: 1.1rem;" onclick="app.navigate('auth')">
+                        Start Coding Free <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    <button class="btn btn-secondary" style="padding: 1rem 2.5rem; font-size: 1.1rem;" onclick="document.getElementById('features-section').scrollIntoView({behavior: 'smooth'})">
+                        Explore Features
+                    </button>
+                </div>
+            </div>
+            <div class="scroll-indicator" onclick="document.getElementById('features-section').scrollIntoView({behavior: 'smooth'})">
+                <i class="fa-solid fa-chevron-down"></i>
+            </div>
+        </section>
+
+        <section id="features-section">
+            <div class="section-header animate-on-scroll">
+                <h2 class="section-title">Everything you need.<br><span class="text-gradient-orange">Nothing you don't.</span></h2>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card animate-on-scroll delay-1">
+                    <div class="feature-card-inner">
+                        <div class="feature-card-front glass-panel accent-border">
+                            <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+                            <h3 class="feature-title">Real-Time Sync</h3>
+                            <p class="feature-desc">Sub-millisecond latency using conflict-free resolution algorithms.</p>
+                        </div>
+                        <div class="feature-card-back glass-panel">
+                            <h3 class="feature-title text-gradient-orange">Powered by Firebase</h3>
+                            <p class="feature-desc">Ensuring 99.9% uptime and instant propagation across all connected clients.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card animate-on-scroll delay-2">
+                    <div class="feature-card-inner">
+                        <div class="feature-card-front glass-panel accent-border">
+                            <div class="feature-icon"><i class="fa-solid fa-code"></i></div>
+                            <h3 class="feature-title">Monaco Engine</h3>
+                            <p class="feature-desc">The exact same editor that powers VS Code, built right into your browser.</p>
+                        </div>
+                        <div class="feature-card-back glass-panel">
+                            <h3 class="feature-title text-gradient-orange">IntelliSense Ready</h3>
+                            <p class="feature-desc">Syntax highlighting, auto-completion, and advanced formatting out of the box.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card animate-on-scroll delay-3">
+                    <div class="feature-card-inner">
+                        <div class="feature-card-front glass-panel accent-border">
+                            <div class="feature-icon"><i class="fa-solid fa-terminal"></i></div>
+                            <h3 class="feature-title">Live Code Runner</h3>
+                            <p class="feature-desc">Execute JavaScript instantly and see console outputs in the integrated terminal.</p>
+                        </div>
+                        <div class="feature-card-back glass-panel">
+                            <h3 class="feature-title text-gradient-orange">Sandboxed execution</h3>
+                            <p class="feature-desc">Securely run and test logic without leaving the collaborative environment.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-card animate-on-scroll delay-1">
+                    <div class="feature-card-inner">
+                        <div class="feature-card-front glass-panel accent-border">
+                            <div class="feature-icon"><i class="fa-solid fa-comments"></i></div>
+                            <h3 class="feature-title">Integrated Chat</h3>
+                            <p class="feature-desc">Communicate with your team in-context without switching tabs.</p>
+                        </div>
+                        <div class="feature-card-back glass-panel">
+                            <h3 class="feature-title text-gradient-orange">Contextual discussions</h3>
+                            <p class="feature-desc">Share snippets and resolve issues faster with built-in messaging.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="timeline-section">
+            <div class="section-header animate-on-scroll">
+                <h2 class="section-title">How it <span class="text-gradient">works</span></h2>
+            </div>
+            <div class="timeline" id="timeline">
+                <div class="timeline-progress" id="timeline-progress"></div>
+                
+                <div class="timeline-item active animate-on-scroll" data-step="1">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-step">Step 01</span>
+                        <h3>Authenticate</h3>
+                        <p style="color: var(--text-tertiary); margin-top: 0.5rem;">Sign in securely using your Google account or email.</p>
+                    </div>
+                    <div class="timeline-mockup" style="background: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"250\" style=\"background:%23111\"><rect x=\"100\" y=\"80\" width=\"200\" height=\"40\" rx=\"8\" fill=\"%23222\"/><rect x=\"100\" y=\"130\" width=\"200\" height=\"40\" rx=\"8\" fill=\"%23ff6b00\"/></svg>') center/cover;"></div>
+                </div>
+
+                <div class="timeline-item animate-on-scroll" data-step="2">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-step">Step 02</span>
+                        <h3>Create a Workspace</h3>
+                        <p style="color: var(--text-tertiary); margin-top: 0.5rem;">Generate a unique 6-digit room code to share with your team.</p>
+                    </div>
+                    <div class="timeline-mockup" style="background: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"250\" style=\"background:%23111\"><text x=\"50%\" y=\"50%\" font-size=\"40\" fill=\"%23ff6b00\" font-family=\"monospace\" text-anchor=\"middle\">A 7 B 2 9 X</text></svg>') center/cover;"></div>
+                </div>
+
+                <div class="timeline-item animate-on-scroll" data-step="3">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-step">Step 03</span>
+                        <h3>Code Together</h3>
+                        <p style="color: var(--text-tertiary); margin-top: 0.5rem;">See cursors in real-time and build amazing things.</p>
+                    </div>
+                    <div class="timeline-mockup" style="background: url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"250\" style=\"background:%23111\"><rect x=\"20\" y=\"20\" width=\"360\" height=\"210\" fill=\"%231e1e1e\"/><text x=\"40\" y=\"60\" fill=\"%23569cd6\" font-family=\"monospace\">function</text><text x=\"120\" y=\"60\" fill=\"%23dcdcaa\" font-family=\"monospace\">build()</text><path d=\"M150 70 L160 90 L155 90 L155 100 L145 100 L145 90 L140 90 Z\" fill=\"%23ff6b00\"/></svg>') center/cover;"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="stats-section">
+            <div class="stats-grid">
+                <div class="stat-item animate-on-scroll delay-1">
+                    <div class="stat-number counter" data-target="10000">0</div>
+                    <div class="stat-label">Developers</div>
+                </div>
+                <div class="stat-item animate-on-scroll delay-2">
+                    <div class="stat-number counter" data-target="50000">0</div>
+                    <div class="stat-label">Sessions</div>
+                </div>
+                <div class="stat-item animate-on-scroll delay-3">
+                    <div class="stat-number">99.9%</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="brand" style="margin-bottom: 1rem;">
+                        <i class="fa-solid fa-fire-flame-curved"></i> CodeSync
+                    </div>
+                    <p style="color: var(--text-tertiary); font-size: 0.9rem;">Building the future of collaborative development. Fast, secure, and beautiful.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Product</h4>
+                        <ul>
+                            <li><a href="#">Features</a></li>
+                            <li><a href="#">Pricing</a></li>
+                            <li><a href="#">Changelog</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Legal</h4>
+                        <ul>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                &copy; 2026 CodeSync Inc. Built with <i class="fa-solid fa-heart" style="color: var(--accent-primary);"></i> and Firebase.
+            </div>
+        </footer>
+    </div>
+
+    <!-- ==========================================================================
+         PAGE 2: AUTH PAGE
+         ========================================================================== -->
+    <div id="page-auth" class="page">
+        <div class="auth-container">
+            <div class="auth-left">
+                <h2 style="font-size: 2.5rem; margin-bottom: 2rem;">Build the future.<br><span class="text-gradient">Together.</span></h2>
+                <div class="code-typing-container" id="code-typing-demo">
+                    <!-- JS animated typing goes here -->
+                </div>
+            </div>
+            <div class="auth-right">
+                <div class="auth-form-wrapper glass-panel" style="padding: 2.5rem; width: 100%; border-radius: 20px;">
+                    <div class="auth-header">
+                        <div class="brand" style="justify-content: center; margin-bottom: 1rem;">
+                            <i class="fa-solid fa-fire-flame-curved"></i> CodeSync
+                        </div>
+                        <h2 id="auth-title">Welcome Back</h2>
+                        <p id="auth-subtitle">Sign in to continue to your dashboard</p>
+                    </div>
+
+                    <button class="btn btn-google" onclick="app.auth.signInWithGoogle()">
+                        <i class="fa-brands fa-google"></i> Continue with Google
+                    </button>
+
+                    <div class="divider">or</div>
+
+                    <form id="auth-form" onsubmit="event.preventDefault(); app.auth.handleEmailAuth();">
+                        <div class="input-group">
+                            <input type="email" id="auth-email" class="input-control" placeholder="Email address" required>
+                            <i class="fa-solid fa-envelope input-icon"></i>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="auth-password" class="input-control" placeholder="Password" required>
+                            <i class="fa-solid fa-lock input-icon"></i>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;" id="auth-submit-btn">
+                            Sign In
+                        </button>
+                    </form>
+
+                    <div class="auth-footer">
+                        <span id="auth-toggle-text">Don't have an account?</span> 
+                        <a onclick="app.auth.toggleMode()" id="auth-toggle-link">Create one</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- 3. MAIN APP INTERFACE -->
-    <div id="app-interface">
-        
+    <!-- ==========================================================================
+         PAGE 3: DASHBOARD
+         ========================================================================== -->
+    <div id="page-dashboard" class="page">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand" style="margin-bottom: 2rem; padding: 0 1rem;">
+                <i class="fa-solid fa-fire-flame-curved"></i> CodeSync
+            </div>
+
+            <div class="user-profile">
+                <div class="avatar-container">
+                    <img id="dash-avatar" class="avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Avatar">
+                    <div class="status-dot"></div>
+                </div>
+                <div class="user-info">
+                    <h4 id="dash-name" class="skeleton">Loading...</h4>
+                    <p id="dash-email" class="skeleton">loading@email.com</p>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a class="nav-item active" onclick="app.dashboard.switchTab('home')">
+                    <i class="fa-solid fa-house"></i> <span>Overview</span>
+                </a>
+                <a class="nav-item" onclick="app.navigate('guide')">
+                    <i class="fa-solid fa-book"></i> <span>How to Use</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn nav-item btn-logout" onclick="app.auth.signOut()">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> <span>Log Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <div class="dashboard-header">
+                <h1>Dashboard</h1>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-secondary" onclick="app.dashboard.showJoinModal()"><i class="fa-solid fa-link"></i> Join Room</button>
+                    <button class="btn btn-primary" onclick="app.dashboard.showCreateModal()"><i class="fa-solid fa-plus"></i> New Room</button>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="glass-panel stat-card">
+                    <div class="stat-card-icon"><i class="fa-solid fa-layer-group"></i></div>
+                    <div class="stat-card-info">
+                        <h3 id="stat-created" class="skeleton">0</h3>
+                        <p>Rooms Created</p>
+                    </div>
+                </div>
+                <div class="glass-panel stat-card">
+                    <div class="stat-card-icon"><i class="fa-solid fa-users"></i></div>
+                    <div class="stat-card-info">
+                        <h3 id="stat-joined" class="skeleton">0</h3>
+                        <p>Rooms Joined</p>
+                    </div>
+                </div>
+                <div class="glass-panel stat-card">
+                    <div class="stat-card-icon"><i class="fa-solid fa-code"></i></div>
+                    <div class="stat-card-info">
+                        <h3 id="stat-sessions" class="skeleton">0</h3>
+                        <p>Total Sessions</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rooms Section -->
+            <div class="section-header-dash">
+                <h2>My Workspaces</h2>
+            </div>
+            
+            <div id="rooms-container" class="rooms-grid">
+                <!-- Dynamically populated -->
+                <div class="empty-state" style="grid-column: 1 / -1;" id="rooms-empty">
+                    <i class="fa-solid fa-folder-open empty-icon"></i>
+                    <h3>No workspaces yet</h3>
+                    <p style="color: var(--text-tertiary); margin: 1rem 0;">Create a new room or join an existing one to get started.</p>
+                    <button class="btn btn-primary" onclick="app.dashboard.showCreateModal()">Create First Room</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Create Room Modal -->
+        <div class="modal-overlay" id="modal-create">
+            <div class="modal-content glass-panel">
+                <div class="modal-header">
+                    <h3>Create Workspace</h3>
+                    <button class="modal-close" onclick="app.dashboard.closeModals()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form onsubmit="event.preventDefault(); app.dashboard.createRoom();">
+                    <div class="input-group">
+                        <input type="text" id="new-room-name" class="input-control" placeholder="Workspace Name (e.g. Frontend Refactor)" required style="padding-left: 1rem;">
+                    </div>
+                    <div class="input-group">
+                        <select id="new-room-lang" class="input-control" style="padding-left: 1rem;">
+                            <option value="javascript">JavaScript</option>
+                            <option value="python">Python</option>
+                            <option value="html">HTML / CSS</option>
+                            <option value="typescript">TypeScript</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Generate & Enter</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Join Room Modal -->
+        <div class="modal-overlay" id="modal-join">
+            <div class="modal-content glass-panel">
+                <div class="modal-header">
+                    <h3>Join Workspace</h3>
+                    <button class="modal-close" onclick="app.dashboard.closeModals()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form onsubmit="event.preventDefault(); app.dashboard.joinRoomSubmit();">
+                    <div class="input-group">
+                        <input type="text" id="join-room-code" class="input-control" placeholder="Enter 6-digit code" maxlength="6" required style="padding-left: 1rem; text-align: center; font-family: var(--font-mono); letter-spacing: 5px; font-size: 1.2rem; text-transform: uppercase;">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Enter Room</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         PAGE 4: EDITOR PAGE
+         ========================================================================== -->
+    <div id="page-editor" class="page">
         <!-- Header -->
-        <header class="app-header">
-            <div class="header-left">
-                <div class="header-brand">
-                    <i class="fa-solid fa-fire-flame-curved"></i> CodeSync
+        <header class="editor-header">
+            <div class="ed-header-left">
+                <div class="ed-brand" onclick="app.editor.leaveRoom()">
+                    <i class="fa-solid fa-fire-flame-curved"></i> <span style="display: none;">CodeSync</span>
                 </div>
-                <div class="room-badge" onclick="app.copyRoomCode()" title="Click to copy">
-                    <i class="fa-solid fa-hashtag"></i> <span id="display-room-code">------</span>
-                    <i class="fa-solid fa-copy" style="font-size: 0.8rem; opacity: 0.7; margin-left: 5px;"></i>
+                <div class="ed-room-info">
+                    <span id="ed-room-name" style="font-weight: 600;">Loading...</span>
+                    <span id="ed-room-code" style="font-family: var(--font-mono); color: var(--accent-primary); background: rgba(255,107,0,0.1); padding: 2px 6px; border-radius: 4px; cursor: pointer;" onclick="app.editor.copyRoomCode()" title="Click to copy">------</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text-muted);">
-                    <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--success-green); box-shadow: 0 0 5px var(--success-green);"></div>
-                    <span id="users-count">1</span> Online
+            </div>
+            
+            <div class="ed-header-center">
+                <div class="ed-users-stack" id="ed-users-list">
+                    <!-- Avatars injected here -->
                 </div>
             </div>
 
-            <div class="header-controls">
-                <button class="btn btn-primary" onclick="app.runCode()" style="padding: 5px 12px; font-size: 0.9rem;">
-                    <i class="fa-solid fa-play"></i> Run Code
-                </button>
-                <select id="language-select" class="dropdown" onchange="app.changeLanguage()">
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
+            <div class="ed-header-right">
+                <select id="ed-lang-select" onchange="app.editor.changeLanguage()" style="background: #333; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 2px 5px; outline: none; font-size: 0.8rem;">
+                    <option value="javascript">JS</option>
+                    <option value="python">PY</option>
                     <option value="html">HTML</option>
-                    <option value="css">CSS</option>
-                    <option value="typescript">TypeScript</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
+                    <option value="typescript">TS</option>
                 </select>
-                <select id="theme-select" class="dropdown" onchange="app.changeTheme()">
-                    <option value="vs-dark">Dark+</option>
-                    <option value="hc-black">High Contrast</option>
-                    <option value="vs">Light (Eww)</option>
-                </select>
-                <button class="btn" onclick="app.leaveRoom()" style="padding: 5px 12px; font-size: 0.9rem; border-color: rgba(255,255,255,0.1);">
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Leave
+                <button class="btn btn-primary" onclick="app.editor.runCode()" style="padding: 4px 12px; font-size: 0.8rem; gap: 5px;">
+                    <i class="fa-solid fa-play"></i> Run
+                </button>
+                <button class="btn btn-secondary" onclick="app.editor.toggleChat()" style="padding: 4px 10px; font-size: 0.8rem;">
+                    <i class="fa-solid fa-comment"></i>
+                </button>
+                <button class="btn btn-secondary" onclick="app.editor.leaveRoom()" style="padding: 4px 10px; font-size: 0.8rem; border-color: rgba(255,0,0,0.2); color: #ff6b6b;">
+                    Leave
                 </button>
             </div>
         </header>
 
-        <!-- Workspace -->
-        <div class="workspace">
-            
-            <!-- Editor & Console -->
-            <div class="editor-container">
-                <div id="monaco-editor"></div>
+        <div class="editor-main">
+            <!-- Tools Sidebar -->
+            <div class="ed-tools">
+                <i class="fa-solid fa-file-code tool-icon active" title="Explorer"></i>
+                <i class="fa-solid fa-magnifying-glass tool-icon" title="Search"></i>
+                <div style="flex:1"></div>
+                <i class="fa-solid fa-terminal tool-icon" title="Toggle Console" onclick="app.editor.toggleConsole()"></i>
+                <i class="fa-solid fa-gear tool-icon" title="Settings"></i>
+            </div>
+
+            <!-- Central Area (Editor + Console) -->
+            <div class="ed-container">
+                <div id="monaco-container"></div>
                 
-                <div class="console-panel">
+                <div id="ed-console" class="ed-console">
                     <div class="console-header">
-                        <span><i class="fa-solid fa-terminal"></i> Output</span>
-                        <button class="btn" onclick="app.clearConsole()" style="padding: 2px 8px; font-size: 0.8rem; border:none;">Clear</button>
+                        <span><i class="fa-solid fa-terminal"></i> Terminal Output</span>
+                        <div>
+                            <button class="btn-icon" style="width:24px; height:24px; font-size: 0.7rem;" onclick="app.editor.clearConsole()"><i class="fa-solid fa-ban"></i></button>
+                            <button class="btn-icon" style="width:24px; height:24px; font-size: 0.7rem;" onclick="app.editor.toggleConsole()"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
                     </div>
-                    <div id="console-output"></div>
+                    <div id="console-output" class="console-output"></div>
                 </div>
             </div>
 
-            <!-- Sidebar -->
-            <div class="sidebar">
-                <div class="sidebar-header">
-                    <span>Active Users</span>
-                    <i class="fa-solid fa-users" style="color: var(--text-muted);"></i>
-                </div>
-                <div class="active-users-list" id="active-users-list">
-                    <!-- Avatars injected here -->
-                </div>
-
-                <div class="sidebar-header" style="border-top: 1px solid var(--border-color); border-bottom: none; margin-top: auto;">
+            <!-- Chat Sidebar -->
+            <div id="ed-chat" class="ed-chat collapsed">
+                <div class="chat-header">
                     <span>Room Chat</span>
-                    <i class="fa-solid fa-comments" style="color: var(--text-muted);"></i>
+                    <i class="fa-solid fa-xmark" style="cursor: pointer; color: #888;" onclick="app.editor.toggleChat()"></i>
                 </div>
-                <div class="chat-messages" id="chat-messages">
-                    <!-- Messages injected here -->
+                <div id="chat-messages" class="chat-messages">
+                    <!-- Messages go here -->
                 </div>
-                <div class="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="app.handleChatKeyPress(event)">
-                    <button class="btn-icon" onclick="app.sendChatMessage()">
-                        <i class="fa-solid fa-paper-plane"></i>
+                <div id="chat-typing" class="typing-indicator">Someone is typing...</div>
+                <div class="chat-input-wrapper">
+                    <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="app.editor.handleChatKeyPress(event)">
+                    <button class="btn-icon" style="background: var(--accent-primary); border: none;" onclick="app.editor.sendChatMessage()">
+                        <i class="fa-solid fa-paper-plane" style="color:#fff; font-size: 0.8rem;"></i>
                     </button>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <div id="toast-container"></div>
+    <!-- ==========================================================================
+         PAGE 5: HOW TO USE GUIDE
+         ========================================================================== -->
+    <div id="page-guide" class="page">
+        <div class="guide-container glass-panel" style="padding: 3rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2>Getting Started with CodeSync</h2>
+                <button class="btn btn-secondary" onclick="app.navigate('dashboard')">Back to Dashboard</button>
+            </div>
 
-    <!-- --- SCRIPTS --- -->
-    <!-- Monaco Editor Loader -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
-    
-    <!-- Application Logic as a Module to support Firebase imports -->
+            <div class="stepper">
+                <div class="step active" data-step="1">
+                    <div class="step-num">1</div>
+                    <div class="step-label">Rooms</div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-num">2</div>
+                    <div class="step-label">Editor</div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-num">3</div>
+                    <div class="step-label">Collab</div>
+                </div>
+                <div class="step" data-step="4">
+                    <div class="step-num">4</div>
+                    <div class="step-label">Run</div>
+                </div>
+            </div>
+
+            <div class="guide-content-wrapper">
+                <div class="guide-slide active" id="guide-1">
+                    <h3 class="text-gradient-orange" style="margin-bottom: 1rem;">Workspaces & Rooms</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.5rem;">
+                        Everything in CodeSync happens inside a "Room". You can create a new room from your dashboard, which will generate a unique 6-digit code (e.g., <strong>A7B29X</strong>). 
+                        Share this code with your teammates so they can join your session instantly.
+                    </p>
+                    <div style="background: rgba(0,0,0,0.5); padding: 2rem; border-radius: 12px; text-align: center; border: 1px solid var(--border-strong);">
+                        <i class="fa-solid fa-door-open" style="font-size: 3rem; color: var(--accent-primary); margin-bottom: 1rem;"></i>
+                        <h4>Create or Join to start.</h4>
+                    </div>
+                </div>
+                
+                <div class="guide-slide" id="guide-2">
+                    <h3 class="text-gradient-orange" style="margin-bottom: 1rem;">The Editor Engine</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.5rem;">
+                        Our editor is powered by Monaco, the same engine behind VS Code. It supports syntax highlighting for multiple languages, automatic indentation, and standard keyboard shortcuts (like Ctrl+Z). Change the language using the dropdown in the top right.
+                    </p>
+                </div>
+
+                <div class="guide-slide" id="guide-3">
+                    <h3 class="text-gradient-orange" style="margin-bottom: 1rem;">Collaboration & Chat</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.5rem;">
+                        When others join your room, their avatars will appear in the top bar. You will see their cursors moving in real-time within the editor. Use the built-in chat panel on the right side to communicate without leaving the context of your code.
+                    </p>
+                </div>
+
+                <div class="guide-slide" id="guide-4">
+                    <h3 class="text-gradient-orange" style="margin-bottom: 1rem;">Running JavaScript</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.5rem;">
+                        If your room is set to JavaScript, you can execute the code directly in your browser. Click the "Run" button in the header (or press Ctrl+Enter). The console panel will slide up from the bottom showing any <code>console.log()</code> outputs or runtime errors.
+                    </p>
+                    <button class="btn btn-primary" style="margin-top: 1rem;" onclick="app.navigate('dashboard')">Got it! Let's Code</button>
+                </div>
+            </div>
+
+            <div class="guide-nav">
+                <button class="btn btn-secondary" id="guide-prev" disabled onclick="app.guide.prev()"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+                <button class="btn btn-primary" id="guide-next" onclick="app.guide.next()">Next <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         JAVASCRIPT APPLICATION LOGIC
+         ========================================================================== -->
     <script type="module">
         /**
          * ==========================================
-         *  FIREBASE CONFIGURATION PLACEHOLDERS
-         *  Replace these with your actual Firebase 
-         *  project credentials.
+         *  FIREBASE CONFIGURATION 
+         *  Replace with your actual Firebase config
          * ==========================================
          */
         const FIREBASE_CONFIG = {
-            apiKey: "YOUR_API_KEY_HERE",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
             projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            storageBucket: "YOUR_STORAGE_BUCKET",
             messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
             appId: "YOUR_APP_ID"
         };
 
-        // Import Firebase modules
+        // Firebase Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getDatabase, ref, set, onValue, push, serverTimestamp, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getDatabase, ref, set, get, onValue, push, serverTimestamp, onDisconnect, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-        // State Management
-        const state = {
-            app: null,
-            auth: null,
-            db: null,
-            user: null,
-            roomId: null,
-            editor: null,
-            isLocalChange: false,
-            codeUpdateTimeout: null,
-            usersRef: null,
-            codeRef: null,
-            chatRef: null
-        };
-
-        // Main Application Controller (Exposed to window for inline onclick handlers)
+        // Global Application Namespace
         window.app = {
-            
+            state: {
+                currentPage: 'landing',
+                firebaseApp: null,
+                auth: null,
+                db: null,
+                user: null,
+                simulateMode: false,
+                monacoReady: false
+            },
+
+            // --- 1. CORE INITIALIZATION ---
             init: async function() {
-                // Initialize Firebase
-                try {
-                    // Check if config is still default
-                    if (FIREBASE_CONFIG.apiKey === "YOUR_API_KEY_HERE") {
-                        console.warn("Firebase config is default. Database features will be simulated.");
-                        this.simulateMode = true;
-                    } else {
-                        state.app = initializeApp(FIREBASE_CONFIG);
-                        state.auth = getAuth(state.app);
-                        state.db = getDatabase(state.app);
-                        
-                        // Setup Auth Listener
-                        onAuthStateChanged(state.auth, (user) => {
-                            state.user = user;
-                            this.updateAuthUI();
-                        });
-                    }
-                } catch(e) {
-                    console.error("Firebase init failed:", e);
-                    this.simulateMode = true;
-                }
-
-                // Simulate fake user if in simulate mode or not signed in
-                if (!state.user) {
-                    state.user = { 
-                        uid: 'guest_' + Math.floor(Math.random()*1000), 
-                        displayName: 'Guest ' + Math.floor(Math.random()*100),
-                        photoURL: null
-                    };
-                }
-
-                // Initialize Monaco Editor
-                this.initMonaco();
-
-                // Hide splash after a short delay
+                // Remove loader
                 setTimeout(() => {
-                    document.getElementById('splash-screen').style.opacity = '0';
-                    setTimeout(() => {
-                        document.getElementById('splash-screen').style.display = 'none';
-                        document.getElementById('landing-page').style.display = 'flex';
-                    }, 500);
-                }, 1500);
+                    const loader = document.getElementById('initial-loader');
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 500);
+                }, 1000);
 
-                // Setup Keyboard Shortcuts
-                document.addEventListener('keydown', (e) => {
-                    if (e.ctrlKey && e.key === 'Enter') {
-                        e.preventDefault();
-                        this.runCode();
-                    }
-                });
-            },
+                // Init Particles
+                this.initParticles();
+                
+                // Init Scroll Animations
+                this.initScrollObservers();
 
-            updateAuthUI: function() {
-                const statusText = document.getElementById('auth-status-text');
-                const authBtn = document.getElementById('auth-btn');
-                if (state.auth && state.auth.currentUser) {
-                    statusText.textContent = `Signed in as ${state.auth.currentUser.displayName}`;
-                    authBtn.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out';
-                    state.user = state.auth.currentUser;
+                // Check Firebase Config
+                if (FIREBASE_CONFIG.apiKey === "YOUR_API_KEY") {
+                    console.warn("⚠️ Firebase config missing. Running in Simulation Mode.");
+                    this.state.simulateMode = true;
+                    this.simulate.init();
                 } else {
-                    statusText.textContent = 'You are not signed in.';
-                    authBtn.innerHTML = '<i class="fa-brands fa-google"></i> Sign In with Google';
-                    // Re-assign guest user if signed out
-                    state.user = { 
-                        uid: 'guest_' + Math.floor(Math.random()*1000), 
-                        displayName: 'Guest ' + Math.floor(Math.random()*100)
-                    };
-                }
-            },
-
-            toggleAuth: async function() {
-                if (this.simulateMode) {
-                    this.showToast("Authentication requires Firebase config.", "error");
-                    return;
-                }
-
-                if (state.auth.currentUser) {
-                    await signOut(state.auth);
-                    this.showToast("Signed out successfully.");
-                } else {
-                    const provider = new GoogleAuthProvider();
                     try {
-                        await signInWithPopup(state.auth, provider);
-                        this.showToast("Signed in successfully!", "success");
-                    } catch(e) {
-                        this.showToast("Sign in failed: " + e.message, "error");
+                        this.state.firebaseApp = initializeApp(FIREBASE_CONFIG);
+                        this.state.auth = getAuth(this.state.firebaseApp);
+                        this.state.db = getDatabase(this.state.firebaseApp);
+                        this.auth.initListeners();
+                    } catch (e) {
+                        console.error("Firebase init failed", e);
+                        this.showToast("Failed to connect to backend", "error");
                     }
                 }
-            },
 
-            initMonaco: function() {
+                // Load Monaco Loader
                 require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
                 require(['vs/editor/editor.main'], () => {
-                    state.editor = monaco.editor.create(document.getElementById('monaco-editor'), {
-                        value: '// Welcome to CodeSync\n// Write your code here...\n\nconsole.log("Hello, World!");',
-                        language: 'javascript',
-                        theme: 'vs-dark',
-                        automaticLayout: true,
-                        fontFamily: 'Fira Code',
-                        fontSize: 14,
-                        minimap: { enabled: false },
-                        padding: { top: 20 }
-                    });
-
-                    // Listen for local changes to sync
-                    state.editor.onDidChangeModelContent((e) => {
-                        if (!state.isLocalChange) {
-                            this.syncCode();
-                        }
-                    });
+                    this.state.monacoReady = true;
                 });
-            },
 
-            createRoom: function() {
-                const newRoomId = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
-                this.joinRoom(newRoomId);
-            },
+                // Init Guide
+                this.guide.init();
 
-            joinRoomFromInput: function() {
-                const input = document.getElementById('join-room-input').value;
-                if (input.length === 6) {
-                    this.joinRoom(input);
-                } else {
-                    this.showToast("Please enter a valid 6-digit room code.", "error");
-                }
-            },
-
-            joinRoom: function(roomId) {
-                state.roomId = roomId;
-                document.getElementById('display-room-code').textContent = roomId;
-                document.getElementById('landing-page').style.display = 'none';
-                document.getElementById('app-interface').style.display = 'flex';
-                
-                this.showToast(`Joined Room: ${roomId}`, "success");
-                
-                if (!this.simulateMode) {
-                    this.setupFirebaseListeners();
-                } else {
-                    this.setupSimulatedRoom();
-                }
-            },
-
-            leaveRoom: function() {
-                if (!this.simulateMode && state.usersRef && state.user) {
-                    remove(ref(state.db, `rooms/${state.roomId}/users/${state.user.uid}`));
-                }
-                state.roomId = null;
-                document.getElementById('app-interface').style.display = 'none';
-                document.getElementById('landing-page').style.display = 'flex';
-                this.clearConsole();
-                if(state.editor) state.editor.setValue("");
-                document.getElementById('chat-messages').innerHTML = '';
-            },
-
-            copyRoomCode: function() {
-                navigator.clipboard.writeText(state.roomId).then(() => {
-                    this.showToast("Room code copied to clipboard!", "success");
-                });
-            },
-
-            changeLanguage: function() {
-                const lang = document.getElementById('language-select').value;
-                monaco.editor.setModelLanguage(state.editor.getModel(), lang);
-                if(!this.simulateMode && state.roomId) {
-                    set(ref(state.db, `rooms/${state.roomId}/meta/language`), lang);
-                }
-            },
-
-            changeTheme: function() {
-                const theme = document.getElementById('theme-select').value;
-                monaco.editor.setTheme(theme);
-            },
-
-            // --- Real-time Sync Logic ---
-            syncCode: function() {
-                if (this.simulateMode || !state.roomId) return;
-                
-                // Debounce the update
-                clearTimeout(state.codeUpdateTimeout);
-                state.codeUpdateTimeout = setTimeout(() => {
-                    const content = state.editor.getValue();
-                    set(ref(state.db, `rooms/${state.roomId}/code`), content);
-                }, 300); // 300ms debounce
-            },
-
-            setupFirebaseListeners: function() {
-                state.codeRef = ref(state.db, `rooms/${state.roomId}/code`);
-                state.chatRef = ref(state.db, `rooms/${state.roomId}/chat`);
-                state.usersRef = ref(state.db, `rooms/${state.roomId}/users`);
-                const metaRef = ref(state.db, `rooms/${state.roomId}/meta`);
-
-                // Listen for Code Changes
-                onValue(state.codeRef, (snapshot) => {
-                    const code = snapshot.val();
-                    if (code !== null && code !== state.editor.getValue()) {
-                        state.isLocalChange = true;
-                        
-                        // Preserve cursor position during remote update
-                        const position = state.editor.getPosition();
-                        state.editor.setValue(code);
-                        if(position) state.editor.setPosition(position);
-                        
-                        // Reset flag after a small delay to allow Monaco to process
-                        setTimeout(() => { state.isLocalChange = false; }, 50);
+                // Keyboard Shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (this.state.currentPage === 'editor' && e.ctrlKey && e.key === 'Enter') {
+                        e.preventDefault();
+                        this.editor.runCode();
                     }
                 });
 
-                // Listen for Meta (Language) Changes
-                onValue(metaRef, (snapshot) => {
-                    const meta = snapshot.val();
-                    if(meta && meta.language) {
-                        const select = document.getElementById('language-select');
-                        if(select.value !== meta.language) {
-                            select.value = meta.language;
-                            monaco.editor.setModelLanguage(state.editor.getModel(), meta.language);
-                        }
+                // Set initial route based on hash or default
+                const initialPage = window.location.hash.replace('#', '') || 'landing';
+                this.navigate(initialPage, true);
+            },
+
+            // --- 2. ROUTER ---
+            navigate: function(pageId, skipAuthCheck = false) {
+                // Auth Protection
+                if (!skipAuthCheck && !this.state.simulateMode) {
+                    const protectedPages = ['dashboard', 'editor'];
+                    if (protectedPages.includes(pageId) && !this.state.user) {
+                        this.showToast("Please sign in first.", "info");
+                        pageId = 'auth';
                     }
-                });
-
-                // User Presence
-                const myUserRef = ref(state.db, `rooms/${state.roomId}/users/${state.user.uid}`);
-                set(myUserRef, {
-                    name: state.user.displayName,
-                    color: this.stringToColor(state.user.displayName),
-                    joinedAt: serverTimestamp()
-                });
-                onDisconnect(myUserRef).remove();
-
-                onValue(state.usersRef, (snapshot) => {
-                    const users = snapshot.val() || {};
-                    this.updateUsersList(users);
-                });
-
-                // Chat Messages
-                onValue(state.chatRef, (snapshot) => {
-                    const messages = snapshot.val() || {};
-                    document.getElementById('chat-messages').innerHTML = '';
-                    Object.values(messages).forEach(msg => this.renderChatMessage(msg));
-                    const chatBox = document.getElementById('chat-messages');
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                });
-            },
-
-            setupSimulatedRoom: function() {
-                // Provide local simulation for UI demonstration
-                const mockUsers = {};
-                mockUsers[state.user.uid] = { name: state.user.displayName, color: this.stringToColor(state.user.displayName) };
-                this.updateUsersList(mockUsers);
-                this.renderChatMessage({ sender: "System", text: "Joined local simulated room. Firebase config missing.", timestamp: Date.now() });
-            },
-
-            updateUsersList: function(usersObj) {
-                const container = document.getElementById('active-users-list');
-                container.innerHTML = '';
-                const count = Object.keys(usersObj).length;
-                document.getElementById('users-count').textContent = count;
-
-                for (let uid in usersObj) {
-                    const u = usersObj[uid];
-                    const initial = u.name ? u.name.charAt(0).toUpperCase() : '?';
-                    const div = document.createElement('div');
-                    div.className = 'user-avatar';
-                    div.style.borderColor = u.color;
-                    div.title = u.name;
-                    div.textContent = initial;
-                    container.appendChild(div);
-                }
-            },
-
-            // --- Chat Logic ---
-            handleChatKeyPress: function(e) {
-                if (e.key === 'Enter') this.sendChatMessage();
-            },
-
-            sendChatMessage: function() {
-                const input = document.getElementById('chat-input');
-                const text = input.value.trim();
-                if (!text) return;
-
-                if (!this.simulateMode && state.roomId) {
-                    push(state.chatRef, {
-                        sender: state.user.displayName,
-                        text: text,
-                        timestamp: Date.now()
-                    });
-                } else {
-                    // Local simulation
-                    this.renderChatMessage({ sender: state.user.displayName, text: text, timestamp: Date.now() });
-                    const chatBox = document.getElementById('chat-messages');
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
-                input.value = '';
-            },
-
-            renderChatMessage: function(msg) {
-                const container = document.getElementById('chat-messages');
-                const div = document.createElement('div');
-                div.className = 'chat-msg';
-                
-                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
-                div.innerHTML = `
-                    <div class="author">${msg.sender} <span class="time">${timeStr}</span></div>
-                    <div class="text">${msg.text}</div>
-                `;
-                container.appendChild(div);
-            },
-
-            // --- Code Runner Logic ---
-            runCode: function() {
-                const lang = document.getElementById('language-select').value;
-                if (lang !== 'javascript') {
-                    this.showToast("Only JavaScript execution is currently supported in browser.", "error");
-                    return;
                 }
 
-                this.clearConsole();
-                const code = state.editor.getValue();
-                const outputDiv = document.getElementById('console-output');
-
-                // Overload console.log
-                const originalLog = console.log;
-                const originalError = console.error;
+                // Hide current
+                document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
                 
-                let outputStr = "";
-                
-                console.log = (...args) => {
-                    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ');
-                    outputDiv.innerHTML += `<div class="console-log">${this.escapeHTML(msg)}</div>`;
-                    originalLog.apply(console, args);
-                    outputDiv.scrollTop = outputDiv.scrollHeight;
-                };
-
-                console.error = (...args) => {
-                    const msg = args.map(a => String(a)).join(' ');
-                    outputDiv.innerHTML += `<div class="console-error">${this.escapeHTML(msg)}</div>`;
-                    originalError.apply(console, args);
-                    outputDiv.scrollTop = outputDiv.scrollHeight;
-                };
-
-                try {
-                    // Safe execution context
-                    outputDiv.innerHTML += `<div style="color:var(--text-muted)">> Executing code...</div>`;
-                    const runner = new Function(code);
-                    runner();
-                } catch (err) {
-                    console.error("Runtime Error:", err.message);
-                } finally {
-                    // Restore original console
-                    console.log = originalLog;
-                    console.error = originalError;
+                // Show new
+                const target = document.getElementById(`page-${pageId}`);
+                if (target) {
+                    target.classList.add('active');
+                    this.state.currentPage = pageId;
+                    window.location.hash = pageId;
                 }
+
+                // Page Specific initializations
+                if (pageId === 'dashboard') this.dashboard.loadData();
+                if (pageId === 'auth') this.auth.startTypewriter();
+                
+                // Handle public nav visibility
+                const nav = document.getElementById('public-nav');
+                if (nav) nav.style.display = pageId === 'landing' ? 'flex' : 'none';
             },
 
-            clearConsole: function() {
-                document.getElementById('console-output').innerHTML = '';
-            },
-
-            // --- Utilities ---
-            showToast: function(message, type = "info") {
+            // --- 3. UI UTILITIES ---
+            showToast: function(msg, type = "info") {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
-                toast.className = 'toast';
+                toast.className = `toast ${type}`;
                 
-                let icon = '<i class="fa-solid fa-circle-info"></i>';
-                if(type === 'success') {
-                    icon = '<i class="fa-solid fa-circle-check" style="color: var(--success-green);"></i>';
-                    toast.style.borderColor = 'var(--success-green)';
-                } else if(type === 'error') {
-                    icon = '<i class="fa-solid fa-circle-exclamation" style="color: var(--error-red);"></i>';
-                    toast.style.borderColor = 'var(--error-red)';
-                }
-
-                toast.innerHTML = `${icon} <span>${message}</span>`;
+                let icon = 'info';
+                if(type==='success') icon = 'check';
+                if(type==='error') icon = 'xmark';
+                
+                toast.innerHTML = `
+                    <i class="fa-solid fa-circle-${icon}" style="font-size: 1.2rem;"></i>
+                    <span style="font-size: 0.9rem; font-weight: 500;">${msg}</span>
+                    <div class="toast-progress" style="animation-duration: 3s;"></div>
+                `;
                 container.appendChild(toast);
-
                 setTimeout(() => {
-                    toast.style.animation = 'fadeOut 0.3s ease forwards';
+                    toast.style.transform = 'translateX(120%)';
+                    toast.style.opacity = '0';
                     setTimeout(() => toast.remove(), 300);
                 }, 3000);
             },
 
-            stringToColor: function(str) {
+            generateAvatarData: function(name) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 64; canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                
+                // Hash color
                 let hash = 0;
-                for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-                const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-                return '#' + '00000'.substring(0, 6 - c.length) + c;
+                for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                const color = `hsl(${hash % 360}, 70%, 40%)`;
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, 64, 64);
+                ctx.fillStyle = '#FFF';
+                ctx.font = 'bold 32px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText((name || '?').charAt(0).toUpperCase(), 32, 34);
+                return canvas.toDataURL();
             },
 
-            escapeHTML: function(str) {
-                return str.replace(/[&<>'"]/g, tag => ({
-                    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-                }[tag]));
+            generateRoomCode: () => Math.random().toString(36).substring(2, 8).toUpperCase(),
+
+            // --- 4. AUTH SERVICE ---
+            auth: {
+                isLoginMode: true,
+                typewriterInterval: null,
+
+                initListeners: function() {
+                    onAuthStateChanged(app.state.auth, (user) => {
+                        app.state.user = user;
+                        if (user) {
+                            // Ensure profile exists in DB
+                            get(ref(app.state.db, `users/${user.uid}/profile`)).then(snapshot => {
+                                if(!snapshot.exists()) {
+                                    set(ref(app.state.db, `users/${user.uid}/profile`), {
+                                        name: user.displayName || user.email.split('@')[0],
+                                        email: user.email,
+                                        avatar: user.photoURL || app.generateAvatarData(user.email.split('@')[0]),
+                                        createdAt: serverTimestamp()
+                                    });
+                                }
+                            });
+                            
+                            if (app.state.currentPage === 'auth' || app.state.currentPage === 'landing') {
+                                app.navigate('dashboard');
+                            }
+                        }
+                    });
+                },
+
+                toggleMode: function() {
+                    this.isLoginMode = !this.isLoginMode;
+                    document.getElementById('auth-title').innerText = this.isLoginMode ? "Welcome Back" : "Create Account";
+                    document.getElementById('auth-subtitle').innerText = this.isLoginMode ? "Sign in to continue to your dashboard" : "Sign up to start building together";
+                    document.getElementById('auth-submit-btn').innerText = this.isLoginMode ? "Sign In" : "Sign Up";
+                    document.getElementById('auth-toggle-text').innerText = this.isLoginMode ? "Don't have an account?" : "Already have an account?";
+                    document.getElementById('auth-toggle-link').innerText = this.isLoginMode ? "Create one" : "Sign in";
+                },
+
+                signInWithGoogle: async function() {
+                    if (app.state.simulateMode) return app.simulate.auth();
+                    
+                    const provider = new GoogleAuthProvider();
+                    try {
+                        await signInWithPopup(app.state.auth, provider);
+                        app.showToast("Signed in successfully", "success");
+                    } catch (error) {
+                        app.showToast(error.message, "error");
+                        this.shakeForm();
+                    }
+                },
+
+                handleEmailAuth: async function() {
+                    if (app.state.simulateMode) return app.simulate.auth();
+
+                    const email = document.getElementById('auth-email').value;
+                    const pass = document.getElementById('auth-password').value;
+                    const btn = document.getElementById('auth-submit-btn');
+                    const originalText = btn.innerText;
+                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+                    
+                    try {
+                        if (this.isLoginMode) {
+                            await signInWithEmailAndPassword(app.state.auth, email, pass);
+                            app.showToast("Welcome back!", "success");
+                        } else {
+                            const cred = await createUserWithEmailAndPassword(app.state.auth, email, pass);
+                            await updateProfile(cred.user, { displayName: email.split('@')[0] });
+                            app.showToast("Account created!", "success");
+                        }
+                    } catch (error) {
+                        app.showToast(error.message, "error");
+                        this.shakeForm();
+                    } finally {
+                        btn.innerText = originalText;
+                    }
+                },
+
+                signOut: async function() {
+                    if(app.state.simulateMode) {
+                        app.state.user = null;
+                        app.navigate('landing');
+                        return;
+                    }
+                    await signOut(app.state.auth);
+                    app.navigate('landing');
+                },
+
+                shakeForm: function() {
+                    const form = document.querySelector('.auth-form-wrapper');
+                    form.style.animation = 'shake 0.5s ease-in-out';
+                    setTimeout(() => form.style.animation = '', 500);
+                },
+
+                startTypewriter: function() {
+                    const el = document.getElementById('code-typing-demo');
+                    if(!el || this.typewriterInterval) return;
+                    
+                    const code = `function initializeCollaboration(roomId) {\n  const session = new SyncEngine({\n    url: 'wss://sync.codesync.dev',\n    room: roomId,\n    latency: 'sub-ms'\n  });\n\n  session.on('change', (diff) => {\n    editor.apply(diff);\n  });\n\n  return session.connect();\n}`;
+                    let i = 0;
+                    el.innerHTML = '';
+                    
+                    this.typewriterInterval = setInterval(() => {
+                        if (i < code.length) {
+                            let char = code.charAt(i);
+                            if(char === '\n') char = '<br>';
+                            if(char === ' ') char = '&nbsp;';
+                            // Basic pseudo highlighting
+                            if(code.substring(i).startsWith('function')) char = '<span style="color:#569cd6">f</span>';
+                            el.innerHTML += char;
+                            i++;
+                        } else {
+                            clearInterval(this.typewriterInterval);
+                            el.innerHTML += '<span class="cursor-blink"></span>';
+                        }
+                    }, 50);
+                }
+            },
+
+            // --- 5. DASHBOARD CONTROLLER ---
+            dashboard: {
+                loadData: async function() {
+                    const u = app.state.user;
+                    if (!u) return;
+
+                    // Update UI Profile
+                    document.getElementById('dash-name').innerText = u.displayName || 'Developer';
+                    document.getElementById('dash-name').classList.remove('skeleton');
+                    document.getElementById('dash-email').innerText = u.email || 'guest@codesync.local';
+                    document.getElementById('dash-email').classList.remove('skeleton');
+                    document.getElementById('dash-avatar').src = u.photoURL || app.generateAvatarData(u.displayName || 'Dev');
+
+                    if (app.state.simulateMode) {
+                        // Mock Stats
+                        document.getElementById('stat-created').innerText = '2';
+                        document.getElementById('stat-joined').innerText = '5';
+                        document.getElementById('stat-sessions').innerText = '12';
+                        document.querySelectorAll('.skeleton').forEach(el => el.classList.remove('skeleton'));
+                        
+                        // Mock Rooms
+                        const container = document.getElementById('rooms-container');
+                        container.innerHTML = `
+                            <div class="glass-panel room-card">
+                                <div class="room-header">
+                                    <div class="room-name"><i class="fa-solid fa-folder"></i> Local Demo</div>
+                                    <div class="lang-badge">javascript</div>
+                                </div>
+                                <div class="room-code" onclick="navigator.clipboard.writeText('DEMO12')">Code: DEMO12</div>
+                                <div class="room-meta"><span>Created just now</span> <span style="color:var(--success)"><i class="fa-solid fa-circle"></i> 1 online</span></div>
+                                <div class="room-actions">
+                                    <button class="btn btn-primary" onclick="app.editor.join('DEMO12')">Enter Room</button>
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Real Data Fetching
+                    try {
+                        // Fetch user stats
+                        get(ref(app.state.db, `users/${u.uid}/stats`)).then(snap => {
+                            const stats = snap.val() || { roomsCreated: 0, roomsJoined: 0, totalSessions: 0 };
+                            document.getElementById('stat-created').innerText = stats.roomsCreated;
+                            document.getElementById('stat-joined').innerText = stats.roomsJoined;
+                            document.getElementById('stat-sessions').innerText = stats.totalSessions;
+                            document.querySelectorAll('.skeleton').forEach(el => el.classList.remove('skeleton'));
+                        });
+
+                        // Fetch created rooms
+                        const roomsRef = ref(app.state.db, `users/${u.uid}/rooms/created`);
+                        onValue(roomsRef, async (snap) => {
+                            const roomList = snap.val();
+                            const container = document.getElementById('rooms-container');
+                            
+                            if (!roomList) {
+                                container.innerHTML = document.getElementById('rooms-empty').outerHTML;
+                                return;
+                            }
+
+                            container.innerHTML = '';
+                            for (const roomId in roomList) {
+                                const roomSnap = await get(ref(app.state.db, `rooms/${roomId}/info`));
+                                if(roomSnap.exists()) {
+                                    const info = roomSnap.val();
+                                    const date = new Date(info.createdAt).toLocaleDateString();
+                                    container.innerHTML += `
+                                        <div class="glass-panel room-card">
+                                            <div class="room-header">
+                                                <div class="room-name"><i class="fa-solid fa-folder"></i> ${info.name}</div>
+                                                <div class="lang-badge">${info.language}</div>
+                                            </div>
+                                            <div class="room-code" onclick="navigator.clipboard.writeText('${roomId}'); app.showToast('Code copied!','success')">Code: ${roomId}</div>
+                                            <div class="room-meta"><span>${date}</span></div>
+                                            <div class="room-actions">
+                                                <button class="btn btn-primary" onclick="app.editor.join('${roomId}')">Enter</button>
+                                                <button class="btn btn-secondary" onclick="app.dashboard.deleteRoom('${roomId}')" title="Delete"><i class="fa-solid fa-trash" style="color:var(--error)"></i></button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        });
+
+                    } catch(e) {
+                        console.error("Error loading dash data", e);
+                    }
+                },
+
+                showCreateModal: () => document.getElementById('modal-create').classList.add('active'),
+                showJoinModal: () => document.getElementById('modal-join').classList.add('active'),
+                closeModals: () => document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active')),
+
+                createRoom: async function() {
+                    const name = document.getElementById('new-room-name').value;
+                    const lang = document.getElementById('new-room-lang').value;
+                    const code = app.generateRoomCode();
+                    
+                    this.closeModals();
+
+                    if(app.state.simulateMode) {
+                        app.editor.join(code, {name, lang});
+                        return;
+                    }
+
+                    try {
+                        const uid = app.state.user.uid;
+                        // 1. Create Room Data
+                        await set(ref(app.state.db, `rooms/${code}/info`), {
+                            name: name, language: lang, createdBy: uid, createdAt: Date.now()
+                        });
+                        await set(ref(app.state.db, `rooms/${code}/code/content`), "// Write your code here...");
+                        
+                        // 2. Link to user
+                        await set(ref(app.state.db, `users/${uid}/rooms/created/${code}`), true);
+                        
+                        // 3. Update stats
+                        const statsRef = ref(app.state.db, `users/${uid}/stats`);
+                        get(statsRef).then(snap => {
+                            const s = snap.val() || {roomsCreated:0};
+                            update(statsRef, {roomsCreated: s.roomsCreated + 1});
+                        });
+
+                        app.showToast("Workspace created!", "success");
+                        app.editor.join(code);
+                    } catch(e) {
+                        app.showToast("Error creating room", "error");
+                        console.error(e);
+                    }
+                },
+
+                joinRoomSubmit: function() {
+                    const code = document.getElementById('join-room-code').value.toUpperCase();
+                    this.closeModals();
+                    app.editor.join(code);
+                },
+
+                deleteRoom: async function(roomId) {
+                    if(confirm("Are you sure you want to delete this workspace?")) {
+                        await remove(ref(app.state.db, `rooms/${roomId}`));
+                        await remove(ref(app.state.db, `users/${app.state.user.uid}/rooms/created/${roomId}`));
+                        app.showToast("Room deleted", "info");
+                    }
+                }
+            },
+
+            // --- 6. EDITOR CONTROLLER ---
+            editor: {
+                instance: null,
+                roomId: null,
+                roomRef: null,
+                usersRef: null,
+                isLocalChange: false,
+                typingTimeout: null,
+                syncTimeout: null,
+
+                join: async function(roomId, mockInfo = null) {
+                    this.roomId = roomId;
+                    app.navigate('editor');
+                    
+                    document.getElementById('ed-room-code').innerText = roomId;
+                    
+                    // Wait for Monaco to load
+                    const waitForMonaco = setInterval(() => {
+                        if(app.state.monacoReady) {
+                            clearInterval(waitForMonaco);
+                            this.initMonaco();
+                            this.setupRoom(mockInfo);
+                        }
+                    }, 100);
+                },
+
+                initMonaco: function() {
+                    if(this.instance) {
+                        this.instance.setValue('');
+                        return; // Already initialized DOM
+                    }
+                    
+                    this.instance = monaco.editor.create(document.getElementById('monaco-container'), {
+                        value: '// Loading code...',
+                        language: 'javascript',
+                        theme: 'vs-dark',
+                        automaticLayout: true,
+                        fontFamily: 'JetBrains Mono',
+                        fontSize: 14,
+                        minimap: { enabled: false },
+                        padding: { top: 15 },
+                        scrollBeyondLastLine: false,
+                        cursorBlinking: 'smooth',
+                        cursorSmoothCaretAnimation: true
+                    });
+
+                    // UI Focus effect
+                    this.instance.onDidFocusEditorText(() => document.getElementById('monaco-container').classList.add('focused'));
+                    this.instance.onDidBlurEditorText(() => document.getElementById('monaco-container').classList.remove('focused'));
+
+                    // Change Listener for Sync
+                    this.instance.onDidChangeModelContent((e) => {
+                        if (!this.isLocalChange) {
+                            this.syncCode();
+                        }
+                    });
+                },
+
+                setupRoom: async function(mockInfo) {
+                    if(app.state.simulateMode) {
+                        document.getElementById('ed-room-name').innerText = mockInfo ? mockInfo.name : "Local Workspace";
+                        document.getElementById('ed-lang-select').value = mockInfo ? mockInfo.lang : "javascript";
+                        this.changeLanguage();
+                        this.instance.setValue('// Welcome to the Local Simulator\n// Real-time sync disabled.\n\nfunction test() {\n  console.log("Hello local world!");\n}\ntest();');
+                        this.renderUserPresence({uid: 'me', name: 'You', color: '#ff6b00'});
+                        return;
+                    }
+
+                    this.roomRef = ref(app.state.db, `rooms/${this.roomId}`);
+                    
+                    // 1. Check if room exists and get info
+                    const infoSnap = await get(ref(this.roomRef, 'info'));
+                    if(!infoSnap.exists()) {
+                        app.showToast("Room not found!", "error");
+                        app.navigate('dashboard');
+                        return;
+                    }
+                    
+                    const info = infoSnap.val();
+                    document.getElementById('ed-room-name').innerText = info.name;
+                    document.getElementById('ed-lang-select').value = info.language;
+                    this.changeLanguage();
+
+                    // 2. Setup Code Sync Listener
+                    onValue(ref(this.roomRef, 'code/content'), (snap) => {
+                        const val = snap.val();
+                        if (val !== null && val !== this.instance.getValue()) {
+                            this.isLocalChange = true;
+                            const pos = this.instance.getPosition();
+                            this.instance.setValue(val);
+                            if(pos) this.instance.setPosition(pos);
+                            setTimeout(() => { this.isLocalChange = false; }, 50);
+                        }
+                    });
+
+                    // 3. Setup User Presence
+                    const myProfile = app.state.user;
+                    const myUserRef = ref(this.roomRef, `users/${myProfile.uid}`);
+                    this.myColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
+                    
+                    set(myUserRef, {
+                        name: myProfile.displayName || 'Dev',
+                        color: this.myColor,
+                        joinedAt: serverTimestamp()
+                    });
+                    onDisconnect(myUserRef).remove();
+
+                    onValue(ref(this.roomRef, 'users'), (snap) => {
+                        const users = snap.val() || {};
+                        const container = document.getElementById('ed-users-list');
+                        container.innerHTML = '';
+                        for(let uid in users) {
+                            this.renderUserPresence(users[uid]);
+                        }
+                    });
+
+                    // 4. Setup Chat Listener
+                    onValue(ref(this.roomRef, 'chat'), (snap) => {
+                        const msgs = snap.val() || {};
+                        const chatBox = document.getElementById('chat-messages');
+                        chatBox.innerHTML = '';
+                        Object.values(msgs).sort((a,b) => a.timestamp - b.timestamp).forEach(m => this.renderMessage(m));
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    });
+                },
+
+                syncCode: function() {
+                    if (app.state.simulateMode || !this.roomId) return;
+                    clearTimeout(this.syncTimeout);
+                    this.syncTimeout = setTimeout(() => {
+                        set(ref(this.roomRef, 'code/content'), this.instance.getValue());
+                    }, 300);
+                },
+
+                changeLanguage: function() {
+                    const lang = document.getElementById('ed-lang-select').value;
+                    if(this.instance) monaco.editor.setModelLanguage(this.instance.getModel(), lang);
+                    if(!app.state.simulateMode && this.roomId) {
+                        update(ref(this.roomRef, 'info'), {language: lang});
+                    }
+                },
+
+                renderUserPresence: function(u) {
+                    const container = document.getElementById('ed-users-list');
+                    const initial = u.name.charAt(0).toUpperCase();
+                    const div = document.createElement('div');
+                    div.className = 'avatar';
+                    div.style.borderColor = u.color;
+                    div.title = u.name;
+                    div.innerText = initial;
+                    container.appendChild(div);
+                },
+
+                // Chat
+                toggleChat: function() {
+                    const chat = document.getElementById('ed-chat');
+                    chat.classList.toggle('collapsed');
+                },
+
+                handleChatKeyPress: function(e) {
+                    if(e.key === 'Enter') this.sendChatMessage();
+                },
+
+                sendChatMessage: function() {
+                    const input = document.getElementById('chat-input');
+                    const text = input.value.trim();
+                    if(!text) return;
+
+                    const msg = {
+                        text,
+                        sender: app.state.user ? app.state.user.displayName : 'Guest',
+                        uid: app.state.user ? app.state.user.uid : 'local',
+                        timestamp: Date.now()
+                    };
+
+                    if(!app.state.simulateMode) {
+                        push(ref(this.roomRef, 'chat'), msg);
+                    } else {
+                        this.renderMessage(msg);
+                        const box = document.getElementById('chat-messages');
+                        box.scrollTop = box.scrollHeight;
+                    }
+                    input.value = '';
+                },
+
+                renderMessage: function(msg) {
+                    const isSelf = app.state.user && msg.uid === app.state.user.uid;
+                    const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const html = `
+                        <div class="chat-msg ${isSelf ? 'self' : 'other'}">
+                            ${!isSelf ? `<div class="msg-info"><span>${msg.sender}</span> <span>${time}</span></div>` : `<div class="msg-info" style="justify-content:flex-end"><span>${time}</span></div>`}
+                            <div class="msg-bubble">${msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                        </div>
+                    `;
+                    document.getElementById('chat-messages').insertAdjacentHTML('beforeend', html);
+                },
+
+                // Code Runner
+                toggleConsole: function() {
+                    document.getElementById('ed-console').classList.toggle('open');
+                },
+                clearConsole: function() {
+                    document.getElementById('console-output').innerHTML = '';
+                },
+                
+                runCode: function() {
+                    const lang = document.getElementById('ed-lang-select').value;
+                    if(lang !== 'javascript') {
+                        app.showToast("In-browser runner only supports JavaScript.", "error");
+                        return;
+                    }
+
+                    document.getElementById('ed-console').classList.add('open');
+                    this.clearConsole();
+                    const code = this.instance.getValue();
+                    const out = document.getElementById('console-output');
+
+                    const origLog = console.log;
+                    const origErr = console.error;
+
+                    console.log = (...args) => {
+                        const txt = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+                        out.innerHTML += `<div class="console-log">${txt.replace(/</g, "&lt;")}</div>`;
+                        out.scrollTop = out.scrollHeight;
+                        origLog.apply(console, args);
+                    };
+
+                    console.error = (...args) => {
+                        const txt = args.map(a => String(a)).join(' ');
+                        out.innerHTML += `<div class="console-error">${txt.replace(/</g, "&lt;")}</div>`;
+                        out.scrollTop = out.scrollHeight;
+                        origErr.apply(console, args);
+                    };
+
+                    try {
+                        out.innerHTML += `<div style="color:#888">> Executing...</div>`;
+                        new Function(code)();
+                        out.innerHTML += `<div style="color:var(--success)">> Execution complete</div>`;
+                    } catch(e) {
+                        console.error(e.message);
+                    } finally {
+                        console.log = origLog;
+                        console.error = origErr;
+                    }
+                },
+
+                leaveRoom: function() {
+                    if(!app.state.simulateMode && this.roomRef && app.state.user) {
+                        remove(ref(this.roomRef, `users/${app.state.user.uid}`));
+                    }
+                    this.roomId = null;
+                    this.roomRef = null;
+                    app.navigate('dashboard');
+                },
+                
+                copyRoomCode: function() {
+                    navigator.clipboard.writeText(this.roomId);
+                    app.showToast("Code copied!", "success");
+                }
+            },
+
+            // --- 7. GUIDE CONTROLLER ---
+            guide: {
+                currentStep: 1,
+                init: function() {
+                    this.updateUI();
+                },
+                next: function() {
+                    if(this.currentStep < 4) {
+                        this.currentStep++;
+                        this.updateUI();
+                    }
+                },
+                prev: function() {
+                    if(this.currentStep > 1) {
+                        this.currentStep--;
+                        this.updateUI();
+                    }
+                },
+                updateUI: function() {
+                    document.querySelectorAll('.step').forEach((el, i) => {
+                        if(i+1 < this.currentStep) { el.classList.add('completed'); el.classList.remove('active'); }
+                        else if(i+1 === this.currentStep) { el.classList.add('active'); el.classList.remove('completed'); }
+                        else { el.classList.remove('active', 'completed'); }
+                    });
+                    
+                    document.querySelectorAll('.guide-slide').forEach(el => el.classList.remove('active'));
+                    document.getElementById(`guide-${this.currentStep}`).classList.add('active');
+
+                    document.getElementById('guide-prev').disabled = this.currentStep === 1;
+                    const nextBtn = document.getElementById('guide-next');
+                    if(this.currentStep === 4) {
+                        nextBtn.style.display = 'none';
+                    } else {
+                        nextBtn.style.display = 'block';
+                    }
+                }
+            },
+
+            // --- 8. VISUAL EFFECTS ---
+            initParticles: function() {
+                const canvas = document.getElementById('particle-canvas');
+                if(!canvas) return;
+                const ctx = canvas.getContext('2d');
+                let width, height;
+                let particles = [];
+
+                const resize = () => {
+                    width = canvas.width = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                };
+                window.addEventListener('resize', resize);
+                resize();
+
+                class Particle {
+                    constructor() {
+                        this.x = Math.random() * width;
+                        this.y = Math.random() * height;
+                        this.vx = (Math.random() - 0.5) * 0.5;
+                        this.vy = (Math.random() - 0.5) * 0.5 - 0.5; // Drift up
+                        this.radius = Math.random() * 2 + 1;
+                        this.alpha = Math.random() * 0.5 + 0.1;
+                    }
+                    update() {
+                        this.x += this.vx;
+                        this.y += this.vy;
+                        if(this.y < 0) { this.y = height; this.x = Math.random() * width; }
+                        if(this.x < 0) this.x = width;
+                        if(this.x > width) this.x = 0;
+                    }
+                    draw() {
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255, 107, 0, ${this.alpha})`;
+                        ctx.fill();
+                    }
+                }
+
+                for(let i=0; i<50; i++) particles.push(new Particle());
+
+                const animate = () => {
+                    if(app.state.currentPage !== 'landing') {
+                        requestAnimationFrame(animate);
+                        return; // pause if not on landing
+                    }
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    // Draw connections
+                    for(let i=0; i<particles.length; i++) {
+                        for(let j=i+1; j<particles.length; j++) {
+                            const dx = particles[i].x - particles[j].x;
+                            const dy = particles[i].y - particles[j].y;
+                            const dist = Math.sqrt(dx*dx + dy*dy);
+                            if(dist < 150) {
+                                ctx.beginPath();
+                                ctx.moveTo(particles[i].x, particles[i].y);
+                                ctx.lineTo(particles[j].x, particles[j].y);
+                                ctx.strokeStyle = `rgba(255, 107, 0, ${0.1 * (1 - dist/150)})`;
+                                ctx.stroke();
+                            }
+                        }
+                    }
+
+                    particles.forEach(p => { p.update(); p.draw(); });
+                    requestAnimationFrame(animate);
+                };
+                animate();
+            },
+
+            initScrollObservers: function() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-visible');
+                            
+                            // Trigger counters
+                            if(entry.target.id === 'stats-section') {
+                                document.querySelectorAll('.counter').forEach(counter => {
+                                    const target = +counter.getAttribute('data-target');
+                                    const updateCount = () => {
+                                        const c = +counter.innerText;
+                                        const inc = target / 50;
+                                        if(c < target) {
+                                            counter.innerText = Math.ceil(c + inc);
+                                            setTimeout(updateCount, 30);
+                                        } else {
+                                            counter.innerText = target.toLocaleString() + "+";
+                                        }
+                                    };
+                                    updateCount();
+                                });
+                            }
+                            
+                            // Trigger Timeline
+                            if(entry.target.id === 'timeline') {
+                                document.getElementById('timeline-progress').style.height = '100%';
+                            }
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                document.querySelectorAll('.animate-on-scroll, #stats-section, #timeline').forEach(el => observer.observe(el));
+                
+                // Navbar scroll effect
+                window.addEventListener('scroll', () => {
+                    const nav = document.getElementById('public-nav');
+                    if(nav) {
+                        if(window.scrollY > 50) nav.classList.add('scrolled');
+                        else nav.classList.remove('scrolled');
+                    }
+                });
+            },
+
+            // --- 9. SIMULATION MOCK ---
+            simulate: {
+                init: function() {
+                    // Create mock user
+                    app.state.user = {
+                        uid: 'local_dev_1',
+                        displayName: 'Local Developer',
+                        email: 'dev@local.host',
+                        photoURL: null
+                    };
+                },
+                auth: function() {
+                    app.showToast("Simulated Login Successful", "success");
+                    setTimeout(() => app.navigate('dashboard'), 1000);
+                }
             }
         };
 
-        // Initialize application on load
-        window.onload = () => app.init();
+        // Bootstrap
+        window.addEventListener('DOMContentLoaded', () => app.init());
 
     </script>
 </body>
