@@ -111,7 +111,7 @@ document.addEventListener('click', (e) => {
     if (e.target.classList.contains('open-room-btn')) {
         const roomId = e.target.dataset.roomId;
         if (roomId) {
-            window.location.href = \`editor.html?room=\${roomId}\`;
+            window.location.href = `editor.html?room=${roomId}`;
         }
     }
 });
@@ -483,6 +483,7 @@ if (document.getElementById('explore-section')
 // --- SNAPSHOTS DATA LOAD ---
 async function loadSnapshots() {
     const list = document.getElementById('snapshot-list');
+    const emptyState = document.getElementById('empty-snapshots');
     
     // Remove existing items
     Array.from(list.children).forEach(c => {
@@ -495,11 +496,11 @@ async function loadSnapshots() {
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-            emptyState.classList.remove('hidden');
+            if (emptyState) emptyState.classList.remove('hidden');
             return;
         }
         
-        emptyState.classList.add('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
@@ -517,7 +518,7 @@ async function loadSnapshots() {
                     </div>
                 </div>
                 <div class="snap-actions">
-                    <button class="btn-secondary btn-sm" onclick="viewSnapshot('${docSnap.id}', \`${encodeURIComponent(data.code)}\`)">View</button>
+                    <button class="btn-secondary btn-sm" onclick="viewSnapshot('${docSnap.id}', '${encodeURIComponent(data.code || '')}')">View</button>
                     <button class="btn-primary btn-sm" onclick="window.location.href='editor.html?room=${data.roomId}&restore=${docSnap.id}'">Restore</button>
                 </div>
             `;
@@ -537,13 +538,13 @@ window.viewSnapshot = (id, encodedCode) => {
     document.getElementById('snap-modal').classList.add('active');
 };
 
-const joinRoom = async (roomCode) => {
+// Expose joinRoom globally so inline onclick and btn-join-submit can call it
+window.joinRoom = async (roomCode) => {
+  const joinSubmitBtn = document.getElementById('btn-join-submit');
   try {
     // Validate input
     if (!roomCode || roomCode.length !== 6) {
-      showToast(
-        'Please enter a valid 6-digit room code',
-        'error');
+      showToast('Please enter a valid 6-character room code', 'error');
       return;
     }
 
@@ -553,31 +554,27 @@ const joinRoom = async (roomCode) => {
       return;
     }
 
-    // Show loading
-    const joinBtn = document.getElementById(
-      'join-room-btn');
-    joinBtn.disabled = true;
-    joinBtn.textContent = 'Joining...';
+    // Show loading on the modal submit button
+    if (joinSubmitBtn) {
+      joinSubmitBtn.disabled = true;
+      joinSubmitBtn.querySelector('.btn-text').textContent = 'Joining...';
+    }
 
     // Find room by roomCode in Firestore
     const roomsQuery = query(
       collection(db, 'rooms'),
-      where('roomCode', '==', 
-        roomCode.toUpperCase())
+      where('roomCode', '==', roomCode.toUpperCase())
     );
     const roomSnap = await getDocs(roomsQuery);
 
     // Check if room exists
     if (roomSnap.empty) {
-      showToast('Room not found. Check the code.',
-        'error');
-      // Shake the input
-      const input = document.getElementById(
-        'join-code-input');
-      input.classList.add('shake');
-      setTimeout(() => {
-        input.classList.remove('shake');
-      }, 500);
+      showToast('Room not found. Check the code.', 'error');
+      // Shake the code boxes
+      document.querySelectorAll('.code-box').forEach(box => {
+        box.classList.add('error');
+        setTimeout(() => box.classList.remove('error'), 500);
+      });
       return;
     }
 
@@ -586,21 +583,16 @@ const joinRoom = async (roomCode) => {
     const roomId = roomDoc.id;
 
     // Check if user is already owner
-    if (roomData.owner === user.uid) {
-      // Just redirect to room, don't add as collaborator
-      window.location.href = 
-        `editor.html?room=${roomId}`;
+    if (roomData.owner === user.uid || roomData.ownerId === user.uid) {
+      window.location.href = `editor.html?room=${roomId}`;
       return;
     }
 
     // Check if already a collaborator
-    const alreadyJoined = roomData.collaborators
-      ?.some(c => c.userId === user.uid);
+    const alreadyJoined = roomData.collaborators?.some(c => c.userId === user.uid);
     
     if (!alreadyJoined) {
-      // Add user to collaborators array
-      await updateDoc(
-        doc(db, 'rooms', roomId), {
+      await updateDoc(doc(db, 'rooms', roomId), {
         collaborators: arrayUnion({
           userId: user.uid,
           userName: user.displayName || user.email,
@@ -608,56 +600,26 @@ const joinRoom = async (roomCode) => {
           joinedAt: new Date().toISOString()
         })
       });
-
-      // Update user stats
-      await updateDoc(
-        doc(db, 'users', user.uid), {
+      await updateDoc(doc(db, 'users', user.uid), {
         'stats.roomsJoined': increment(1)
       });
     }
 
-    // Redirect to editor
     showToast('Joining room...', 'success');
     setTimeout(() => {
-      window.location.href = 
-        `editor.html?room=${roomId}`;
+      window.location.href = `editor.html?room=${roomId}`;
     }, 500);
 
   } catch (error) {
     console.error('Join room error:', error);
-    showToast('Failed to join: ' 
-      + error.message, 'error');
+    showToast('Failed to join: ' + error.message, 'error');
   } finally {
-    const joinBtn = document.getElementById(
-      'join-room-btn');
-    if (joinBtn) {
-      joinBtn.disabled = false;
-      joinBtn.textContent = 'Join Room';
+    if (joinSubmitBtn) {
+      joinSubmitBtn.disabled = false;
+      joinSubmitBtn.querySelector('.btn-text').textContent = 'Join Room';
     }
   }
 };
-
-// Join room button click handler
-const joinBtn = document.getElementById(
-  'join-room-btn');
-if (joinBtn) {
-  joinBtn.addEventListener('click', () => {
-    const code = document.getElementById(
-      'join-code-input').value.trim();
-    joinRoom(code);
-  });
-}
-
-// Join on Enter key press
-const joinInput = document.getElementById(
-  'join-code-input');
-if (joinInput) {
-  joinInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      joinRoom(e.target.value.trim());
-    }
-  });
-}
 
 // --- MODALS & FORMS ---
 // Create Room
@@ -665,15 +627,24 @@ document.getElementById('btn-quick-create').addEventListener('click', () => {
     document.getElementById('create-modal').classList.add('active');
 });
 
-const createRoom = async (roomName, language, isPublic) => {
-  try {
-    // Show loading state on create button
-    const createBtn = document.getElementById(
-      'create-room-btn');
-    createBtn.disabled = true;
-    createBtn.textContent = 'Creating...';
+// Generate 6 char room code
+const generateRoomCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
 
-    // Get current logged in user
+const createRoom = async (roomName, language, isPublic) => {
+  const createBtn = document.getElementById('btn-create-submit');
+  try {
+    if (createBtn) {
+      createBtn.disabled = true;
+      createBtn.querySelector('.btn-text').textContent = 'Creating...';
+    }
+
     const user = auth.currentUser;
     if (!user) {
       showToast('You must be logged in', 'error');
@@ -682,28 +653,20 @@ const createRoom = async (roomName, language, isPublic) => {
 
     // Generate unique 6-char room code
     const roomCode = generateRoomCode();
-
-    // Check if code already exists in Firestore
     const existing = await getDocs(
-      query(
-        collection(db, 'rooms'),
-        where('roomCode', '==', roomCode)
-      )
+      query(collection(db, 'rooms'), where('roomCode', '==', roomCode))
     );
-    // If code exists regenerate
-    const finalCode = existing.empty 
-      ? roomCode 
-      : generateRoomCode();
+    const finalCode = existing.empty ? roomCode : generateRoomCode();
 
     // Create room document in Firestore
-    const roomRef = await addDoc(
-      collection(db, 'rooms'), {
+    const roomRef = await addDoc(collection(db, 'rooms'), {
       name: roomName,
       roomCode: finalCode,
-      language: language,
+      language: language || 'javascript',
       isPublic: isPublic,
       owner: user.uid,
-      ownerName: user.displayName || user.email,
+      ownerId: user.uid,
+      ownerName: userData?.displayName || user.displayName || user.email,
       collaborators: [],
       createdAt: serverTimestamp(),
       lastActive: serverTimestamp(),
@@ -713,73 +676,45 @@ const createRoom = async (roomName, language, isPublic) => {
     });
 
     // Update user stats in Firestore
-    const userRef = doc(db, 'users', user.uid);
-    await updateDoc(userRef, {
+    await updateDoc(doc(db, 'users', user.uid), {
       'stats.roomsCreated': increment(1)
     });
 
     // Close modal
-    if (typeof closeCreateModal === 'function') closeCreateModal();
+    document.getElementById('create-modal').classList.remove('active');
 
-    // Show success toast
-    showToast('Room created successfully!', 
-      'success');
-
-    // Redirect to editor with room ID
-    window.location.href = 
-      \`editor.html?room=\${roomRef.id}\`;
+    showToast('Room created! Redirecting...', 'success');
+    setTimeout(() => {
+      window.location.href = `editor.html?room=${roomRef.id}`;
+    }, 600);
 
   } catch (error) {
     console.error('Create room error:', error);
-    showToast('Failed to create room: ' 
-      + error.message, 'error');
+    showToast('Failed to create room: ' + error.message, 'error');
   } finally {
-    const createBtn = document.getElementById(
-      'create-room-btn');
     if (createBtn) {
       createBtn.disabled = false;
-      createBtn.textContent = 'Create Room';
+      createBtn.querySelector('.btn-text').textContent = 'Create Room';
     }
   }
 };
 
-// Generate 6 char room code
-const generateRoomCode = () => {
-  const chars = 
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(
-      Math.floor(Math.random() * chars.length)
-    );
-  }
-  return code;
-};
-
-// Create room form submit handler
-const createRoomForm = document.getElementById(
-  'create-room-form');
+// Create room form submit handler — uses the correct element IDs from dashboard.html
+const createRoomForm = document.getElementById('create-room-form');
 if (createRoomForm) {
-  createRoomForm.addEventListener(
-    'submit', async (e) => {
+  createRoomForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const roomName = document.getElementById(
-      'room-name-input').value.trim();
-    const language = document.getElementById(
-      'language-select').value;
-    const isPublic = document.getElementById(
-      'public-toggle').checked;
+    const roomName = document.getElementById('new-room-name')?.value.trim();
+    const language = document.getElementById('new-room-template')?.value || 'javascript';
+    const isPublic = document.getElementById('new-room-public')?.checked ?? true;
 
     if (!roomName) {
-      showToast('Please enter a room name', 
-        'error');
+      showToast('Please enter a room name', 'error');
       return;
     }
     if (roomName.length < 3) {
-      showToast(
-        'Room name must be at least 3 characters',
-        'error');
+      showToast('Room name must be at least 3 characters', 'error');
       return;
     }
 
@@ -808,7 +743,7 @@ document.getElementById('btn-join-submit').addEventListener('click', () => {
     if (code.length === 6) {
         window.joinRoom(code);
     } else {
-        codeBoxes.forEach(b => { if(!b.value) b.classList.add('error'); setTimeout(()=>b.classList.remove('error'),400); });
+        codeBoxes.forEach(b => { if(!b.value) { b.classList.add('error'); setTimeout(()=>b.classList.remove('error'),400); } });
         showToast("Please enter a 6-character code.", "error");
     }
 });
