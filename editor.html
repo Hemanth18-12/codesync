@@ -3,187 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor | CodeSync</title>
+    <title>CodeSync | Editor</title>
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/editor.css">
     
-    <!-- Prism.js for chat code highlighting -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
-    
-    <!-- Monaco Editor Loader -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    <!-- Monaco Editor Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <script src="https://unpkg.com/prettier@2.8.8/standalone.js"></script>
+    <script src="https://unpkg.com/prettier@2.8.8/parser-babel.js"></script>
+    <script src="https://unpkg.com/prettier@2.8.8/parser-html.js"></script>
+    <script src="https://unpkg.com/prettier@2.8.8/parser-postcss.js"></script>
 </head>
 <body class="editor-layout">
+
+    <!-- LOADING OVERLAY -->
+    <div class="editor-loading" id="editor-loading">
+        <div class="spinner" style="width: 3rem; height: 3rem; margin-bottom: 1rem;"></div>
+        <h2 style="font-family: var(--font-code); color: var(--primary-color);">Syncing Workspace...</h2>
+    </div>
+
+    <!-- TOAST CONTAINER -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- TOP HEADER BAR -->
+    <!-- HEADER -->
     <header class="editor-header">
         <div class="header-left">
-            <a href="dashboard.html" class="logo" title="Back to Dashboard">
-                <span class="logo-icon">&lt;/&gt;</span>
-            </a>
-            <div class="room-info">
-                <h2 id="room-name" class="editable-title">Loading Room...</h2>
-                <span class="room-badge" id="room-code-badge" title="Click to copy">------</span>
+            <a href="dashboard.html" class="room-brand" title="Back to Dashboard">&lt;/&gt; CodeSync</a>
+            <div class="room-name-display">
+                <span id="room-name">Loading Room...</span>
+                <span class="read-only-badge hidden" id="readonly-badge">READ ONLY</span>
             </div>
         </div>
-        
+
         <div class="header-center">
-            <div class="language-selector glass-card">
-                <select id="editor-lang">
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
-                    <option value="html">HTML</option>
-                    <option value="css">CSS</option>
-                    <!-- More dynamically added -->
-                </select>
+            <div class="active-users-bar" id="active-users-bar">
+                <!-- Avatars injected here -->
             </div>
-            <div class="presence-stack" id="presence-stack">
-                <!-- Avatars added by JS -->
-            </div>
-            <button class="btn-secondary btn-sm" id="btn-invite">
-                <span class="icon">🔗</span> Invite
-            </button>
         </div>
 
         <div class="header-right">
-            <button class="btn-run" id="btn-run" title="Run Code (Ctrl+Enter)">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
-                Run
-            </button>
-            <button class="icon-btn" id="btn-snapshot" title="Save Snapshot (Ctrl+S)">📸</button>
-            <button class="icon-btn" id="btn-fullscreen" title="Toggle Fullscreen (F11)">🔲</button>
-            
-            <div class="settings-dropdown">
-                <button class="icon-btn" id="btn-settings" title="Editor Settings">⚙️</button>
-                <div class="dropdown-menu glass-card hidden" id="settings-menu">
-                    <div class="menu-item">
-                        <span>Theme</span>
-                        <select id="pref-theme">
-                            <option value="vs-dark">VS Dark</option>
-                            <option value="vs">VS Light</option>
-                            <option value="hc-black">High Contrast</option>
-                        </select>
-                    </div>
-                    <div class="menu-item">
-                        <span>Font Size</span>
-                        <div class="num-input">
-                            <button id="font-dec">-</button>
-                            <span id="font-val">14</span>
-                            <button id="font-inc">+</button>
-                        </div>
-                    </div>
-                    <div class="menu-item">
-                        <span>Word Wrap</span>
-                        <label class="switch"><input type="checkbox" id="pref-wrap" checked><span class="slider round"></span></label>
-                    </div>
-                    <div class="menu-item">
-                        <span>Minimap</span>
-                        <label class="switch"><input type="checkbox" id="pref-minimap" checked><span class="slider round"></span></label>
-                    </div>
-                </div>
-            </div>
-            <button class="btn-danger btn-sm" id="btn-leave">Leave</button>
+            <button class="btn-secondary btn-sm" id="btn-format" title="Format Code (Shift+Alt+F)">✨ Format</button>
+            <button class="btn-secondary btn-sm" id="btn-snapshot" title="Save Snapshot">📸 Save</button>
+            <button class="btn-secondary btn-sm" id="btn-preview-toggle">👁️ Preview</button>
+            <button class="btn-primary btn-sm" id="btn-room-settings">⚙️ Settings</button>
         </div>
     </header>
 
-    <!-- MAIN WORKSPACE -->
+    <!-- WORKSPACE -->
     <div class="workspace">
         
-        <!-- LEFT TOOLS PANEL -->
-        <aside class="panel-left" id="panel-left">
-            <div class="panel-header">
-                <h3>Explorer</h3>
-                <button class="icon-btn" title="New File" disabled>📄</button>
-            </div>
-            <div class="file-tree">
-                <div class="file-item active">
-                    <span class="file-icon">📜</span>
-                    <span class="file-name">main code</span>
-                </div>
-                <!-- File system expansion planned for v3 -->
-            </div>
-            
-            <div class="shortcuts-panel">
-                <h4>Shortcuts</h4>
-                <ul>
-                    <li><span>Ctrl+Enter</span>Run Code</li>
-                    <li><span>Ctrl+S</span>Snapshot</li>
-                    <li><span>Ctrl+B</span>Toggle Sidebar</li>
-                    <li><span>Ctrl+K</span>Toggle Chat</li>
-                    <li><span>Ctrl+`</span>Toggle Console</li>
-                </ul>
-            </div>
+        <!-- ACTIVITY BAR -->
+        <aside class="activity-bar">
+            <div class="activity-item active" data-panel="explorer" title="Explorer">📁</div>
+            <div class="activity-item" data-panel="chat" title="Room Chat">💬</div>
         </aside>
 
-        <!-- CENTER EDITOR -->
-        <main class="editor-container">
-            <div id="monaco-container"></div>
+        <!-- SIDEBAR -->
+        <aside class="editor-sidebar" id="editor-sidebar">
             
-            <!-- BOTTOM CONSOLE -->
-            <div class="console-panel collapsed" id="console-panel">
-                <div class="resize-handle" id="console-resize"></div>
-                <div class="console-header">
-                    <div class="tabs">
-                        <span class="tab active">Terminal</span>
-                        <span class="tab">Output</span>
-                    </div>
-                    <div class="actions">
-                        <button class="icon-btn" id="btn-clear-console" title="Clear">🗑️</button>
-                        <button class="icon-btn" id="btn-close-console" title="Close">⬇️</button>
-                    </div>
+            <!-- EXPLORER PANEL -->
+            <div class="sidebar-panel active" id="panel-explorer">
+                <div class="sidebar-title">
+                    <span>Workspace</span>
+                    <button class="icon-btn" id="btn-open-folder" title="Open Local Folder (VS Code Mode)">📂</button>
                 </div>
-                <div class="console-body" id="console-output">
-                    <div class="console-line system">CodeSync Console Ready.</div>
-                    <div class="console-input-line">
-                        <span class="prompt">&gt;</span>
-                        <input type="text" id="console-input" autocomplete="off" spellcheck="false">
+                <div class="file-tree" id="file-tree">
+                    <!-- File tree injected here -->
+                    <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+                        <p style="margin-bottom: 1rem;">No local folder opened.</p>
+                        <button class="btn-secondary btn-sm" id="btn-open-folder-center">Open Local Folder</button>
+                        <p style="margin-top: 1rem; font-size: 0.7rem;">Or select files from the list above if created remotely.</p>
                     </div>
                 </div>
             </div>
+
+            <!-- CHAT PANEL -->
+            <div class="sidebar-panel" id="panel-chat">
+                <div class="sidebar-title">
+                    <span>Room Chat</span>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages injected here -->
+                </div>
+                <div class="typing-indicator" id="typing-indicator"></div>
+                <div class="chat-input-area">
+                    <form id="chat-form" class="chat-input-wrapper">
+                        <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                        <button type="submit">➤</button>
+                    </form>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- MAIN EDITOR AREA -->
+        <main class="editor-main">
+            
+            <!-- TABS -->
+            <div class="editor-tabs" id="editor-tabs">
+                <!-- File tabs injected here -->
+                <div class="file-tab active" data-path="main">
+                    <span class="file-icon">📄</span>
+                    <span class="tab-label">main</span>
+                </div>
+            </div>
+
+            <div class="split-view">
+                
+                <!-- MONACO WRAPPER -->
+                <div class="monaco-wrapper">
+                    <div id="monaco-container"></div>
+                </div>
+
+                <!-- LIVE PREVIEW PANEL -->
+                <div class="preview-panel" id="preview-panel">
+                    <div class="preview-header">
+                        <span>Live Preview</span>
+                        <button class="icon-btn" id="btn-refresh-preview" title="Refresh">🔄</button>
+                    </div>
+                    <iframe class="preview-iframe" id="preview-iframe" sandbox="allow-scripts allow-modals"></iframe>
+                </div>
+
+            </div>
+
         </main>
-
-        <!-- RIGHT CHAT PANEL -->
-        <aside class="panel-right" id="panel-right">
-            <div class="chat-header">
-                <h3>Room Chat</h3>
-                <span class="badge" id="online-count">1 Online</span>
-                <button class="icon-btn" id="btn-close-chat">➡️</button>
-            </div>
-            
-            <div class="members-list collapsed" id="members-list">
-                <!-- Populated by JS -->
-            </div>
-            <div class="toggle-members" id="btn-toggle-members">
-                <span>View Members</span> ▼
-            </div>
-
-            <div class="chat-messages" id="chat-messages">
-                <!-- System Message -->
-                <div class="sys-msg">Welcome to the room.</div>
-                <!-- Messages populated by JS -->
-            </div>
-
-            <div class="typing-indicator hidden" id="typing-indicator">
-                <span id="typing-text">Someone is typing</span>
-                <div class="dots-loader"><span></span><span></span><span></span></div>
-            </div>
-
-            <div class="chat-input-area">
-                <textarea id="chat-input" placeholder="Type a message... (Markdown code supported)" rows="1"></textarea>
-                <button class="btn-send" id="btn-send-chat">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
-            </div>
-        </aside>
     </div>
 
-    <!-- Hidden iframe for sandboxed execution -->
-    <iframe id="sandbox-frame" style="display:none;" sandbox="allow-scripts"></iframe>
+    <!-- STATUS BAR -->
+    <footer class="status-bar">
+        <div class="status-left">
+            <span class="status-item" id="status-connection">⚡ Connected</span>
+            <span class="status-item" id="status-error" style="color: var(--error-color); display: none;">✕ Disconnected</span>
+            <span class="status-item" id="status-file">main</span>
+        </div>
+        <div class="status-right">
+            <span class="status-item" id="status-cursor">Ln 1, Col 1</span>
+            <span class="status-item" id="status-lang">JavaScript</span>
+            <span class="status-item">UTF-8</span>
+        </div>
+    </footer>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
-    
+    <!-- ROOM SETTINGS MODAL -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Room Settings</h2>
+                <button class="icon-btn" onclick="document.getElementById('settings-modal').classList.remove('active')">✕</button>
+            </div>
+            
+            <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <label style="margin:0; font-weight:bold;">Lock Room</label>
+                    <p style="font-size:0.8rem; margin:0;">Prevent new users from joining.</p>
+                </div>
+                <label class="switch"><input type="checkbox" id="setting-lock"><span class="slider round"></span></label>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Permissions</h3>
+            <div class="permissions-list" id="permissions-list">
+                <!-- Populated via JS -->
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="document.getElementById('settings-modal').classList.remove('active')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SNAPSHOT NAME MODAL -->
+    <div class="modal-overlay" id="snap-name-modal">
+        <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Save Snapshot</h2>
+                <button class="icon-btn" onclick="document.getElementById('snap-name-modal').classList.remove('active')">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Snapshot Label</label>
+                <input type="text" id="snap-label" placeholder="e.g., Working Auth Config" autofocus>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('snap-name-modal').classList.remove('active')">Cancel</button>
+                <button class="btn-primary" id="btn-save-snapshot-confirm">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CORE LOGIC MODULES -->
     <script type="module" src="js/editor.js"></script>
+    <script type="module" src="js/file-system.js"></script>
+    <script type="module" src="js/chat.js"></script>
+    <script type="module" src="js/rooms.js"></script>
 </body>
 </html>

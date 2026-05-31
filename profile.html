@@ -3,249 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile | CodeSync</title>
+    <title>Profile Settings | CodeSync</title>
     <link rel="stylesheet" href="css/global.css">
-    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/profile.css">
 </head>
-<body class="dashboard-layout">
+<body class="profile-layout">
     <div class="toast-container" id="toast-container"></div>
+    <input type="file" id="avatar-input" accept="image/jpeg, image/png, image/webp" hidden>
 
-    <!-- SIDEBAR (same structure as dashboard) -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <a href="dashboard.html" class="logo">
-                <span class="logo-icon">&lt;/&gt;</span>
-                <span class="logo-text">CodeSync</span>
-            </a>
-            <span class="version-badge">v2.0</span>
-            <button class="collapse-btn" id="collapse-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-        </div>
-        <div class="user-profile-mini">
-            <div class="avatar" id="user-avatar">--</div>
-            <div class="user-info">
-                <h4 id="user-name">Loading...</h4>
-                <p id="user-email">loading@email.com</p>
+    <main class="profile-content">
+        <div class="profile-header">
+            <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn-primary" id="btn-save" style="display: none;">Save Changes</button>
             </div>
-            <div class="status-dot online"></div>
         </div>
-        <nav class="sidebar-nav">
-            <a href="dashboard.html" class="nav-item"><span class="icon">🏠</span><span class="label">Overview</span></a>
-            <a href="dashboard.html#my-rooms" class="nav-item"><span class="icon">🚪</span><span class="label">My Rooms</span></a>
-            <a href="dashboard.html#explore" class="nav-item"><span class="icon">🌍</span><span class="label">Explore</span></a>
-            <div class="nav-divider"></div>
-            <a href="profile.html" class="nav-item active"><span class="icon">👤</span><span class="label">Profile</span></a>
-            <a href="guide.html" class="nav-item"><span class="icon">❓</span><span class="label">Guide</span></a>
-        </nav>
-        <div class="sidebar-footer">
-            <button class="btn-logout" id="btn-logout"><span class="icon">🚪</span><span class="label">Logout</span></button>
-        </div>
-    </aside>
 
-    <!-- MAIN PROFILE CONTENT -->
-    <main class="main-content">
-        <header class="top-header">
-            <h2>My Profile</h2>
-        </header>
-
-        <div class="profile-scroll">
-            <!-- PROFILE HERO -->
-            <div class="profile-hero glass-card animate-on-scroll">
-                <div class="avatar-section">
-                    <div class="avatar-large" id="profile-avatar">--</div>
-                    <div class="color-picker-row" id="color-picker-row">
-                        <button class="color-swatch" data-color="#7aa2f7" style="background:#7aa2f7"></button>
-                        <button class="color-swatch" data-color="#bb9af7" style="background:#bb9af7"></button>
-                        <button class="color-swatch" data-color="#9ece6a" style="background:#9ece6a"></button>
-                        <button class="color-swatch" data-color="#e0af68" style="background:#e0af68"></button>
-                        <button class="color-swatch" data-color="#f7768e" style="background:#f7768e"></button>
-                        <button class="color-swatch" data-color="#73daca" style="background:#73daca"></button>
-                        <button class="color-swatch" data-color="#ff9e64" style="background:#ff9e64"></button>
-                        <button class="color-swatch" data-color="#2ac3de" style="background:#2ac3de"></button>
-                    </div>
-                    <button class="btn-secondary btn-xs" id="btn-pick-color">Change Color</button>
-                </div>
-                <div class="profile-info">
-                    <h2 id="hero-name">...</h2>
-                    <p id="hero-email" class="text-muted">...</p>
-                    <div class="meta-row">
-                        <span class="badge-soft">Member since <span id="hero-since">--</span></span>
-                        <span class="status-indicator online-pill">🟢 Online</span>
-                    </div>
+        <div class="user-card glass-card">
+            <div class="avatar-upload-area">
+                <img src="assets/default-avatar.png" id="profile-avatar" class="profile-avatar">
+                <div class="avatar-edit-btn" id="btn-edit-avatar" title="Change Avatar">📷</div>
+            </div>
+            <div class="user-card-info">
+                <h1 id="display-name-header">User Name</h1>
+                <p id="email-header">user@example.com</p>
+                <div class="user-badges" id="badges-container">
+                    <span class="badge" style="background: rgba(249,115,22,0.1); color: var(--primary-color);">Free Plan</span>
+                    <!-- Populated dynamically -->
                 </div>
             </div>
+        </div>
 
-            <div class="profile-grid">
-                <!-- LEFT: Edit Form + Preferences + Password -->
-                <div class="profile-left">
-                    <!-- Edit Profile -->
-                    <div class="card glass-card animate-on-scroll">
-                        <div class="card-header"><h3>Edit Profile</h3></div>
-                        <form id="profile-form">
+        <div class="settings-grid">
+            <div class="settings-main">
+                <div class="settings-section glass-card">
+                    <h3>Basic Information</h3>
+                    <form id="profile-form">
+                        <div class="form-row">
                             <div class="form-group">
-                                <label>Full Name</label>
-                                <input type="text" id="pf-name" placeholder="Your full name" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Bio</label>
-                                <textarea id="pf-bio" rows="3" placeholder="Tell others about yourself..."></textarea>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group flex-1">
-                                    <label>GitHub URL</label>
-                                    <input type="url" id="pf-github" placeholder="https://github.com/username">
-                                </div>
-                                <div class="form-group flex-1">
-                                    <label>LinkedIn URL</label>
-                                    <input type="url" id="pf-linkedin" placeholder="https://linkedin.com/in/...">
-                                </div>
-                            </div>
-                            <button type="submit" class="btn-primary" id="btn-save-profile">
-                                <span class="btn-text">Save Changes</span>
-                                <div class="spinner hidden"></div>
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Preferences -->
-                    <div class="card glass-card animate-on-scroll">
-                        <div class="card-header"><h3>Preferences</h3></div>
-                        <div class="prefs-grid">
-                            <div class="pref-row">
-                                <span class="pref-label">Theme</span>
-                                <div class="theme-toggle">
-                                    <button class="theme-btn active" data-theme="dark" id="theme-dark">🌙 Dark</button>
-                                    <button class="theme-btn" data-theme="light" id="theme-light">☀️ Light</button>
-                                </div>
-                            </div>
-                            <div class="pref-row">
-                                <span class="pref-label">Font Size: <strong id="font-size-val">14</strong>px</span>
-                                <input type="range" id="pref-font-size" min="12" max="24" value="14" step="1">
-                            </div>
-                            <div class="pref-row">
-                                <span class="pref-label">Tab Size</span>
-                                <div class="tab-toggle">
-                                    <button class="tab-size-btn active" data-size="2">2</button>
-                                    <button class="tab-size-btn" data-size="4">4</button>
-                                </div>
-                            </div>
-                            <div class="pref-row">
-                                <span class="pref-label">Auto Save</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="pref-autosave" checked>
-                                    <span class="slider round"></span>
-                                </label>
+                                <label>Display Name</label>
+                                <input type="text" id="input-name" required>
                             </div>
                         </div>
-                        <button class="btn-primary" id="btn-save-prefs" style="margin-top:1rem;">Save Preferences</button>
-                    </div>
-
-                    <!-- Change Password -->
-                    <div class="card glass-card animate-on-scroll">
-                        <div class="card-header"><h3>Change Password</h3></div>
-                        <form id="password-form">
+                        <div class="form-group">
+                            <label>Bio</label>
+                            <textarea id="input-bio" rows="3" placeholder="Tell us about yourself..."></textarea>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
-                                <label>Current Password</label>
-                                <input type="password" id="pw-current" placeholder="Enter current password" required>
+                                <label>GitHub URL</label>
+                                <input type="url" id="input-github" placeholder="https://github.com/">
                             </div>
                             <div class="form-group">
-                                <label>New Password</label>
-                                <input type="password" id="pw-new" placeholder="Min 8 characters" required>
+                                <label>LinkedIn URL</label>
+                                <input type="url" id="input-linkedin" placeholder="https://linkedin.com/in/">
                             </div>
-                            <div class="form-group">
-                                <label>Confirm New Password</label>
-                                <input type="password" id="pw-confirm" placeholder="Repeat new password" required>
-                            </div>
-                            <button type="submit" class="btn-primary" id="btn-change-pw">
-                                <span class="btn-text">Update Password</span>
-                                <div class="spinner hidden"></div>
-                            </button>
-                        </form>
-                    </div>
+                        </div>
+                    </form>
                 </div>
 
-                <!-- RIGHT: Stats + Activity + Rooms -->
-                <div class="profile-right">
-                    <!-- Stats Cards -->
-                    <div class="stats-grid animate-on-scroll">
-                        <div class="stat-card glass-card border-top-blue">
-                            <div class="stat-header"><span>🚪</span><span class="label">Rooms Created</span></div>
-                            <h3 class="stat-value" id="ps-created">0</h3>
-                        </div>
-                        <div class="stat-card glass-card border-top-purple">
-                            <div class="stat-header"><span>👥</span><span class="label">Sessions</span></div>
-                            <h3 class="stat-value" id="ps-sessions">0</h3>
-                        </div>
-                        <div class="stat-card glass-card border-top-green">
-                            <div class="stat-header"><span>📝</span><span class="label">Lines Written</span></div>
-                            <h3 class="stat-value" id="ps-lines">0</h3>
-                        </div>
-                        <div class="stat-card glass-card border-top-amber">
-                            <div class="stat-header"><span>🤝</span><span class="label">Joined Rooms</span></div>
-                            <h3 class="stat-value" id="ps-joined">0</h3>
-                        </div>
-                    </div>
-
-                    <!-- Activity Heatmap -->
-                    <div class="card glass-card animate-on-scroll">
-                        <div class="card-header"><h3>Activity (Last 12 Weeks)</h3></div>
-                        <div class="heatmap" id="heatmap-grid">
-                            <!-- Generated by JS -->
+                <div class="settings-section glass-card">
+                    <h3>Activity Log</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Your coding activity over the last 90 days.</p>
+                    <div class="heatmap-container">
+                        <div class="heatmap-grid" id="heatmap">
+                            <!-- Populated via JS -->
                         </div>
                         <div class="heatmap-legend">
-                            <span>Less</span>
-                            <div class="hm-cell l0"></div>
-                            <div class="hm-cell l1"></div>
-                            <div class="hm-cell l2"></div>
-                            <div class="hm-cell l3"></div>
-                            <div class="hm-cell l4"></div>
-                            <span>More</span>
+                            Less 
+                            <div class="heatmap-cell" data-level="0"></div>
+                            <div class="heatmap-cell" data-level="1"></div>
+                            <div class="heatmap-cell" data-level="2"></div>
+                            <div class="heatmap-cell" data-level="3"></div>
+                            <div class="heatmap-cell" data-level="4"></div>
+                            More
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section danger-zone glass-card">
+                    <h3>Danger Zone</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Once you delete your account, there is no going back. Please be certain.</p>
+                    <button class="btn-danger" id="btn-delete-account">Delete Account</button>
+                </div>
+            </div>
+
+            <div class="settings-sidebar">
+                <div class="settings-section glass-card">
+                    <h3>Editor Preferences</h3>
+                    
+                    <div class="form-group">
+                        <label>Theme</label>
+                        <div class="theme-grid">
+                            <div class="theme-option selected" data-theme="vs-dark">
+                                <div class="theme-preview dark">const a = 1;</div>
+                                VS Dark
+                            </div>
+                            <div class="theme-option" data-theme="vs">
+                                <div class="theme-preview light">const a = 1;</div>
+                                VS Light
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Quick Rooms List -->
-                    <div class="card glass-card animate-on-scroll">
-                        <div class="card-header"><h3>Recent Rooms</h3></div>
-                        <div class="quick-rooms" id="quick-rooms">
-                            <div class="skeleton-loader" style="height:50px;margin-bottom:8px;"></div>
-                            <div class="skeleton-loader" style="height:50px;margin-bottom:8px;"></div>
-                        </div>
+                    <div class="form-group">
+                        <label>Font Size</label>
+                        <select id="input-fontsize">
+                            <option value="12">12px</option>
+                            <option value="14">14px</option>
+                            <option value="16">16px</option>
+                            <option value="18">18px</option>
+                            <option value="20">20px</option>
+                        </select>
                     </div>
 
-                    <!-- Danger Zone -->
-                    <div class="card danger-card glass-card animate-on-scroll">
-                        <div class="card-header"><h3>⚠ Danger Zone</h3></div>
-                        <p class="text-muted text-sm">These actions are permanent and cannot be undone.</p>
-                        <div class="danger-actions">
-                            <button class="btn-danger" id="btn-delete-account">Delete Account</button>
-                        </div>
+                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="margin: 0;">Show Minimap</label>
+                        <label class="switch"><input type="checkbox" id="input-minimap"><span class="slider round"></span></label>
+                    </div>
+                    
+                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                        <label style="margin: 0;">Word Wrap</label>
+                        <label class="switch"><input type="checkbox" id="input-wordwrap"><span class="slider round"></span></label>
                     </div>
                 </div>
             </div>
         </div>
     </main>
-
-    <!-- Delete Account Confirmation Modal -->
-    <div class="modal-overlay" id="delete-modal">
-        <div class="modal-card">
-            <h2>Delete Account</h2>
-            <p class="text-muted">This will permanently delete your account, all your rooms, and all data. This cannot be undone.</p>
-            <div class="form-group" style="margin-top:1.5rem;">
-                <label>Type your email to confirm:</label>
-                <input type="email" id="delete-confirm-email" placeholder="your@email.com">
-            </div>
-            <div class="form-group">
-                <label>Your password:</label>
-                <input type="password" id="delete-confirm-pw" placeholder="Current password">
-            </div>
-            <div class="modal-actions">
-                <button class="btn-secondary" id="btn-cancel-delete">Cancel</button>
-                <button class="btn-danger" id="btn-confirm-delete">Delete My Account</button>
-            </div>
-        </div>
-    </div>
 
     <script type="module" src="js/profile.js"></script>
 </body>

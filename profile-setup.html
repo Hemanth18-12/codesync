@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Profile | CodeSync</title>
+    <link rel="stylesheet" href="css/global.css">
+    <link rel="stylesheet" href="css/profile-setup.css">
+</head>
+<body>
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="setup-container">
+        <canvas id="confetti-canvas"></canvas>
+        
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <div class="setup-header">
+            <h2 id="step-title">Welcome to CodeSync!</h2>
+            <p id="step-subtitle">Let's get your profile set up so you can start collaborating.</p>
+        </div>
+
+        <div class="steps-wrapper" id="steps-wrapper">
+            <!-- STEP 1: Basic Info & Photo -->
+            <div class="step-card active" data-step="1">
+                <div class="avatar-upload-area">
+                    <input type="file" id="avatar-input" accept="image/jpeg, image/png, image/webp" hidden>
+                    <div class="avatar-preview" id="avatar-preview" title="Click to upload photo">
+                        <span id="avatar-placeholder">👤</span>
+                        <img id="avatar-img" src="" alt="Avatar" class="hidden">
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted);">Max size: 5MB</p>
+                </div>
+                
+                <div class="form-group" style="margin-top: 2rem;">
+                    <label for="display-name">Display Name</label>
+                    <input type="text" id="display-name" placeholder="How should we call you?" required>
+                </div>
+            </div>
+
+            <!-- STEP 2: Bio & Socials -->
+            <div class="step-card" data-step="2">
+                <div class="form-group">
+                    <label for="bio-input">About Me (Bio)</label>
+                    <textarea id="bio-input" placeholder="I'm a full-stack developer who loves building..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="github-input">GitHub Profile URL</label>
+                    <input type="text" id="github-input" placeholder="https://github.com/username">
+                </div>
+                <div class="form-group">
+                    <label for="linkedin-input">LinkedIn Profile URL</label>
+                    <input type="text" id="linkedin-input" placeholder="https://linkedin.com/in/username">
+                </div>
+            </div>
+
+            <!-- STEP 3: Preferences -->
+            <div class="step-card" data-step="3">
+                <div class="form-group">
+                    <label>Editor Theme</label>
+                    <div class="prefs-grid">
+                        <div class="theme-option selected" data-theme="vs-dark">
+                            <div class="theme-preview dark">function code() { ... }</div>
+                            <span>VS Dark</span>
+                        </div>
+                        <div class="theme-option" data-theme="vs">
+                            <div class="theme-preview light">function code() { ... }</div>
+                            <span>VS Light</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="prefs-grid" style="margin-top: 1.5rem;">
+                    <div class="form-group">
+                        <label for="font-size">Font Size</label>
+                        <select id="font-size">
+                            <option value="12">12px</option>
+                            <option value="14" selected>14px</option>
+                            <option value="16">16px</option>
+                            <option value="18">18px</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                        <label style="margin-bottom:1rem;">Minimap</label>
+                        <label class="switch"><input type="checkbox" id="pref-minimap" checked><span class="slider round"></span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: Complete -->
+            <div class="step-card" data-step="4">
+                <div class="completion-content">
+                    <div class="success-icon">✓</div>
+                    <h3>You're all set!</h3>
+                    <p class="text-muted">Your profile is ready. Let's start coding together.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="setup-footer" id="setup-footer">
+            <button class="btn-secondary" id="btn-prev">Back</button>
+            <button class="btn-primary" id="btn-next">Continue</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/profile-setup.js"></script>
+</body>
+</html>

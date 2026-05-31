@@ -1,41 +1,68 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeSync | Real-Time Collaborative Editor</title>
+    <title>CodeSync | Serverless Collaborative Editor</title>
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/landing.css">
+    
+    <!-- Scripts for animations -->
+    <script type="module">
+        import { auth, onAuthStateChanged } from './js/firebase-config.js';
+        
+        // Handle auth state early to redirect
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Change CTA if logged in
+                const btns = document.querySelectorAll('.btn-primary');
+                btns.forEach(btn => {
+                    btn.textContent = 'Go to Dashboard';
+                    btn.href = 'dashboard.html';
+                });
+                
+                const loginBtns = document.querySelectorAll('.btn-secondary');
+                loginBtns.forEach(btn => {
+                    btn.textContent = 'Dashboard';
+                    btn.href = 'dashboard.html';
+                });
+            }
+        });
+    </script>
 </head>
 <body>
+    <div id="splash-screen">
+        <div class="splash-logo">&lt;/&gt; CodeSync</div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="custom-cursor-dot" id="cursor-dot"></div>
+    <div class="custom-cursor-ring" id="cursor-ring"></div>
+
     <nav class="navbar" id="navbar">
         <div class="nav-container">
-            <a href="index.html" class="logo">
+            <a href="#" class="logo">
                 <span class="logo-icon">&lt;/&gt;</span>
                 <span class="logo-text">CodeSync</span>
             </a>
             <div class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#how-it-works">How It Works</a>
-                <a href="#languages">Languages</a>
-                <a href="#testimonials">Testimonials</a>
             </div>
             <div class="nav-actions">
                 <a href="auth.html" class="btn-secondary">Login</a>
                 <a href="auth.html" class="btn-primary">Get Started Free</a>
             </div>
-            <button class="mobile-menu-btn">
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
                 <span></span><span></span><span></span>
             </button>
         </div>
     </nav>
 
-    <div class="mobile-nav-overlay">
+    <div class="mobile-nav-overlay" id="mobile-nav">
         <div class="mobile-nav-links">
             <a href="#features">Features</a>
             <a href="#how-it-works">How It Works</a>
-            <a href="#languages">Languages</a>
-            <a href="#testimonials">Testimonials</a>
             <a href="auth.html" class="btn-secondary">Login</a>
             <a href="auth.html" class="btn-primary">Get Started Free</a>
         </div>
@@ -43,530 +70,533 @@
 
     <section class="hero">
         <canvas id="hero-canvas"></canvas>
+        
+        <!-- Floating background cards -->
+        <div class="floating-cards-container" id="floating-cards"></div>
+
         <div class="hero-container">
             <div class="hero-content">
-                <h1 class="hero-title">
+                <h1 class="hero-title animate-on-scroll stagger-1">
                     Code Together.<br>
-                    <span class="gradient-text type-wrap">
-                        <span class="typewriter-text">In Real Time.</span>
-                    </span>
+                    <span class="gradient-text type-wrap" id="typewriter">Anywhere.</span>
                 </h1>
-                <p class="hero-subtitle">
-                    The ultimate real-time collaborative code editor. Build faster, ship together, and seamlessly share your workspace with developers around the world.
+                <p class="hero-subtitle animate-on-scroll stagger-2">
+                    A professional, serverless collaborative code editor built for modern teams. Sync code in real-time, jump into voice chat, and ship faster.
                 </p>
-                <div class="hero-ctas">
-                    <a href="auth.html" class="btn-primary btn-large">Start Coding Free</a>
-                    <button class="btn-secondary btn-large demo-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                        Watch Demo
-                    </button>
-                </div>
-                <div class="trusted-by">
-                    <span>Powered by</span>
-                    <div class="trusted-logos">
-                        <span>GitHub</span>
-                        <span>Firebase</span>
-                        <span>Monaco</span>
-                    </div>
+                <div class="hero-actions animate-on-scroll stagger-3">
+                    <a href="auth.html" class="btn-primary">Start Coding Now</a>
+                    <a href="#how-it-works" class="btn-secondary">See How It Works</a>
                 </div>
             </div>
-            <div class="hero-visual animate-on-scroll">
-                <div class="browser-mockup glass-card">
+            
+            <div class="hero-visual animate-on-scroll stagger-4">
+                <div class="browser-mockup" id="browser-mockup">
                     <div class="browser-header">
-                        <div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
-                        <div class="url-bar">codesync.app/room/dev-squad</div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
                     </div>
-                    <div class="browser-body">
-                        <div class="editor-mock">
-                            <div class="line"><span class="kw">function</span> <span class="fn">initCodeSync</span>() {</div>
-                            <div class="line">  <span class="kw">const</span> room = <span class="kw">new</span> <span class="cls">Room</span>(<span class="str">'dev-squad'</span>);</div>
-                            <div class="line">  room.<span class="fn">connect</span>(); <span class="cursor c1"><span class="cursor-name">Alex</span></span></div>
-                            <div class="line">  </div>
-                            <div class="line">  <span class="kw">return</span> room.<span class="fn">onSync</span>(<span class="kw">data</span> =&gt; {</div>
-                            <div class="line">    <span class="fn">renderEditor</span>(data); <span class="cursor c2"><span class="cursor-name">Sam</span></span></div>
-                            <div class="line">  });</div>
-                            <div class="line">}</div>
-                        </div>
+                    <div class="browser-body" id="mockup-code">
+                        <!-- Code injected via JS -->
                     </div>
-                    <div class="floating-badge badge-1 glass-card">🟢 3 users online</div>
-                    <div class="floating-badge badge-2 glass-card">⚡ Real-time sync</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="stats-bar glass-card animate-on-scroll">
-        <div class="stat-item">
-            <h3 class="stat-num" data-target="500">0</h3>
-            <p class="stat-label">Active Rooms</p>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-            <h3 class="stat-num" data-target="1200">0</h3>
-            <p class="stat-label">Developers</p>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-            <h3 class="stat-num" data-target="15">0</h3>
-            <p class="stat-label">Languages</p>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item">
-            <h3 class="stat-num">99.9%</h3>
-            <p class="stat-label">Uptime</p>
+    <section class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-box animate-on-scroll stagger-1">
+                <h3 class="counter" data-target="0" id="stat-latency">100</h3>
+                <p>ms Sync Latency</p>
+            </div>
+            <div class="stat-box animate-on-scroll stagger-2">
+                <h3 class="counter" data-target="30">0</h3>
+                <p>Languages Supported</p>
+            </div>
+            <div class="stat-box animate-on-scroll stagger-3">
+                <h3 class="counter" data-target="100">0</h3>
+                <p>Serverless</p>
+            </div>
+            <div class="stat-box animate-on-scroll stagger-4">
+                <h3 class="counter" data-target="0" id="stat-uptime">99.9</h3>
+                <p>% Uptime</p>
+            </div>
         </div>
     </section>
 
-    <section class="features" id="features">
+    <section class="features-section" id="features">
         <div class="section-header animate-on-scroll">
-            <h2 class="section-title">Everything you need to <span class="underline-draw">collaborate</span></h2>
-            <p class="section-subtitle">Professional tools designed for modern development teams.</p>
+            <h2>Everything you need. <span class="gradient-text">Nothing you don't.</span></h2>
+            <p>Built with modern web technologies, CodeSync delivers a desktop-class editing experience directly in your browser without any setup.</p>
         </div>
+        
         <div class="features-grid">
-            <div class="feature-card animate-on-scroll" style="--stagger: 1;">
-                <div class="card-inner">
-                    <div class="card-front glass-card">
-                        <div class="feature-icon">🖱️</div>
-                        <h3>Live Cursors</h3>
-                    </div>
-                    <div class="card-back glass-card">
-                        <p>See exactly where your teammates are typing in real-time with color-coded cursors and presence indicators.</p>
-                    </div>
-                </div>
+            <div class="feature-card tilt-card animate-on-scroll stagger-1">
+                <div class="glare"></div>
+                <div class="feature-icon">⚡</div>
+                <h3>Real-Time Sync</h3>
+                <p>Sub-100ms synchronization powered by Firebase Realtime Database. See cursors move and code update instantly across the globe.</p>
             </div>
-            <div class="feature-card animate-on-scroll" style="--stagger: 2;">
-                <div class="card-inner">
-                    <div class="card-front glass-card">
-                        <div class="feature-icon">🎨</div>
-                        <h3>Monaco Editor</h3>
-                    </div>
-                    <div class="card-back glass-card">
-                        <p>Powered by the same underlying engine as VS Code, delivering a rich editing experience with syntax highlighting and autocompletion.</p>
-                    </div>
-                </div>
+            
+            <div class="feature-card tilt-card animate-on-scroll stagger-2">
+                <div class="glare"></div>
+                <div class="feature-icon">📁</div>
+                <h3>VS Code File System</h3>
+                <p>Open local folders directly in the browser using the File System Access API. Navigate your project just like in VS Code.</p>
             </div>
-            <div class="feature-card animate-on-scroll" style="--stagger: 3;">
-                <div class="card-inner">
-                    <div class="card-front glass-card">
-                        <div class="feature-icon">🚪</div>
-                        <h3>Room System</h3>
-                    </div>
-                    <div class="card-back glass-card">
-                        <p>Create private rooms with 6-digit access codes or public rooms to invite the community to collaborate.</p>
-                    </div>
-                </div>
+            
+            <div class="feature-card tilt-card animate-on-scroll stagger-3">
+                <div class="glare"></div>
+                <div class="feature-icon">🎨</div>
+                <h3>Multi-Language</h3>
+                <p>Full Monaco Editor integration with syntax highlighting, auto-completion, and formatting for over 30 languages.</p>
             </div>
-            <div class="feature-card animate-on-scroll" style="--stagger: 4;">
-                <div class="card-inner">
-                    <div class="card-front glass-card">
-                        <div class="feature-icon">💬</div>
-                        <h3>Built-in Chat</h3>
-                    </div>
-                    <div class="card-back glass-card">
-                        <p>Communicate contextually without leaving the editor. Share code snippets and discuss logic right where you work.</p>
-                    </div>
-                </div>
+            
+            <div class="feature-card tilt-card animate-on-scroll stagger-1">
+                <div class="glare"></div>
+                <div class="feature-icon">📸</div>
+                <h3>Code Snapshots</h3>
+                <p>Never lose a working state. Save snapshots of your code and restore them instantly with a single click.</p>
             </div>
-            <div class="feature-card animate-on-scroll" style="--stagger: 5;">
-                <div class="card-inner">
-                    <div class="card-front glass-card">
-                        <div class="feature-icon">▶️</div>
-                        <h3>Run Code Live</h3>
-                    </div>
-                    <div class="card-back glass-card">
-                        <p>Execute JavaScript directly in the browser with an integrated sandboxed console to test logic instantly.</p>
-                    </div>
-                </div>
+
+            <div class="feature-card tilt-card animate-on-scroll stagger-2">
+                <div class="glare"></div>
+                <div class="feature-icon">💬</div>
+                <h3>Integrated Chat</h3>
+                <p>Discuss implementations right next to the code. Supports markdown, code blocks, and real-time typing indicators.</p>
             </div>
-            <div class="feature-card animate-on-scroll" style="--stagger: 6;">
-                <div class="card-inner">
-                    <div class="card-front glass-card">
-                        <div class="feature-icon">📸</div>
-                        <h3>Code Snapshots</h3>
-                    </div>
-                    <div class="card-back glass-card">
-                        <p>Save point-in-time versions of your code. Review history and restore previous states when experimenting goes wrong.</p>
-                    </div>
-                </div>
+
+            <div class="feature-card tilt-card animate-on-scroll stagger-3">
+                <div class="glare"></div>
+                <div class="feature-icon">🛡️</div>
+                <h3>Room Permissions</h3>
+                <p>Control who can edit and who can only view. Lock rooms to prevent new joins when discussing sensitive logic.</p>
             </div>
         </div>
     </section>
 
     <section class="how-it-works" id="how-it-works">
         <div class="section-header animate-on-scroll">
-            <h2 class="section-title">How it works</h2>
+            <h2>How It Works</h2>
+            <p>Get your team coding together in three simple steps.</p>
         </div>
-        <div class="timeline">
-            <div class="timeline-line"></div>
-            
-            <div class="timeline-item left animate-on-scroll">
-                <div class="timeline-content glass-card">
-                    <span class="step-num">1</span>
-                    <h3>Create a Room</h3>
-                    <p>Start a new session in seconds. Choose your language and configure access controls.</p>
-                </div>
-                <div class="timeline-visual">
-                    <div class="mock-modal glass-card">
-                        <div class="mock-field">New Room</div>
-                        <div class="mock-btn primary">Create</div>
-                    </div>
+
+        <div class="timeline-container">
+            <div class="timeline-path"></div>
+            <div class="timeline-path-fill" id="timeline-fill"></div>
+
+            <div class="timeline-step animate-on-scroll">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3 style="margin-bottom: 0.5rem;">1. Create a Room</h3>
+                    <p class="text-muted">Sign in and click "New Room". Choose a template or start from scratch.</p>
                 </div>
             </div>
-            
-            <div class="timeline-item right animate-on-scroll">
-                <div class="timeline-visual">
-                    <div class="mock-modal glass-card">
-                        <div class="mock-code">CS4X9Z</div>
-                        <div class="mock-btn secondary">📋 Copy Link</div>
-                    </div>
-                </div>
-                <div class="timeline-content glass-card">
-                    <span class="step-num">2</span>
-                    <h3>Share the Code</h3>
-                    <p>Send the generated 6-digit code or direct link to your teammates to grant instant access.</p>
+
+            <div class="timeline-step animate-on-scroll">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3 style="margin-bottom: 0.5rem;">2. Share the Link</h3>
+                    <p class="text-muted">Copy the room URL or the 6-character code and send it to your team.</p>
                 </div>
             </div>
-            
-            <div class="timeline-item left animate-on-scroll">
-                <div class="timeline-content glass-card">
-                    <span class="step-num">3</span>
-                    <h3>Code Together</h3>
-                    <p>Experience real-time synchronization. Watch changes as they happen, chat, and execute code.</p>
-                </div>
-                <div class="timeline-visual">
-                    <div class="mock-editor glass-card">
-                        <div class="mock-line"></div>
-                        <div class="mock-line cursor-line"></div>
-                        <div class="mock-line"></div>
-                    </div>
+
+            <div class="timeline-step animate-on-scroll">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3 style="margin-bottom: 0.5rem;">3. Code Together</h3>
+                    <p class="text-muted">Watch their cursors appear. Open your local folders and start building.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="languages" id="languages">
-        <div class="section-header animate-on-scroll">
-            <h2 class="section-title">Supported Languages</h2>
-        </div>
-        <div class="lang-grid">
-            <!-- Populated via CSS -->
-            <span class="lang-pill animate-on-scroll js">JavaScript</span>
-            <span class="lang-pill animate-on-scroll py">Python</span>
-            <span class="lang-pill animate-on-scroll java">Java</span>
-            <span class="lang-pill animate-on-scroll cpp">C++</span>
-            <span class="lang-pill animate-on-scroll ts">TypeScript</span>
-            <span class="lang-pill animate-on-scroll go">Go</span>
-            <span class="lang-pill animate-on-scroll rs">Rust</span>
-            <span class="lang-pill animate-on-scroll html">HTML</span>
-            <span class="lang-pill animate-on-scroll css">CSS</span>
-            <span class="lang-pill animate-on-scroll json">JSON</span>
-            <span class="lang-pill animate-on-scroll md">Markdown</span>
-            <span class="lang-pill animate-on-scroll php">PHP</span>
+    <section class="cta-section animate-on-scroll">
+        <div class="cta-container">
+            <h2>Ready to sync your code?</h2>
+            <p>Join developers worldwide who are building faster together.</p>
+            <a href="auth.html" class="btn-primary" style="font-size: 1.2rem; padding: 1rem 3rem;">Get Started for Free</a>
         </div>
     </section>
 
-    <section class="testimonials" id="testimonials">
-        <div class="section-header animate-on-scroll">
-            <h2 class="section-title">Loved by developers</h2>
-        </div>
-        <div class="carousel-container">
-            <div class="carousel-track">
-                <!-- Testimonial cards -->
-                <div class="testimonial-card glass-card">
-                    <div class="stars">★★★★★</div>
-                    <p>"CodeSync changed how we do pair programming. The real-time latency is practically zero."</p>
-                    <div class="author">
-                        <div class="author-av bg-blue">SD</div>
-                        <div>
-                            <h4>Sarah Drasner</h4>
-                            <span>Senior Engineer</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card glass-card">
-                    <div class="stars">★★★★★</div>
-                    <p>"The Monaco integration makes it feel just like my local environment. Brilliant execution."</p>
-                    <div class="author">
-                        <div class="author-av bg-purple">JD</div>
-                        <div>
-                            <h4>John Doe</h4>
-                            <span>Tech Lead</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card glass-card">
-                    <div class="stars">★★★★★</div>
-                    <p>"We use it for technical interviews. The snapshot feature is perfect for reviewing candidates later."</p>
-                    <div class="author">
-                        <div class="author-av bg-green">MR</div>
-                        <div>
-                            <h4>Mike Ross</h4>
-                            <span>Engineering Manager</span>
-                        </div>
-                    </div>
-                </div>
-                <!-- Duplicate for infinite scroll -->
-                 <div class="testimonial-card glass-card">
-                    <div class="stars">★★★★★</div>
-                    <p>"CodeSync changed how we do pair programming. The real-time latency is practically zero."</p>
-                    <div class="author">
-                        <div class="author-av bg-blue">SD</div>
-                        <div>
-                            <h4>Sarah Drasner</h4>
-                            <span>Senior Engineer</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card glass-card">
-                    <div class="stars">★★★★★</div>
-                    <p>"The Monaco integration makes it feel just like my local environment. Brilliant execution."</p>
-                    <div class="author">
-                        <div class="author-av bg-purple">JD</div>
-                        <div>
-                            <h4>John Doe</h4>
-                            <span>Tech Lead</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card glass-card">
-                    <div class="stars">★★★★★</div>
-                    <p>"We use it for technical interviews. The snapshot feature is perfect for reviewing candidates later."</p>
-                    <div class="author">
-                        <div class="author-av bg-green">MR</div>
-                        <div>
-                            <h4>Mike Ross</h4>
-                            <span>Engineering Manager</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <div class="footer-top-border"></div>
-        <div class="footer-content">
-            <div class="footer-col brand-col">
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-brand">
                 <a href="#" class="logo">
                     <span class="logo-icon">&lt;/&gt;</span>
                     <span class="logo-text">CodeSync</span>
                 </a>
-                <p>Real-time collaborative code editing platform for modern teams.</p>
-                <div class="social-icons">
-                    <a href="#">GH</a>
-                    <a href="#">TW</a>
-                    <a href="#">IN</a>
-                </div>
+                <p>A production-grade, serverless collaborative code editor built for the modern web.</p>
             </div>
-            <div class="footer-col">
+            <div class="footer-links">
                 <h4>Product</h4>
-                <a href="#features">Features</a>
-                <a href="#how-it-works">How it works</a>
-                <a href="auth.html">Pricing (Free)</a>
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="auth.html">Sign Up</a></li>
+                    <li><a href="auth.html">Login</a></li>
+                </ul>
             </div>
-            <div class="footer-col">
-                <h4>Company</h4>
-                <a href="#">About Us</a>
-                <a href="#">Blog</a>
-                <a href="#">Contact</a>
-            </div>
-            <div class="footer-col">
-                <h4>Tech Stack</h4>
-                <div class="tech-badge">🔥 Firebase</div>
-                <div class="tech-badge">📝 Monaco Editor</div>
-                <div class="tech-badge">🚀 GitHub Pages</div>
+            <div class="footer-links">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://github.com/microsoft/monaco-editor" target="_blank">Monaco Editor</a></li>
+                    <li><a href="https://firebase.google.com/" target="_blank">Firebase</a></li>
+                    <li><a href="https://github.com/" target="_blank">GitHub</a></li>
+                </ul>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 CodeSync. All rights reserved.</p>
+            <p>&copy; 2025 CodeSync. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- Video Modal -->
-    <div class="modal-overlay" id="demo-modal">
-        <div class="modal-card">
-            <button class="close-modal">×</button>
-            <div class="video-container">
-                <div class="play-icon">▶</div>
-                <p>Demo Video Placeholder</p>
-            </div>
-        </div>
-    </div>
-
+    <!-- CORE ANIMATION LOGIC -->
     <script>
-        // Landing Page Scripts
-        document.addEventListener('DOMContentLoaded', () => {
-            // Navbar Scroll Effect
-            const nav = document.getElementById('navbar');
-            let lastScroll = 0;
+        // --- 1. SPLASH SCREEN ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 500);
+            }, 500); // Only show for 500ms
+        });
+
+        // --- 2. CUSTOM CURSOR ---
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorRing = document.getElementById('cursor-ring');
+        
+        document.addEventListener('mousemove', (e) => {
+            cursorDot.style.left = e.clientX + 'px';
+            cursorDot.style.top = e.clientY + 'px';
             
-            window.addEventListener('scroll', () => {
-                const currentScroll = window.pageYOffset;
-                if (currentScroll <= 0) {
-                    nav.style.boxShadow = 'none';
-                    nav.style.background = 'rgba(255,255,255,0.8)';
-                } else {
-                    nav.style.boxShadow = 'var(--card-shadow)';
-                    nav.style.background = 'var(--glass-bg)';
-                }
-                
-                if (currentScroll > lastScroll && currentScroll > 80) {
-                    nav.style.transform = 'translateY(-100%)';
-                } else {
-                    nav.style.transform = 'translateY(0)';
-                }
-                lastScroll = currentScroll;
-            });
+            // Lagging ring
+            setTimeout(() => {
+                cursorRing.style.left = e.clientX + 'px';
+                cursorRing.style.top = e.clientY + 'px';
+            }, 50);
+        });
 
-            // Mobile Menu
-            const menuBtn = document.querySelector('.mobile-menu-btn');
-            const overlay = document.querySelector('.mobile-nav-overlay');
-            
-            menuBtn.addEventListener('click', () => {
-                menuBtn.classList.toggle('active');
-                overlay.classList.toggle('active');
-            });
+        document.addEventListener('mousedown', () => {
+            cursorRing.style.width = '16px';
+            cursorRing.style.height = '16px';
+        });
+        document.addEventListener('mouseup', () => {
+            cursorRing.style.width = '24px';
+            cursorRing.style.height = '24px';
+        });
 
-            overlay.addEventListener('click', (e) => {
-                if(e.target.tagName === 'A') {
-                    menuBtn.classList.remove('active');
-                    overlay.classList.remove('active');
-                }
-            });
+        // --- 3. NAVBAR SCROLL ---
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) navbar.classList.add('scrolled');
+            else navbar.classList.remove('scrolled');
+        });
 
-            // Intersection Observer for Animations
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                        
-                        // Handle stat counters
-                        if (entry.target.classList.contains('stats-bar')) {
-                            document.querySelectorAll('.stat-num').forEach(el => {
-                                const target = el.getAttribute('data-target');
-                                if (!target) return;
-                                let current = 0;
-                                const inc = target / 50;
-                                const timer = setInterval(() => {
-                                    current += inc;
-                                    if (current >= target) {
-                                        el.innerText = target + (target > 100 ? '+' : '');
-                                        clearInterval(timer);
-                                    } else {
-                                        el.innerText = Math.ceil(current);
-                                    }
-                                }, 30);
-                            });
+        // --- 4. MOBILE MENU ---
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const mobileNav = document.getElementById('mobile-nav');
+        menuBtn.addEventListener('click', () => {
+            mobileNav.classList.toggle('active');
+        });
+        mobileNav.addEventListener('click', () => mobileNav.classList.remove('active'));
+
+        // --- 5. INTERSECTION OBSERVER ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    
+                    // Trigger counters if it's a stat box
+                    if (entry.target.classList.contains('stat-box')) {
+                        const counter = entry.target.querySelector('.counter');
+                        if (counter && !counter.classList.contains('counted')) {
+                            animateCounter(counter);
                         }
                     }
-                });
-            }, { threshold: 0.1 });
-
-            document.querySelectorAll('.animate-on-scroll').forEach(el => {
-                observer.observe(el);
+                }
             });
+        }, { threshold: 0.1 });
 
-            // Typewriter Effect
-            const phrases = ["In Real Time.", "Build Faster.", "Ship Together."];
-            const textElement = document.querySelector('.typewriter-text');
-            let phraseIndex = 0;
-            let charIndex = 0;
-            let isDeleting = false;
+        document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
 
-            function typeWriter() {
-                const currentPhrase = phrases[phraseIndex];
-                
-                if (isDeleting) {
-                    textElement.textContent = currentPhrase.substring(0, charIndex - 1);
-                    charIndex--;
+        // --- 6. COUNTER ANIMATION ---
+        function animateCounter(el) {
+            el.classList.add('counted');
+            const target = parseFloat(el.getAttribute('data-target'));
+            const isFloat = el.id === 'stat-uptime';
+            const duration = 2000;
+            const stepTime = 20;
+            const steps = duration / stepTime;
+            let current = 0;
+            const inc = target / steps;
+
+            // Handle latency specifically to count down
+            if (el.id === 'stat-latency') {
+                el.innerText = '< 100';
+                return;
+            }
+
+            const timer = setInterval(() => {
+                current += inc;
+                if (current >= target) {
+                    el.innerText = isFloat ? target.toFixed(1) : (target === 100 ? '100%' : target);
+                    clearInterval(timer);
+                    
+                    // Pop animation
+                    el.style.transform = 'scale(1.2)';
+                    setTimeout(() => el.style.transform = 'scale(1)', 200);
                 } else {
-                    textElement.textContent = currentPhrase.substring(0, charIndex + 1);
-                    charIndex++;
+                    el.innerText = isFloat ? current.toFixed(1) : Math.floor(current);
                 }
+            }, stepTime);
+        }
 
-                let typeSpeed = isDeleting ? 50 : 100;
-
-                if (!isDeleting && charIndex === currentPhrase.length) {
-                    typeSpeed = 2000;
-                    isDeleting = true;
-                } else if (isDeleting && charIndex === 0) {
-                    isDeleting = false;
-                    phraseIndex = (phraseIndex + 1) % phrases.length;
-                    typeSpeed = 500;
-                }
-
-                setTimeout(typeWriter, typeSpeed);
-            }
+        // --- 7. TIMELINE SCROLL ---
+        const timelineFill = document.getElementById('timeline-fill');
+        const timelineContainer = document.querySelector('.timeline-container');
+        
+        window.addEventListener('scroll', () => {
+            if (!timelineContainer) return;
+            const rect = timelineContainer.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
             
-            setTimeout(typeWriter, 1000);
-
-            // Canvas Background (Floating particles)
-            const canvas = document.getElementById('hero-canvas');
-            const ctx = canvas.getContext('2d');
-            let particles = [];
-
-            function resizeCanvas() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
+            // If top of timeline is above bottom of screen, start filling
+            if (rect.top < viewportHeight) {
+                let fillPercentage = ((viewportHeight - rect.top) / rect.height) * 100;
+                fillPercentage = Math.max(0, Math.min(100, fillPercentage - 20)); // Offset
+                timelineFill.style.height = fillPercentage + '%';
             }
+        });
+
+        // --- 8. 3D TILT EFFECT ---
+        document.querySelectorAll('.tilt-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Calculate rotation (max 10 degrees)
+                const xPct = (x / rect.width - 0.5) * 2;
+                const yPct = (y / rect.height - 0.5) * 2;
+                
+                card.style.transform = `perspective(1000px) rotateX(${-yPct * 10}deg) rotateY(${xPct * 10}deg) translateZ(10px)`;
+                
+                // Glare effect
+                const glare = card.querySelector('.glare');
+                if (glare) glare.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.1), transparent 50%)`;
+            });
             
-            window.addEventListener('resize', resizeCanvas);
-            resizeCanvas();
-
-            class Particle {
-                constructor() {
-                    this.x = Math.random() * canvas.width;
-                    this.y = Math.random() * canvas.height;
-                    this.size = Math.random() * 2 + 0.5;
-                    this.speedY = Math.random() * 0.5 + 0.1;
-                    this.opacity = Math.random() * 0.5;
-                }
-                update() {
-                    this.y -= this.speedY;
-                    if (this.y < 0) {
-                        this.y = canvas.height;
-                        this.x = Math.random() * canvas.width;
-                    }
-                }
-                draw() {
-                    ctx.fillStyle = `rgba(79, 70, 229, ${this.opacity})`;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-
-            for (let i = 0; i < 50; i++) {
-                particles.push(new Particle());
-            }
-
-            function animateCanvas() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                particles.forEach(p => {
-                    p.update();
-                    p.draw();
-                });
-                requestAnimationFrame(animateCanvas);
-            }
-            animateCanvas();
-
-            // Demo Modal
-            const demoBtn = document.querySelector('.demo-btn');
-            const modal = document.getElementById('demo-modal');
-            const closeBtn = document.querySelector('.close-modal');
-
-            demoBtn.addEventListener('click', () => {
-                modal.classList.add('active');
-            });
-
-            closeBtn.addEventListener('click', () => {
-                modal.classList.remove('active');
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) modal.classList.remove('active');
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
             });
         });
+
+        // --- 9. BROWSER MOCKUP TYPEWRITER ---
+        const mockupCode = document.getElementById('mockup-code');
+        const codeLines = [
+            { text: 'import { initializeApp } from "firebase";', type: 'keyword' },
+            { text: 'const codesync = new CodeSync();', type: 'function' },
+            { text: '', type: '' },
+            { text: '// Join a collaborative room', type: 'text-muted' },
+            { text: 'await codesync.joinRoom("HQ-123");', type: 'function' },
+            { text: '', type: '' },
+            { text: 'codesync.on("codeUpdate", (data) => {', type: 'keyword' },
+            { text: '  editor.setValue(data.code);', type: 'string' },
+            { text: '});', type: 'keyword' }
+        ];
+
+        let lineIdx = 0;
+        let charIdx = 0;
+        
+        function typeCode() {
+            if (lineIdx >= codeLines.length) {
+                // Reset and loop after 5 seconds
+                setTimeout(() => {
+                    mockupCode.innerHTML = '';
+                    lineIdx = 0;
+                    charIdx = 0;
+                    typeCode();
+                }, 5000);
+                return;
+            }
+
+            const currentLine = codeLines[lineIdx];
+            
+            // Handle empty lines
+            if (currentLine.text === '') {
+                mockupCode.innerHTML += '<br>';
+                lineIdx++;
+                setTimeout(typeCode, 200);
+                return;
+            }
+
+            // Get or create current span
+            let spanId = `line-${lineIdx}`;
+            let span = document.getElementById(spanId);
+            
+            if (!span) {
+                // Remove cursor from previous line
+                const oldCursor = document.getElementById('mockup-cursor');
+                if (oldCursor) oldCursor.remove();
+                
+                if (lineIdx > 0 && codeLines[lineIdx-1].text !== '') mockupCode.innerHTML += '<br>';
+                
+                span = document.createElement('span');
+                span.id = spanId;
+                span.className = `mockup-line ${currentLine.type}`;
+                mockupCode.appendChild(span);
+                
+                const cursor = document.createElement('span');
+                cursor.id = 'mockup-cursor';
+                cursor.className = 'mockup-cursor';
+                mockupCode.appendChild(cursor);
+            }
+
+            span.textContent += currentLine.text[charIdx];
+            charIdx++;
+
+            if (charIdx >= currentLine.text.length) {
+                lineIdx++;
+                charIdx = 0;
+                setTimeout(typeCode, 500); // Pause at end of line
+            } else {
+                // Random typing speed between 20-80ms
+                setTimeout(typeCode, Math.random() * 60 + 20);
+            }
+        }
+        
+        // Start typing after 1s
+        setTimeout(typeCode, 1000);
+
+        // --- 10. FLOATING CARDS ---
+        const cardsContainer = document.getElementById('floating-cards');
+        const snippets = [
+            "function sync() {\n  return db.ref();\n}",
+            "const user = \n  await auth();",
+            "<div>\n  <Editor />\n</div>",
+            ".glow {\n  box-shadow: 0 0 10px;\n}",
+            "SELECT * FROM\n  users WHERE\n  active = true;"
+        ];
+
+        function createFloatingCard() {
+            const card = document.createElement('div');
+            card.className = 'float-card';
+            card.textContent = snippets[Math.floor(Math.random() * snippets.length)];
+            
+            // Random properties
+            const left = Math.random() * 100;
+            const duration = Math.random() * 10 + 15; // 15-25s
+            const delay = Math.random() * -20; // Start at random times
+            const scale = Math.random() * 0.5 + 0.7; // 0.7-1.2
+            
+            card.style.left = `${left}%`;
+            card.style.animationDuration = `${duration}s`;
+            card.style.animationDelay = `${delay}s`;
+            card.style.transform = `scale(${scale})`;
+            
+            cardsContainer.appendChild(card);
+            
+            // Remove and recreate when done
+            setTimeout(() => {
+                card.remove();
+                createFloatingCard();
+            }, duration * 1000);
+        }
+
+        // Create 8 cards
+        for(let i=0; i<8; i++) createFloatingCard();
+
+        // --- 11. PARTICLES CANVAS ---
+        const canvas = document.getElementById('hero-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let particles = [];
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 1;
+                this.vy = (Math.random() - 0.5) * 1;
+                this.radius = Math.random() * 2 + 1;
+                this.color = Math.random() > 0.5 ? '#f97316' : '#f59e0b';
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+                
+                // Mouse interaction
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < 150) {
+                    this.x -= dx * 0.02;
+                    this.y -= dy * 0.02;
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = 0.3;
+                ctx.fill();
+            }
+        }
+
+        for(let i=0; i<50; i++) particles.push(new Particle());
+
+        let mouse = { x: -1000, y: -1000 };
+        window.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        function animateCanvas() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw lines
+            ctx.lineWidth = 1;
+            for(let i=0; i<particles.length; i++) {
+                for(let j=i+1; j<particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (dist < 150) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = '#f97316';
+                        ctx.globalAlpha = 1 - (dist / 150);
+                        ctx.globalAlpha *= 0.15; // Max opacity 0.15
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            requestAnimationFrame(animateCanvas);
+        }
+        
+        animateCanvas();
     </script>
 </body>
 </html>
