@@ -1,7 +1,7 @@
 import { 
     auth, db, rtdb, collection, doc, getDoc, getDocs, setDoc, updateDoc, 
     onSnapshot, query, where, orderBy, limit, startAfter, addDoc, serverTimestamp, 
-    ref, set, onValue, onAuthStateChanged, signOut, increment
+    ref, set, onValue, onAuthStateChanged, signOut, increment, arrayUnion
 } from './firebase-config.js';
 
 // --- GLOBAL STATE ---
@@ -275,116 +275,214 @@ function loadActivityTimeline() {
                     <span>${time}</span>
                 </div>
             `;
-            list.appendChild(item);
+list.appendChild(item);
         });
     });
 }
 
 // --- EXPLORE DATA LOAD ---
-async function loadExploreRooms(reset = false) {
-    if (isExploreLoading) return;
-    isExploreLoading = true;
-    
-    const grid = document.getElementById('explore-grid');
-    if (reset) {
-        exploreLastDoc = null;
-        grid.innerHTML = `
-            <div class="skeleton-loader" style="height: 200px;"></div>
-            <div class="skeleton-loader" style="height: 200px;"></div>
-            <div class="skeleton-loader" style="height: 200px;"></div>
-        `;
+const loadExploreRooms = async () => {
+  const exploreGrid = document.getElementById(
+    'explore-grid');
+  if (!exploreGrid) return;
+
+  // Show skeleton loading cards
+  exploreGrid.innerHTML = `
+    ${Array(6).fill(`
+      <div class="room-card skeleton">
+        <div class="skeleton-line w-60"></div>
+        <div class="skeleton-line w-40"></div>
+        <div class="skeleton-line w-80"></div>
+      </div>
+    `).join('')}
+  `;
+
+  try {
+    const user = auth.currentUser;
+
+    // Query all public rooms from Firestore
+    const publicRoomsQuery = query(
+      collection(db, 'rooms'),
+      where('isPublic', '==', true),
+      orderBy('lastActive', 'desc'),
+      limit(20)
+    );
+
+    const snapshot = await getDocs(
+      publicRoomsQuery);
+
+    // Clear skeleton
+    exploreGrid.innerHTML = '';
+
+    // Show empty state if no rooms
+    if (snapshot.empty) {
+      exploreGrid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🌍</div>
+          <h3>No public rooms yet</h3>
+          <p>Be the first to create a 
+            public room!</p>
+          <button onclick="openCreateModal()" 
+            class="btn-primary">
+            Create Public Room
+          </button>
+        </div>
+      `;
+      return;
     }
 
-    try {
-        let q;
-        if (exploreLastDoc) {
-            q = query(collection(db, 'rooms'), where('isPublic', '==', true), orderBy('lastActive', 'desc'), startAfter(exploreLastDoc), limit(12));
-        } else {
-            q = query(collection(db, 'rooms'), where('isPublic', '==', true), orderBy('lastActive', 'desc'), limit(12));
-        }
+    // Render each public room card
+    snapshot.forEach((docSnap) => {
+      const room = docSnap.data();
+      const roomId = docSnap.id;
 
-        const snapshot = await getDocs(q);
-        
-        if (reset) grid.innerHTML = '';
-        
-        if (snapshot.empty && reset) {
-            grid.innerHTML = `
-                <div class="empty-state" style="grid-column: 1 / -1">
-                    <div class="empty-icon">🌍</div>
-                    <h3>No public rooms yet</h3>
-                    <p>Be the first to create a public room and share your code with the world!</p>
-                </div>
-            `;
-            document.getElementById('btn-load-more').style.display = 'none';
-            isExploreLoading = false;
-            return;
-        }
+      // Skip rooms owned by current user
+      // (they appear in My Rooms already)
+      const isOwner = room.owner === user?.uid;
+      const isCollaborator = room.collaborators
+        ?.some(c => c.userId === user?.uid);
 
-        snapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            const roomId = docSnap.id;
-            
-            const card = document.createElement('div');
-            card.className = 'room-card glass-card';
-            
-            // Build Tags
-            let tagsHtml = '';
-            if (data.tags && Array.isArray(data.tags)) {
-                tagsHtml = `<div class="room-tags">` + data.tags.slice(0,3).map(t => `<span class="badge">${t}</span>`).join('') + `</div>`;
-            }
+      const card = document.createElement('div');
+      card.className = 'room-card explore-card';
+      card.style.animation = 
+        'cardSlideIn 0.4s ease forwards';
+      
+      card.innerHTML = `
+        <div class="room-card-header">
+          <div class="room-info">
+            <h3 class="room-name">
+              ${room.name}
+            </h3>
+            <span class="language-badge 
+              lang-${room.language}">
+              ${room.language}
+            </span>
+          </div>
+          <div class="room-status">
+            <span class="live-dot"></span>
+            <span class="live-count">
+              ${room.activeUsers || 0} live
+            </span>
+          </div>
+        </div>
 
-            card.innerHTML = `
-                <div class="room-card-header">
-                    <div class="room-title-wrapper">
-                        <div class="room-title">${data.name}</div>
-                        <div class="room-owner">
-                            <img src="${data.ownerPhoto || 'assets/default-avatar.png'}">
-                            ${data.ownerName || 'Unknown'}
-                        </div>
-                    </div>
-                    <div class="room-lang"><span class="lang-dot" style="background: var(--primary-color)"></span> ${data.language || 'Mixed'}</div>
-                </div>
-                <div class="room-desc">${data.description || 'No description provided.'}</div>
-                ${tagsHtml}
-                <div class="room-stats">
-                    <span>👥 ${data.collaborators?.length || 1} members</span>
-                    <span class="active-users"><div class="dot"></div> <span id="explore-active-${roomId}">1</span> live</span>
-                </div>
-                <div class="room-card-footer">
-                    <button class="btn-secondary btn-sm" onclick="joinRoom('${roomId}')">Join Room</button>
-                </div>
-            `;
-            grid.appendChild(card);
+        <div class="room-owner">
+          <div class="owner-avatar">
+            ${(room.ownerName || 'U')
+              .charAt(0).toUpperCase()}
+          </div>
+          <span class="owner-name">
+            by ${room.ownerName || 'Unknown'}
+          </span>
+        </div>
 
-            // Bind live users
-            onValue(ref(rtdb, `rooms/${roomId}/activeUsers`), (snap) => {
-                const el = document.getElementById(`explore-active-${roomId}`);
-                if (el) el.innerText = snap.exists() ? Object.keys(snap.val()).length : 0;
+        <div class="room-meta">
+          <span>
+            👥 ${(room.collaborators?.length 
+              || 0) + 1} members
+          </span>
+          <span>
+            🕐 ${getRelativeTime(
+              room.lastActive?.toDate())}
+          </span>
+        </div>
+
+        <div class="room-card-footer">
+          <span class="room-code">
+            ID: ${room.roomCode}
+          </span>
+          ${isOwner || isCollaborator ? `
+            <button 
+              class="btn-primary open-room-btn"
+              data-room-id="${roomId}">
+              Open
+            </button>
+          ` : `
+            <button 
+              class="btn-primary join-explore-btn"
+              data-room-id="${roomId}"
+              data-room-code="${room.roomCode}">
+              Join Room
+            </button>
+          `}
+        </div>
+      `;
+
+      exploreGrid.appendChild(card);
+    });
+
+    // Handle Join buttons in explore
+    document.querySelectorAll('.join-explore-btn')
+      .forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const rid = btn.dataset.roomId;
+          btn.disabled = true;
+          btn.textContent = 'Joining...';
+          try {
+            const user = auth.currentUser;
+            await updateDoc(
+              doc(db, 'rooms', rid), {
+              collaborators: arrayUnion({
+                userId: user.uid,
+                userName: user.displayName 
+                  || user.email,
+                role: 'editor',
+                joinedAt: new Date().toISOString()
+              })
             });
+            await updateDoc(
+              doc(db, 'users', user.uid), {
+              'stats.roomsJoined': increment(1)
+            });
+            showToast('Joined! Opening room...', 
+              'success');
+            setTimeout(() => {
+              window.location.href = 
+                `editor.html?room=${rid}`;
+            }, 600);
+          } catch (err) {
+            showToast('Failed to join room', 
+              'error');
+            btn.disabled = false;
+            btn.textContent = 'Join Room';
+          }
         });
+      });
 
-        exploreLastDoc = snapshot.docs[snapshot.docs.length - 1];
-        
-        if (snapshot.size < 12) {
-            document.getElementById('btn-load-more').style.display = 'none';
-        } else {
-            document.getElementById('btn-load-more').style.display = 'inline-flex';
-        }
+  } catch (error) {
+    console.error('Explore error:', error);
+    exploreGrid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <h3>Failed to load rooms</h3>
+        <p>${error.message}</p>
+        <button onclick="loadExploreRooms()" 
+          class="btn-primary">
+          Try Again
+        </button>
+      </div>
+    `;
+  }
+};
 
-    } catch (error) {
-        console.error("Explore error:", error);
-        if (reset) grid.innerHTML = `<p style="color:var(--error-color)">Failed to load rooms.</p>`;
-    } finally {
-        isExploreLoading = false;
-    }
+// Call when explore tab is clicked
+const exploreNavItem = document.getElementById(
+  'nav-explore');
+if (exploreNavItem) {
+  exploreNavItem.addEventListener('click', () => {
+    loadExploreRooms();
+  });
 }
 
-document.getElementById('btn-load-more').addEventListener('click', () => loadExploreRooms(false));
+// Also call on load if explore section visible
+if (document.getElementById('explore-section')
+  ?.classList.contains('active')) {
+  loadExploreRooms();
+}
 
 // --- SNAPSHOTS DATA LOAD ---
 async function loadSnapshots() {
     const list = document.getElementById('snapshot-list');
-    const emptyState = document.getElementById('empty-snapshots');
     
     // Remove existing items
     Array.from(list.children).forEach(c => {
@@ -439,37 +537,127 @@ window.viewSnapshot = (id, encodedCode) => {
     document.getElementById('snap-modal').classList.add('active');
 };
 
-window.joinRoom = async (roomId) => {
-    if (!roomId) return;
-    // Add user to collaborators if not already
-    try {
-        const roomRef = doc(db, 'rooms', roomId);
-        const roomSnap = await getDoc(roomRef);
-        if (roomSnap.exists()) {
-            const data = roomSnap.data();
-            if (!data.collaborators.includes(currentUser.uid)) {
-                const newCollabs = [...data.collaborators, currentUser.uid];
-                await updateDoc(roomRef, { collaborators: newCollabs });
-                
-                // Add notification to owner
-                if (data.ownerId !== currentUser.uid) {
-                    await addDoc(collection(db, `notifications/${data.ownerId}/items`), {
-                        type: 'room_join',
-                        message: `${userData.displayName} joined your room ${data.name}`,
-                        timestamp: serverTimestamp(),
-                        read: false
-                    });
-                }
-            }
-            window.location.href = `editor.html?room=${roomId}`;
-        } else {
-            showToast("Room not found.", "error");
-        }
-    } catch (error) {
-        console.error(error);
-        showToast("Error joining room.", "error");
+const joinRoom = async (roomCode) => {
+  try {
+    // Validate input
+    if (!roomCode || roomCode.length !== 6) {
+      showToast(
+        'Please enter a valid 6-digit room code',
+        'error');
+      return;
     }
+
+    const user = auth.currentUser;
+    if (!user) {
+      showToast('You must be logged in', 'error');
+      return;
+    }
+
+    // Show loading
+    const joinBtn = document.getElementById(
+      'join-room-btn');
+    joinBtn.disabled = true;
+    joinBtn.textContent = 'Joining...';
+
+    // Find room by roomCode in Firestore
+    const roomsQuery = query(
+      collection(db, 'rooms'),
+      where('roomCode', '==', 
+        roomCode.toUpperCase())
+    );
+    const roomSnap = await getDocs(roomsQuery);
+
+    // Check if room exists
+    if (roomSnap.empty) {
+      showToast('Room not found. Check the code.',
+        'error');
+      // Shake the input
+      const input = document.getElementById(
+        'join-code-input');
+      input.classList.add('shake');
+      setTimeout(() => {
+        input.classList.remove('shake');
+      }, 500);
+      return;
+    }
+
+    const roomDoc = roomSnap.docs[0];
+    const roomData = roomDoc.data();
+    const roomId = roomDoc.id;
+
+    // Check if user is already owner
+    if (roomData.owner === user.uid) {
+      // Just redirect to room, don't add as collaborator
+      window.location.href = 
+        `editor.html?room=${roomId}`;
+      return;
+    }
+
+    // Check if already a collaborator
+    const alreadyJoined = roomData.collaborators
+      ?.some(c => c.userId === user.uid);
+    
+    if (!alreadyJoined) {
+      // Add user to collaborators array
+      await updateDoc(
+        doc(db, 'rooms', roomId), {
+        collaborators: arrayUnion({
+          userId: user.uid,
+          userName: user.displayName || user.email,
+          role: 'editor',
+          joinedAt: new Date().toISOString()
+        })
+      });
+
+      // Update user stats
+      await updateDoc(
+        doc(db, 'users', user.uid), {
+        'stats.roomsJoined': increment(1)
+      });
+    }
+
+    // Redirect to editor
+    showToast('Joining room...', 'success');
+    setTimeout(() => {
+      window.location.href = 
+        `editor.html?room=${roomId}`;
+    }, 500);
+
+  } catch (error) {
+    console.error('Join room error:', error);
+    showToast('Failed to join: ' 
+      + error.message, 'error');
+  } finally {
+    const joinBtn = document.getElementById(
+      'join-room-btn');
+    if (joinBtn) {
+      joinBtn.disabled = false;
+      joinBtn.textContent = 'Join Room';
+    }
+  }
 };
+
+// Join room button click handler
+const joinBtn = document.getElementById(
+  'join-room-btn');
+if (joinBtn) {
+  joinBtn.addEventListener('click', () => {
+    const code = document.getElementById(
+      'join-code-input').value.trim();
+    joinRoom(code);
+  });
+}
+
+// Join on Enter key press
+const joinInput = document.getElementById(
+  'join-code-input');
+if (joinInput) {
+  joinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      joinRoom(e.target.value.trim());
+    }
+  });
+}
 
 // --- MODALS & FORMS ---
 // Create Room
@@ -477,60 +665,127 @@ document.getElementById('btn-quick-create').addEventListener('click', () => {
     document.getElementById('create-modal').classList.add('active');
 });
 
-document.getElementById('create-room-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('btn-create-submit');
-    btn.classList.add('loading');
-    
-    const name = document.getElementById('new-room-name').value;
-    const isPublic = document.getElementById('new-room-public').checked;
-    const template = document.getElementById('new-room-template').value;
-    const tagsInput = document.getElementById('new-room-tags').value;
-    const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
-    
-    try {
-        const newRoomRef = doc(collection(db, 'rooms'));
-        const roomId = newRoomRef.id.substring(0,6).toUpperCase(); // Short ID for easy sharing
-        
-        await setDoc(doc(db, 'rooms', roomId), {
-            name: name,
-            ownerId: currentUser.uid,
-            ownerName: userData.displayName,
-            ownerPhoto: userData.photoURL,
-            isPublic: isPublic,
-            template: template,
-            tags: tags,
-            collaborators: [currentUser.uid],
-            createdAt: serverTimestamp(),
-            lastActive: serverTimestamp(),
-            permissions: {
-                [currentUser.uid]: 'owner'
-            }
-        });
-        
-        // Setup initial RTDB workspace based on template
-        let initialCode = '';
-        if (template === 'js-node') initialCode = 'console.log("Hello Node.js");';
-        if (template === 'html-css') initialCode = '<!DOCTYPE html>\n<html>\n<body>\n  <h1>Hello</h1>\n</body>\n</html>';
-        if (template === 'python') initialCode = 'print("Hello Python")';
-        
-        await set(ref(rtdb, `rooms/${roomId}/workspace/main`), {
-            content: initialCode,
-            language: template === 'python' ? 'python' : template === 'html-css' ? 'html' : 'javascript'
-        });
+const createRoom = async (roomName, language, isPublic) => {
+  try {
+    // Show loading state on create button
+    const createBtn = document.getElementById(
+      'create-room-btn');
+    createBtn.disabled = true;
+    createBtn.textContent = 'Creating...';
 
-        // Add to user stats
-        await updateDoc(doc(db, 'users', currentUser.uid), {
-            "stats.roomsCreated": increment(1)
-        });
-        
-        window.location.href = `editor.html?room=${roomId}`;
-    } catch (error) {
-        console.error(error);
-        showToast("Failed to create room", "error");
-        btn.classList.remove('loading');
+    // Get current logged in user
+    const user = auth.currentUser;
+    if (!user) {
+      showToast('You must be logged in', 'error');
+      return;
     }
-});
+
+    // Generate unique 6-char room code
+    const roomCode = generateRoomCode();
+
+    // Check if code already exists in Firestore
+    const existing = await getDocs(
+      query(
+        collection(db, 'rooms'),
+        where('roomCode', '==', roomCode)
+      )
+    );
+    // If code exists regenerate
+    const finalCode = existing.empty 
+      ? roomCode 
+      : generateRoomCode();
+
+    // Create room document in Firestore
+    const roomRef = await addDoc(
+      collection(db, 'rooms'), {
+      name: roomName,
+      roomCode: finalCode,
+      language: language,
+      isPublic: isPublic,
+      owner: user.uid,
+      ownerName: user.displayName || user.email,
+      collaborators: [],
+      createdAt: serverTimestamp(),
+      lastActive: serverTimestamp(),
+      activeUsers: 0,
+      description: '',
+      tags: []
+    });
+
+    // Update user stats in Firestore
+    const userRef = doc(db, 'users', user.uid);
+    await updateDoc(userRef, {
+      'stats.roomsCreated': increment(1)
+    });
+
+    // Close modal
+    if (typeof closeCreateModal === 'function') closeCreateModal();
+
+    // Show success toast
+    showToast('Room created successfully!', 
+      'success');
+
+    // Redirect to editor with room ID
+    window.location.href = 
+      \`editor.html?room=\${roomRef.id}\`;
+
+  } catch (error) {
+    console.error('Create room error:', error);
+    showToast('Failed to create room: ' 
+      + error.message, 'error');
+  } finally {
+    const createBtn = document.getElementById(
+      'create-room-btn');
+    if (createBtn) {
+      createBtn.disabled = false;
+      createBtn.textContent = 'Create Room';
+    }
+  }
+};
+
+// Generate 6 char room code
+const generateRoomCode = () => {
+  const chars = 
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(
+      Math.floor(Math.random() * chars.length)
+    );
+  }
+  return code;
+};
+
+// Create room form submit handler
+const createRoomForm = document.getElementById(
+  'create-room-form');
+if (createRoomForm) {
+  createRoomForm.addEventListener(
+    'submit', async (e) => {
+    e.preventDefault();
+    
+    const roomName = document.getElementById(
+      'room-name-input').value.trim();
+    const language = document.getElementById(
+      'language-select').value;
+    const isPublic = document.getElementById(
+      'public-toggle').checked;
+
+    if (!roomName) {
+      showToast('Please enter a room name', 
+        'error');
+      return;
+    }
+    if (roomName.length < 3) {
+      showToast(
+        'Room name must be at least 3 characters',
+        'error');
+      return;
+    }
+
+    await createRoom(roomName, language, isPublic);
+  });
+}
 
 // Join Room Modal
 document.getElementById('btn-quick-join').addEventListener('click', () => {
