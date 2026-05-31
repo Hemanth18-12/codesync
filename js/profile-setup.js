@@ -1,4 +1,4 @@
-import { auth, db, doc, getDoc, updateDoc, onAuthStateChanged } from './firebase-config.js';
+import { auth, db, doc, getDoc, setDoc, onAuthStateChanged } from './firebase-config.js';
 
 let currentUser = null;
 let currentStep = 1;
@@ -93,8 +93,9 @@ btnNext.addEventListener('click', async () => {
     if (currentStep === 1) {
         const nameInput = document.getElementById('display-name');
         if (nameInput.value.trim().length < 2) {
-            alert("Please enter a display name (min 2 characters)."); // Kept simple for this isolated page
+            nameInput.style.border = '2px solid var(--error-color)';
             nameInput.focus();
+            setTimeout(() => nameInput.style.border = '', 2000);
             return;
         }
     }
@@ -102,8 +103,19 @@ btnNext.addEventListener('click', async () => {
     if (currentStep === totalSteps - 1) {
         // Save everything to Firestore before showing final step
         btnNext.classList.add('loading');
-        await saveProfileData();
-        btnNext.classList.remove('loading');
+        btnNext.disabled = true;
+        try {
+            await saveProfileData();
+            // Only proceed if save succeeded
+            btnNext.classList.remove('loading');
+            btnNext.disabled = false;
+            currentStep++;
+            updateUI();
+        } catch (e) {
+            // Error already shown inside saveProfileData()
+            btnNext.disabled = false;
+        }
+        return; // Early return — updateUI called inside try block
     }
     
     if (currentStep < totalSteps) {
@@ -191,15 +203,27 @@ themeOptions.forEach(opt => {
 async function saveProfileData() {
     if (!currentUser) return;
     
+    // Use nested object — setDoc(merge) does NOT support dot-notation keys
     const updates = {
+        uid: currentUser.uid,
+        email: currentUser.email,
         displayName: document.getElementById('display-name').value.trim(),
         bio: document.getElementById('bio-input').value.trim(),
         githubUrl: document.getElementById('github-input').value.trim(),
         linkedinUrl: document.getElementById('linkedin-input').value.trim(),
-        'preferences.theme': selectedTheme,
-        'preferences.fontSize': parseInt(document.getElementById('font-size').value),
-        'preferences.minimap': document.getElementById('pref-minimap').checked,
-        onboardingComplete: true
+        preferences: {
+            theme: selectedTheme,
+            fontSize: parseInt(document.getElementById('font-size').value),
+            minimap: document.getElementById('pref-minimap').checked,
+            wordWrap: true
+        },
+        onboardingComplete: true,
+        stats: {
+            totalCodingMinutes: 0,
+            linesWritten: 0,
+            streakDays: 0,
+            lastSessionDate: null
+        }
     };
     
     if (photoBase64) {
@@ -207,10 +231,21 @@ async function saveProfileData() {
     }
     
     try {
-        await updateDoc(doc(db, 'users', currentUser.uid), updates);
+        // setDoc with merge:true = create if not exists, update if exists
+        await setDoc(doc(db, 'users', currentUser.uid), updates, { merge: true });
+        console.log('✅ Profile saved successfully');
     } catch (e) {
         console.error("Failed to save profile:", e);
-        alert("Failed to save your profile. Please try again.");
+        // Show error inline instead of blocking alert
+        const btn = document.getElementById('btn-next');
+        btn.classList.remove('loading');
+        btn.style.border = '2px solid var(--error-color)';
+        btn.innerText = '❌ Save Failed — Retry';
+        setTimeout(() => {
+            btn.style.border = '';
+            btn.innerText = 'Complete Setup';
+        }, 3000);
+        throw e; // Re-throw so the caller knows it failed
     }
 }
 

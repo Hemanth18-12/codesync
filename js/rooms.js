@@ -1,10 +1,10 @@
 import { 
     db, rtdb, doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, 
-    ref, onValue, set, onDisconnect, push, update as rtdbUpdate, remove
+    ref, get, onValue, set, onDisconnect, push, rtdbUpdate, remove
 } from './firebase-config.js';
 import { 
     editorInstance, currentUser, currentRoomId, setEditorContent, 
-    setReadOnly, hideLoading, updateTabsUI, activeFile
+    setReadOnly, hideLoading, updateTabsUI, getActiveFile, setActiveFile
 } from './editor.js';
 import { appendSystemMessage } from './chat.js';
 import { localFilesMap, saveToLocalFile } from './file-system.js';
@@ -51,7 +51,6 @@ window.addEventListener('monaco-ready', async () => {
 
         setupPresence();
         setupWorkspaceSync();
-        setupSettingsModal();
         
     } catch (e) {
         console.error("Failed to load room", e);
@@ -120,13 +119,14 @@ function setupWorkspaceSync() {
         renderTabsAndTree(files);
         
         // If active file is in the sync data, update editor
-        if (files[activeFile]) {
-            const remoteContent = files[activeFile].content;
-            const remoteLang = files[activeFile].language;
+        const currentFile = getActiveFile();
+        if (files[currentFile]) {
+            const remoteContent = files[currentFile].content;
+            const remoteLang = files[currentFile].language;
             
             if (editorInstance.getValue() !== remoteContent) {
                 ignoreNextChange = true;
-                setEditorContent(remoteContent, remoteLang, activeFile);
+                setEditorContent(remoteContent, remoteLang, currentFile);
             }
         }
         
@@ -142,9 +142,10 @@ function setupWorkspaceSync() {
         
         const content = editorInstance.getValue();
         const lang = editorInstance.getModel().getLanguageId();
+        const currentFile = getActiveFile();
         
         // Sync to RTDB
-        rtdbUpdate(ref(rtdb, `rooms/${currentRoomId}/workspace/${activeFile}`), {
+        set(ref(rtdb, `rooms/${currentRoomId}/workspace/${currentFile}`), {
             content: content,
             language: lang,
             lastModifiedBy: currentUser.uid,
@@ -152,7 +153,7 @@ function setupWorkspaceSync() {
         });
         
         // Sync to Local FS if applicable
-        const mappedLocalPath = activeFile.replace(/_/g, '/');
+        const mappedLocalPath = currentFile.replace(/_/g, '/');
         if (localFilesMap.has(mappedLocalPath)) {
             saveToLocalFile(mappedLocalPath, content);
         }
@@ -162,7 +163,7 @@ function setupWorkspaceSync() {
     editorInstance.onDidChangeCursorPosition((e) => {
         const { lineNumber, column } = e.position;
         set(ref(rtdb, `rooms/${currentRoomId}/cursors/${currentUser.uid}`), {
-            file: activeFile,
+            file: getActiveFile(),
             line: lineNumber,
             col: column
         });
@@ -186,7 +187,7 @@ function renderTabsAndTree(files) {
         const f = files[fileId];
         // Tab DOM
         const tab = document.createElement('div');
-        tab.className = `file-tab ${fileId === activeFile ? 'active' : ''}`;
+        tab.className = `file-tab ${fileId === getActiveFile() ? 'active' : ''}`;
         tab.dataset.path = fileId;
         
         const name = fileId === 'main' ? 'main' : f.originalPath?.split('/').pop() || fileId;
@@ -199,7 +200,7 @@ function renderTabsAndTree(files) {
         
         tab.onclick = (e) => {
             if(e.target.classList.contains('tab-close')) return;
-            activeFile = fileId;
+            setActiveFile(fileId);
             setEditorContent(f.content, f.language, fileId);
             updateTabsUI(fileId);
         };
@@ -211,13 +212,13 @@ function renderTabsAndTree(files) {
 window.closeRemoteFile = async (fileId, event) => {
     event.stopPropagation();
     if(fileId === 'main') {
-        alert("Cannot close main workspace file.");
+        showToast('Cannot close main workspace file.', 'warning');
         return;
     }
     // Delete from RTDB
     await remove(ref(rtdb, `rooms/${currentRoomId}/workspace/${fileId}`));
-    if (activeFile === fileId) {
-        activeFile = 'main';
+    if (getActiveFile() === fileId) {
+        setActiveFile('main');
         // The onValue listener will handle loading main content
     }
 };
@@ -233,7 +234,7 @@ function updateRemoteCursors(cursorsData) {
             if (uid === currentUser.uid) return;
             
             const cursor = cursorsData[uid];
-            if (cursor.file !== activeFile) return; // Only show cursors in same file
+            if (cursor.file !== getActiveFile()) return; // Only show cursors in same file
             
             const user = users[uid];
             if (!user) return;
@@ -296,7 +297,7 @@ document.getElementById('btn-save-snapshot-confirm').addEventListener('click', a
         });
         
         // Notify room
-        appendSystemMessage(`📸 ${userData?.displayName || 'A user'} saved a snapshot: "${label}"`);
+        appendSystemMessage(`📸 Snapshot saved: "${label}"`);
         
         document.getElementById('snap-name-modal').classList.remove('active');
         document.getElementById('snap-label').value = '';
@@ -362,23 +363,24 @@ window.updateUserPermission = async (uid, perm) => {
 const urlParams = new URLSearchParams(window.location.search);
 const restoreId = urlParams.get('restore');
 if (restoreId) {
-    // Wait for auth to complete
-    setTimeout(async () => {
+    // Wait for monaco-ready event so currentUser is available
+    window.addEventListener('monaco-ready', async () => {
         try {
-            const snapDoc = await getDoc(doc(db, `users/${currentUser.uid}/snapshots`, restoreId));
-            if(snapDoc.exists()) {
+            if (!currentUser) return;
+            const snapDoc = await getDoc(doc(db, 'users', currentUser.uid, 'snapshots', restoreId));
+            if (snapDoc.exists()) {
                 const code = snapDoc.data().code;
-                rtdbUpdate(ref(rtdb, `rooms/${currentRoomId}/workspace/main`), {
+                set(ref(rtdb, `rooms/${currentRoomId}/workspace/main`), {
                     content: code,
+                    language: snapDoc.data().language || 'javascript',
                     timestamp: Date.now()
                 });
-                appendSystemMessage("🔄 Restored from snapshot: " + snapDoc.data().label);
-                
+                appendSystemMessage('🔄 Restored from snapshot: ' + snapDoc.data().label);
                 // Clean URL
                 window.history.replaceState({}, document.title, `editor.html?room=${currentRoomId}`);
             }
-        } catch(e) {}
-    }, 1500);
+        } catch(e) { console.error('Restore error', e); }
+    }, { once: true });
 }
 
 // Utils

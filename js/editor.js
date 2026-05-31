@@ -8,6 +8,9 @@ export let activeFile = 'main';
 export let userPreferences = { theme: 'vs-dark', fontSize: 14, minimap: true, wordWrap: true };
 export let isReadOnly = false;
 
+export const getActiveFile = () => activeFile;
+export const setActiveFile = (fileId) => { activeFile = fileId; };
+
 // --- DOM ELEMENTS ---
 const monacoContainer = document.getElementById('monaco-container');
 const loadingOverlay = document.getElementById('editor-loading');
