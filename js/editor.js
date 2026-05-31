@@ -1,341 +1,595 @@
-/**
- * CodeSync v2.0 - Core Editor Logic (Monaco + Real-time Sync)
- */
-import { auth, database, isDev } from './firebase-config.js';
-import { ref, onValue, set, serverTimestamp, update, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+import { 
+    auth, db, rtdb, 
+    onAuthStateChanged,
+    doc, getDoc, updateDoc,
+    ref, set, onValue, onDisconnect, push, remove, onChildAdded
+} from './firebase-config.js';
 
-const appEditor = {
-    roomId: null,
-    editorInstance: null,
-    isApplyingRemote: false,
-    saveTimeout: null,
-    userColors: ['#ff6b00', '#00ff88', '#4488ff', '#ff4444', '#ffcc00', '#b042ff'],
-    decorations: {},
+// --- Global State ---
+let currentUser = null;
+let userData = null;
+let roomId = null;
+let roomData = null;
+let editor = null;
+let Monaco = null;
 
-    init: function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        this.roomId = urlParams.get('room');
+// Realtime Presence & Sync
+let codeRef, cursorsRef, activeUsersRef;
+let isUpdatingContent = false;
+let decorations = []; // Monaco cursor decorations
+let cursorColors = {}; // userId -> color
 
-        if (!this.roomId) {
-            window.location.href = 'dashboard.html';
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Extract Room ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    roomId = urlParams.get('room');
+    
+    if (!roomId) {
+        showToast("No room specified!", 'error');
+        setTimeout(() => window.location.href = 'dashboard.html', 1500);
+        return;
+    }
+
+    // 2. Auth Guard
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = `auth.html?redirect=editor.html?room=${roomId}`;
             return;
         }
+        currentUser = user;
+        
+        try {
+            await initializeWorkspace();
+        } catch(err) {
+            console.error(err);
+            showToast(err.message, 'error');
+            setTimeout(() => window.location.href = 'dashboard.html', 2000);
+        }
+    });
 
-        // Wait for Monaco to be loaded by script tag
-        const checkMonaco = setInterval(() => {
-            if (window.monaco) {
-                clearInterval(checkMonaco);
-                this.initMonaco();
-            }
-        }, 100);
+    setupUIListeners();
+});
 
-        // Bind shortcuts
-        document.addEventListener('keydown', (e) => {
-            if(e.ctrlKey && e.key === 'Enter') { e.preventDefault(); this.runCode(); }
-            if(e.ctrlKey && e.key === 'k') { e.preventDefault(); this.togglePanel('chat'); }
-            if(e.ctrlKey && e.key === '`') { e.preventDefault(); this.toggleConsole(); }
-        });
+async function initializeWorkspace() {
+    // 1. Fetch User Data
+    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+    if(!userDoc.exists()) throw new Error("User data not found");
+    userData = userDoc.data();
 
-        // Setup Console Eval
-        document.getElementById('console-eval').addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') {
-                const code = e.target.value;
-                if(code) {
-                    this.printToConsole('> ' + code, 'log');
-                    this.evalInSandbox(code);
-                    e.target.value = '';
-                }
-            }
-        });
-    },
+    // 2. Fetch Room Data
+    const roomRef = doc(db, 'rooms', roomId);
+    const roomSnap = await getDoc(roomRef);
+    if (!roomSnap.exists()) throw new Error("Room not found or deleted");
+    roomData = roomSnap.data();
 
-    initMonaco: function() {
-        this.editorInstance = monaco.editor.create(document.getElementById('monaco-container'), {
-            value: '// Loading...',
-            language: 'javascript',
-            theme: 'vs-dark',
+    // Access control check
+    if (!roomData.isPublic && !roomData.collaborators.includes(currentUser.uid)) {
+        throw new Error("You do not have access to this room");
+    }
+
+    // 3. Update UI Headers
+    document.getElementById('room-name').textContent = roomData.name;
+    document.getElementById('room-code-badge').textContent = roomId;
+    document.getElementById('editor-lang').value = roomData.language;
+
+    // Apply User Prefs
+    document.documentElement.setAttribute('data-theme', userData.preferences.theme);
+
+    // 4. Initialize Monaco
+    initMonaco();
+
+    // 5. Setup Firebase Realtime Listeners
+    setupPresenceAndSync();
+}
+
+// --- Monaco Editor Setup ---
+function initMonaco() {
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+        Monaco = monaco;
+
+        const container = document.getElementById('monaco-container');
+        editor = monaco.editor.create(container, {
+            value: "// Loading code...",
+            language: roomData.language,
+            theme: userData.preferences.theme === 'light' ? 'vs' : 'vs-dark',
+            fontSize: userData.preferences.fontSize || 14,
+            tabSize: userData.preferences.tabSize || 2,
+            wordWrap: userData.preferences.wordWrap ? "on" : "off",
+            minimap: { enabled: userData.preferences.minimap !== false },
             automaticLayout: true,
-            minimap: { enabled: true },
-            fontSize: 16,
-            fontFamily: 'JetBrains Mono',
-            padding: { top: 20 },
             scrollBeyondLastLine: false,
             smoothScrolling: true,
-            cursorBlinking: "smooth"
+            padding: { top: 16 }
         });
 
-        if(isDev) {
-            this.editorInstance.setValue("// CodeSync Dev Mode\nconsole.log('Hello World');");
-            document.getElementById('room-name').innerText = "Local Dev Room";
-            document.getElementById('room-code').innerText = this.roomId;
-            document.getElementById('room-name').classList.remove('skeleton-loader');
-            this.setupLocalListeners();
+        // Expose editor globally so rooms.js snapshot can access it
+        window._monacoEditor = editor;
+        window._currentUserData = userData;
+
+        // Editor Change Event (Sync to RTDB)
+        editor.onDidChangeModelContent(debounce(() => {
+            if (isUpdatingContent) return;
+            if (!codeRef) return;
+            set(codeRef, {
+                content: editor.getValue(),
+                language: roomData.language,
+                updatedBy: currentUser.uid,
+                timestamp: Date.now()
+            });
+        }, 300));
+
+        // Cursor Change Event (Sync to RTDB)
+        editor.onDidChangeCursorPosition(debounce((e) => {
+            if (!currentUser || !userData) return;
+            const pos = e.position;
+            set(ref(rtdb, `rooms/${roomId}/cursors/${currentUser.uid}`), {
+                line: pos.lineNumber,
+                column: pos.column,
+                color: userData.avatar.color,
+                username: userData.fullName.split(' ')[0],
+                timestamp: Date.now()
+            });
+        }, 100));
+
+        // Monaco keyboard shortcuts
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+            document.getElementById('btn-run')?.click();
+        });
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+            document.getElementById('btn-snapshot')?.click();
+        });
+
+        // Trigger initial data load from RTDB
+        setupCodeListener();
+    });
+}
+
+// --- Realtime Sync Logic ---
+function setupPresenceAndSync() {
+    codeRef = ref(rtdb, `rooms/${roomId}/code`);
+    cursorsRef = ref(rtdb, `rooms/${roomId}/cursors`);
+    activeUsersRef = ref(rtdb, `rooms/${roomId}/activeUsers`);
+
+    // 1. Presence
+    const myPresenceRef = ref(rtdb, `rooms/${roomId}/activeUsers/${currentUser.uid}`);
+    const connectedRef = ref(rtdb, '.info/connected');
+
+    onValue(connectedRef, (snap) => {
+        if (snap.val() === true) {
+            // We are connected
+            showToast("Connected to room", "success");
+            
+            // Set disconnect hook
+            onDisconnect(myPresenceRef).remove();
+            onDisconnect(ref(rtdb, `rooms/${roomId}/cursors/${currentUser.uid}`)).remove();
+
+            // Write presence
+            set(myPresenceRef, {
+                uid: currentUser.uid,
+                name: userData.fullName,
+                color: userData.avatar.color,
+                initials: userData.avatar.initials,
+                joinedAt: Date.now()
+            });
+        } else {
+            showToast("Connection lost. Reconnecting...", "error");
+        }
+    });
+
+    // Listen to Active Users
+    onValue(activeUsersRef, (snap) => {
+        const users = snap.val() || {};
+        updatePresenceUI(users);
+        
+        // Clean up cursors of users who left
+        Object.keys(cursorColors).forEach(uid => {
+            if(!users[uid] && uid !== currentUser.uid) {
+                remove(ref(rtdb, `rooms/${roomId}/cursors/${uid}`));
+                delete cursorColors[uid];
+            }
+        });
+    });
+
+    // 2. Cursor Sync Listener
+    onValue(cursorsRef, (snap) => {
+        if (!editor || !Monaco) return;
+        const cursors = snap.val() || {};
+        const newDecorations = [];
+
+        Object.keys(cursors).forEach(uid => {
+            if (uid === currentUser.uid) return; // Ignore own cursor
+            
+            const cursor = cursors[uid];
+            cursorColors[uid] = cursor.color;
+
+            // Create CSS rule for cursor color if not exists
+            let styleId = `cursor-style-${uid}`;
+            if (!document.getElementById(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.innerHTML = `
+                    .cursor-${uid} { border-left: 2px solid ${cursor.color}; }
+                    .cursor-${uid} .cursor-label { background-color: ${cursor.color}; }
+                `;
+                document.head.appendChild(style);
+            }
+
+            newDecorations.push({
+                range: new Monaco.Range(cursor.line, cursor.column, cursor.line, cursor.column),
+                options: {
+                    className: `cursor-decorator cursor-${uid}`,
+                    hoverMessage: { value: cursor.username },
+                    beforeContentClassName: `cursor-label`,
+                    before: {
+                        content: cursor.username
+                    }
+                }
+            });
+        });
+
+        decorations = editor.deltaDecorations(decorations, newDecorations);
+    });
+
+    // Lazy-load chat and room tool modules after sync is established
+    import('./chat.js')
+        .then(module => module.initChat(roomId, currentUser, userData))
+        .catch(err => console.error('Chat module failed to load:', err));
+
+    import('./rooms.js')
+        .then(module => module.initRoomTools(roomId, currentUser, roomData))
+        .catch(err => console.error('Rooms module failed to load:', err));
+}
+
+function setupCodeListener() {
+    onValue(codeRef, (snap) => {
+        const data = snap.val();
+        if (!data || !editor) {
+            if(!data && editor) editor.setValue("// Start typing...");
             return;
         }
 
-        // Setup Firebase Listeners once auth is ready
-        const checkAuth = setInterval(() => {
-            if (auth.currentUser) {
-                clearInterval(checkAuth);
-                this.setupFirebaseSync();
-                window.appRooms.initPresence();
-                window.appChat.init();
-            }
-        }, 100);
-    },
-
-    setupFirebaseSync: function() {
-        const codeRef = ref(database, `rooms/${this.roomId}/code`);
-        const infoRef = ref(database, `rooms/${this.roomId}/info`);
-
-        // Load room info
-        onValue(infoRef, (snap) => {
-            if(snap.exists()) {
-                const info = snap.val();
-                document.getElementById('room-name').innerText = info.name;
-                document.getElementById('room-name').classList.remove('skeleton-loader');
-                document.getElementById('room-code').innerText = this.roomId;
-                document.getElementById('lang-select').value = info.language;
-                this.changeLanguage(info.language, false);
-            } else {
-                this.showToast("Room does not exist", "error");
-                setTimeout(() => window.location.href = 'dashboard.html', 2000);
-            }
-        });
-
-        // Listen for remote code changes
-        onValue(codeRef, (snap) => {
-            if(snap.exists()) {
-                const data = snap.val();
-                if(data.lastUpdatedBy !== auth.currentUser.uid && this.editorInstance) {
-                    this.isApplyingRemote = true;
-                    // Preserve cursor position
-                    const position = this.editorInstance.getPosition();
-                    this.editorInstance.setValue(data.content);
-                    this.editorInstance.setPosition(position);
-                    this.isApplyingRemote = false;
-                }
-            }
-        });
-
-        // Listen for local code changes to push
-        this.editorInstance.onDidChangeModelContent((e) => {
-            if(this.isApplyingRemote) return;
+        // Only update if someone else changed it to prevent cursor jumping
+        if (data.updatedBy !== currentUser.uid) {
+            isUpdatingContent = true;
             
-            clearTimeout(this.saveTimeout);
-            this.saveTimeout = setTimeout(() => {
-                const content = this.editorInstance.getValue();
-                update(ref(database, `rooms/${this.roomId}/code`), {
-                    content: content,
-                    lastUpdatedBy: auth.currentUser.uid,
-                    timestamp: serverTimestamp()
-                });
-            }, 500); // 500ms debounce
-        });
-
-        // Listen for local cursor changes to push presence
-        this.editorInstance.onDidChangeCursorPosition((e) => {
-            update(ref(database, `rooms/${this.roomId}/users/${auth.currentUser.uid}`), {
-                cursor: { lineNumber: e.position.lineNumber, column: e.position.column }
-            });
-        });
-
-        // Listen for remote cursor changes
-        onValue(ref(database, `rooms/${this.roomId}/users`), (snap) => {
-            if(!snap.exists() || !this.editorInstance) return;
-            const users = snap.val();
-            let newDecorations = [];
+            // Save cursor state
+            const position = editor.getPosition();
             
-            let colorIndex = 0;
-            Object.keys(users).forEach(uid => {
-                if(uid !== auth.currentUser.uid && users[uid].cursor) {
-                    const c = users[uid].cursor;
-                    const color = this.userColors[colorIndex % this.userColors.length];
-                    
-                    // Create CSS rule for this user's cursor dynamically if not exists
-                    const className = `cursor-${uid}`;
-                    if(!document.getElementById(`style-${uid}`)) {
-                        const style = document.createElement('style');
-                        style.id = `style-${uid}`;
-                        style.innerHTML = `
-                            .${className} { border-left: 2px solid ${color}; position: absolute; z-index:99; }
-                            .${className}::after { content: '${users[uid].name.split(' ')[0]}'; position: absolute; top: -15px; left: 0; background: ${color}; color: #fff; font-size: 10px; padding: 2px 4px; border-radius: 2px; white-space: nowrap; pointer-events: none; }
-                        `;
-                        document.head.appendChild(style);
-                    }
-
-                    newDecorations.push({
-                        range: new monaco.Range(c.lineNumber, c.column, c.lineNumber, c.column),
-                        options: { className: className }
-                    });
-                }
-                colorIndex++;
-            });
-
-            this.decorations[this.roomId] = this.editorInstance.deltaDecorations(
-                this.decorations[this.roomId] || [], 
-                newDecorations
-            );
-        });
-    },
-
-    setupLocalListeners: function() {
-        this.editorInstance.onDidChangeModelContent(() => {
-            document.getElementById('btn-run').classList.add('pulse');
-            setTimeout(()=> document.getElementById('btn-run').classList.remove('pulse'), 500);
-        });
-    },
-
-    // --- Editor Commands ---
-    changeLanguage: function(lang, notify = true) {
-        if(!this.editorInstance) return;
-        monaco.editor.setModelLanguage(this.editorInstance.getModel(), lang);
-        
-        const iconMap = { 'javascript': 'fa-js', 'python': 'fa-python', 'html': 'fa-html5', 'typescript': 'fa-js' };
-        document.getElementById('lang-icon').className = `fa-brands ${iconMap[lang] || 'fa-code'}`;
-        
-        if(notify && !isDev) {
-            update(ref(database, `rooms/${this.roomId}/info`), { language: lang });
-            this.showToast(`Language changed to ${lang}`, "success");
+            // Execute edit instead of setValue to preserve undo stack
+            const fullRange = editor.getModel().getFullModelRange();
+            editor.executeEdits("remote", [{
+                range: fullRange,
+                text: data.content
+            }]);
+            
+            // Restore cursor state
+            if(position) editor.setPosition(position);
+            
+            isUpdatingContent = false;
         }
-    },
 
-    changeTheme: function(theme) {
-        monaco.editor.setTheme(theme);
-    },
+        // Update language if changed
+        if (data.language !== roomData.language) {
+            roomData.language = data.language;
+            document.getElementById('editor-lang').value = data.language;
+            Monaco.editor.setModelLanguage(editor.getModel(), data.language);
+        }
+    });
+}
 
-    changeFontSize: function(delta) {
-        const current = this.editorInstance.getOption(monaco.editor.EditorOption.fontSize);
-        const next = Math.max(10, Math.min(32, current + delta));
-        this.editorInstance.updateOptions({ fontSize: next });
-        document.getElementById('font-size-disp').innerText = next + 'px';
-    },
+function updatePresenceUI(users) {
+    const stack = document.getElementById('presence-stack');
+    const onlineCount = document.getElementById('online-count');
+    
+    stack.innerHTML = '';
+    const userIds = Object.keys(users);
+    onlineCount.textContent = `${userIds.length} Online`;
 
-    toggleSetting: function(setting, value) {
-        let opts = {};
-        if(setting === 'minimap') opts.minimap = { enabled: value };
-        if(setting === 'wordWrap') opts.wordWrap = value ? "on" : "off";
-        this.editorInstance.updateOptions(opts);
-    },
+    // Max 5 avatars in stack
+    const displayUsers = userIds.slice(0, 5);
+    displayUsers.forEach(uid => {
+        const u = users[uid];
+        const av = document.createElement('div');
+        av.className = 'presence-avatar';
+        av.style.backgroundColor = u.color;
+        av.textContent = u.initials;
+        av.setAttribute('data-name', u.name);
+        stack.appendChild(av);
+    });
 
-    // --- UI Toggles ---
-    togglePanel: function(panel) {
-        const el = document.getElementById(`panel-${panel}`);
-        el.classList.toggle('hidden');
-        // Force monaco layout update
-        setTimeout(() => this.editorInstance.layout(), 300);
-    },
+    if (userIds.length > 5) {
+        const more = document.createElement('div');
+        more.className = 'presence-avatar';
+        more.style.backgroundColor = '#333';
+        more.textContent = `+${userIds.length - 5}`;
+        stack.appendChild(more);
+    }
+}
 
-    toggleConsole: function() {
-        const panel = document.getElementById('panel-console');
-        const icon = document.getElementById('console-toggle-icon');
-        panel.classList.toggle('collapsed');
-        icon.classList.toggle('fa-chevron-down', !panel.classList.contains('collapsed'));
-        icon.classList.toggle('fa-chevron-up', panel.classList.contains('collapsed'));
-        setTimeout(() => this.editorInstance.layout(), 300);
-    },
+// --- UI Interaction Logic ---
+function setupUIListeners() {
+    // Title Edit — roomData available only after initializeWorkspace resolves,
+    // so we defer content-editable enablement and rename logic.
+    const titleEl = document.getElementById('room-name');
+    titleEl.addEventListener('blur', async (e) => {
+        if (!roomData || !currentUser) return;
+        const newName = e.target.textContent.trim();
+        if (newName && newName !== roomData.name) {
+            if (roomData.ownerId === currentUser.uid) {
+                try {
+                    await updateDoc(doc(db, 'rooms', roomId), { name: newName });
+                    roomData.name = newName;
+                    showToast("Room renamed");
+                } catch (err) {
+                    showToast("Failed to rename room", "error");
+                    e.target.textContent = roomData.name;
+                }
+            } else {
+                showToast("Only the owner can rename the room", 'warning');
+                e.target.textContent = roomData.name;
+            }
+        }
+    });
+    titleEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+    });
+    // Enable editing after workspace fully initializes
+    setTimeout(() => {
+        if (roomData && currentUser && roomData.ownerId === currentUser.uid) {
+            titleEl.setAttribute('contenteditable', 'true');
+        }
+    }, 2000);
 
-    // --- Execution Engine ---
-    runCode: function() {
-        if(!this.editorInstance) return;
-        const lang = document.getElementById('lang-select').value;
-        const code = this.editorInstance.getValue();
+    // Copy Badge
+    document.getElementById('room-code-badge').addEventListener('click', () => {
+        navigator.clipboard.writeText(roomId);
+        showToast("Room code copied!");
+    });
+
+    // Invite Btn
+    document.getElementById('btn-invite').addEventListener('click', () => {
+        navigator.clipboard.writeText(window.location.href);
+        showToast("Invite link copied to clipboard!");
+    });
+
+    // Language change
+    document.getElementById('editor-lang').addEventListener('change', (e) => {
+        const newLang = e.target.value;
+        if (editor && Monaco) {
+            Monaco.editor.setModelLanguage(editor.getModel(), newLang);
+            // Trigger sync
+            set(codeRef, {
+                content: editor.getValue(),
+                language: newLang,
+                updatedBy: currentUser.uid,
+                timestamp: Date.now()
+            });
+        }
+    });
+
+    // Settings Menu
+    const settingsBtn = document.getElementById('btn-settings');
+    const settingsMenu = document.getElementById('settings-menu');
+    settingsBtn.addEventListener('click', () => settingsMenu.classList.toggle('hidden'));
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if(!settingsBtn.contains(e.target) && !settingsMenu.contains(e.target)) {
+            settingsMenu.classList.add('hidden');
+        }
+    });
+
+    // Font size controls
+    const fontVal = document.getElementById('font-val');
+    document.getElementById('font-inc').addEventListener('click', () => {
+        let size = parseInt(fontVal.textContent);
+        if(size < 32) { size+=2; fontVal.textContent = size; updateEditorOption('fontSize', size); }
+    });
+    document.getElementById('font-dec').addEventListener('click', () => {
+        let size = parseInt(fontVal.textContent);
+        if(size > 10) { size-=2; fontVal.textContent = size; updateEditorOption('fontSize', size); }
+    });
+
+    // Toggle options — Monaco may not be ready immediately, guard with check
+    document.getElementById('pref-theme').addEventListener('change', (e) => {
+        if (Monaco) Monaco.editor.setTheme(e.target.value);
+    });
+    document.getElementById('pref-wrap').addEventListener('change', (e) => {
+        updateEditorOption('wordWrap', e.target.checked ? 'on' : 'off');
+    });
+    document.getElementById('pref-minimap').addEventListener('change', (e) => {
+        updateEditorOption('minimap', { enabled: e.target.checked });
+    });
+
+    // Fullscreen
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {});
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    });
+
+    // Leave
+    document.getElementById('btn-leave').addEventListener('click', () => {
+        if(confirm("Leave this room?")) window.location.href = 'dashboard.html';
+    });
+
+    // Panels toggle
+    // Shortcuts handled by editor above, these are visual buttons if added
+
+    // --- Sandboxed Execution ---
+    const btnRun = document.getElementById('btn-run');
+    const consoleOutput = document.getElementById('console-output');
+    const consolePanel = document.getElementById('console-panel');
+
+    btnRun.addEventListener('click', () => {
+        if (!editor) return;
+        const code = editor.getValue();
+        const lang = document.getElementById('editor-lang').value;
         
-        const panel = document.getElementById('panel-console');
-        if(panel.classList.contains('collapsed')) this.toggleConsole();
-        
-        this.clearConsole();
-        this.printToConsole(`[CodeSync] Running ${lang}...`, 'log');
-        
-        const startTime = performance.now();
+        consolePanel.classList.remove('collapsed');
+        btnRun.classList.add('running');
+        btnRun.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px"></div> Running';
 
         if (lang === 'javascript' || lang === 'typescript') {
-            this.evalInSandbox(code, startTime);
+            runSandboxedCode(code);
         } else {
-            this.printToConsole(`[Error] Client-side execution for ${lang} is currently mocked.`, 'error');
-            setTimeout(() => this.printToConsole('Execution finished.', 'log'), 500);
+            appendConsole(`Executing ${lang} requires a backend environment. In this static demo, only JS is evaluated in browser.`, 'warn');
+            setTimeout(() => {
+                btnRun.classList.remove('running');
+                btnRun.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg> Run';
+            }, 500);
         }
-    },
+    });
 
-    evalInSandbox: function(code, startTime = null) {
-        // We inject the code into our hidden iframe to run it safely and capture console
-        const frame = document.getElementById('sandbox-frame');
-        const content = `
-            <script>
-                const origLog = console.log;
-                const origErr = console.error;
-                const origWarn = console.warn;
-                
-                console.log = function(...args) { window.parent.postMessage({type: 'console', level: 'log', args: args.map(a => String(a))}, '*'); origLog(...args); };
-                console.error = function(...args) { window.parent.postMessage({type: 'console', level: 'error', args: args.map(a => String(a))}, '*'); origErr(...args); };
-                console.warn = function(...args) { window.parent.postMessage({type: 'console', level: 'warn', args: args.map(a => String(a))}, '*'); origWarn(...args); };
-                
-                window.onerror = function(msg, url, line) {
-                    console.error("Runtime Error: " + msg + " (Line " + (line - 16) + ")"); // approx offset
-                    return true;
-                };
+    document.getElementById('btn-close-console').addEventListener('click', () => {
+        consolePanel.classList.add('collapsed');
+    });
+    document.getElementById('btn-clear-console').addEventListener('click', () => {
+        const inputLine = consoleOutput.querySelector('.console-input-line');
+        consoleOutput.innerHTML = '';
+        if(inputLine) consoleOutput.appendChild(inputLine);
+    });
 
-                try {
-                    const result = eval(${JSON.stringify(code)});
-                    if(result !== undefined) {
-                        window.parent.postMessage({type: 'eval_result', data: String(result)}, '*');
-                    }
-                } catch(e) {
-                    console.error(e.toString());
-                }
-                
-                window.parent.postMessage({type: 'eval_done'}, '*');
-            </script>
-        `;
-        
-        // Listen for messages from iframe
-        const listener = (e) => {
-            if(e.data.type === 'console') {
-                this.printToConsole(e.data.args.join(' '), e.data.level);
-            }
-            if(e.data.type === 'eval_result') {
-                this.printToConsole(`<- ${e.data.data}`, 'return');
-            }
-            if(e.data.type === 'eval_done') {
-                if(startTime) {
-                    const t = (performance.now() - startTime).toFixed(2);
-                    this.printToConsole(`[CodeSync] Execution finished in ${t}ms.`, 'log');
-                }
-                window.removeEventListener('message', listener);
-            }
-        };
-        window.addEventListener('message', listener);
-        
-        frame.srcdoc = content;
-    },
+    // Setup iframe message listener
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'console') {
+            appendConsole(event.data.message, event.data.method);
+        } else if (event.data.type === 'error') {
+            appendConsole(event.data.message, 'error');
+        } else if (event.data.type === 'result') {
+            if(event.data.message !== undefined) appendConsole(String(event.data.message), 'return');
+            
+            // Execution complete
+            const time = event.data.time;
+            appendConsole(`Execution finished in ${time}ms`, 'system');
+            
+            btnRun.classList.remove('running');
+            btnRun.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg> Run';
+        }
+    });
 
-    printToConsole: function(msg, level) {
-        const out = document.getElementById('console-output');
-        const el = document.createElement('div');
-        el.className = `console-line console-${level}`;
-        
-        let prefix = '';
-        if(level === 'error') prefix = '<i class="fa-solid fa-triangle-exclamation"></i> ';
-        if(level === 'warn') prefix = '<i class="fa-solid fa-circle-exclamation"></i> ';
-        
-        el.innerHTML = prefix + msg.replace(/\n/g, '<br>');
-        out.appendChild(el);
-        out.scrollTop = out.scrollHeight;
-    },
+    // Setup REPL input
+    const consoleInput = document.getElementById('console-input');
+    consoleInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const code = e.target.value;
+            e.target.value = '';
+            if(code.trim() === '') return;
+            appendConsole("> " + code, 'log');
+            runSandboxedCode(code, true);
+        }
+    });
+}
 
-    clearConsole: function() {
-        document.getElementById('console-output').innerHTML = '';
-    },
-
-    showToast: function(msg, type="info") {
-        const container = document.getElementById('toast-container');
-        const t = document.createElement('div');
-        t.className = `toast ${type}`;
-        t.innerHTML = `<span>${msg}</span>`;
-        container.appendChild(t);
-        setTimeout(() => { t.style.opacity=0; setTimeout(()=>t.remove(), 300); }, 3000);
+function updateEditorOption(key, value) {
+    if (editor) {
+        editor.updateOptions({ [key]: value });
     }
-};
+}
 
-window.appEditor = appEditor;
-document.addEventListener('DOMContentLoaded', () => appEditor.init());
+// --- Sandboxed Execution Logic ---
+function runSandboxedCode(code, isRepl = false) {
+    const iframe = document.getElementById('sandbox-frame');
+    
+    // Inject script into iframe to intercept console
+    const scriptContent = `
+        <script>
+            // Intercept console
+            const methods = ['log', 'error', 'warn', 'info'];
+            methods.forEach(method => {
+                const original = console[method];
+                console[method] = function(...args) {
+                    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+                    window.parent.postMessage({ type: 'console', method: method, message: msg }, '*');
+                    original.apply(console, args);
+                };
+            });
+
+            // Catch errors
+            window.onerror = function(msg, url, line, col, error) {
+                window.parent.postMessage({ type: 'error', message: msg + ' (Line: ' + line + ')' }, '*');
+                return true;
+            };
+
+            // Execute
+            try {
+                const start = performance.now();
+                ${isRepl ? 'const result = eval(' + JSON.stringify(code) + ');' : code + '\nconst result = undefined;'}
+                const end = performance.now();
+                window.parent.postMessage({ 
+                    type: 'result', 
+                    message: result,
+                    time: (end - start).toFixed(2)
+                }, '*');
+            } catch (err) {
+                window.parent.postMessage({ type: 'error', message: err.toString() }, '*');
+                window.parent.postMessage({ type: 'result', time: 0 }, '*');
+            }
+        </script>
+    `;
+
+    // Rewrite iframe content
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(scriptContent);
+    doc.close();
+}
+
+function appendConsole(text, type = 'log') {
+    const output = document.getElementById('console-output');
+    const inputLine = output.querySelector('.console-input-line');
+    
+    const div = document.createElement('div');
+    div.className = `console-line ${type}`;
+    
+    // Formatting
+    let prefix = '';
+    if(type === 'error') prefix = '✕ ';
+    if(type === 'warn') prefix = '⚠ ';
+    if(type === 'return') prefix = '← ';
+    
+    div.textContent = prefix + text;
+    
+    if (inputLine) {
+        output.insertBefore(div, inputLine);
+    } else {
+        output.appendChild(div);
+    }
+    
+    output.scrollTop = output.scrollHeight;
+}
+
+// Utils
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    let icon = '';
+    if(type==='success') icon = '✅';
+    if(type==='error') icon = '❌';
+    if(type==='warning') icon = '⚠';
+
+    toast.innerHTML = `${icon} <span>${message}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        if(container.contains(toast)) toast.remove();
+    }, 4000);
+}

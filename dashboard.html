@@ -1,218 +1,354 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeSync | Dashboard</title>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Dashboard | CodeSync</title>
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
-<body>
-    <div class="global-bg"></div>
-    <div id="toast-container"></div>
+<body class="dashboard-layout">
+    <div class="toast-container" id="toast-container"></div>
 
-    <div class="dashboard-layout">
-        
-        <!-- Mobile Header -->
-        <div class="mobile-header">
-            <div class="brand"><i class="fa-solid fa-fire-flame-curved"></i> CodeSync</div>
-            <button class="btn-icon" onclick="document.getElementById('sidebar').classList.add('active')"><i class="fa-solid fa-bars"></i></button>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="dashboard.html" class="logo">
+                <span class="logo-icon">&lt;/&gt;</span>
+                <span class="logo-text">CodeSync</span>
+            </a>
+            <span class="version-badge">v2.0</span>
+            <button class="collapse-btn" id="collapse-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
         </div>
 
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="brand"><i class="fa-solid fa-fire-flame-curved"></i> <span>CodeSync</span></div>
-                <button class="btn-icon mobile-close" onclick="document.getElementById('sidebar').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
+        <div class="user-profile-mini">
+            <div class="avatar" id="user-avatar">--</div>
+            <div class="user-info">
+                <h4 id="user-name" class="skeleton-text">Loading...</h4>
+                <p id="user-email" class="skeleton-text">loading@email.com</p>
+            </div>
+            <div class="status-dot online"></div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-view="overview">
+                <span class="icon">🏠</span>
+                <span class="label">Overview</span>
+            </a>
+            <a href="#" class="nav-item" data-view="my-rooms">
+                <span class="icon">🚪</span>
+                <span class="label">My Rooms</span>
+            </a>
+            <a href="#" class="nav-item" data-view="joined-rooms">
+                <span class="icon">👥</span>
+                <span class="label">Joined Rooms</span>
+            </a>
+            <a href="#" class="nav-item" data-view="explore">
+                <span class="icon">🌍</span>
+                <span class="label">Explore Public</span>
+            </a>
+            <a href="#" class="nav-item" data-view="snapshots">
+                <span class="icon">📸</span>
+                <span class="label">Snapshots</span>
+            </a>
+            
+            <div class="nav-divider"></div>
+            
+            <a href="profile.html" class="nav-item">
+                <span class="icon">👤</span>
+                <span class="label">Profile</span>
+            </a>
+            <a href="guide.html" class="nav-item">
+                <span class="icon">❓</span>
+                <span class="label">Guide</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="btn-logout" id="btn-logout">
+                <span class="icon">🚪</span>
+                <span class="label">Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <!-- TOP HEADER -->
+        <header class="top-header">
+            <div class="greeting">
+                <h2 id="greeting-text">Good day</h2>
             </div>
             
-            <div class="user-profile glass-card">
-                <div class="avatar" id="user-avatar">?</div>
-                <div class="user-info">
-                    <h4 id="user-name" class="skeleton-loader">Loading...</h4>
-                    <span id="user-email" class="skeleton-loader" style="font-size: 0.8rem;">---</span>
+            <div class="header-actions">
+                <div class="search-bar glass-card">
+                    <span class="icon">🔍</span>
+                    <input type="text" id="global-search" placeholder="Search rooms, codes...">
                 </div>
-                <div class="status-dot"></div>
+                
+                <button class="notification-btn" id="btn-notifications">
+                    <span class="icon">🔔</span>
+                    <span class="badge hidden" id="notif-badge">0</span>
+                </button>
+                
+                <div class="avatar header-avatar" id="header-avatar">--</div>
             </div>
+        </header>
 
-            <nav class="sidebar-nav">
-                <a href="#dashboard" class="nav-item active" onclick="appDash.nav('dashboard', this)"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
-                <a href="#my-rooms" class="nav-item" onclick="appDash.nav('my-rooms', this)"><i class="fa-solid fa-door-closed"></i> <span>My Rooms</span></a>
-                <a href="#joined" class="nav-item" onclick="appDash.nav('joined', this)"><i class="fa-solid fa-users"></i> <span>Joined Rooms</span></a>
-                <div class="nav-divider"></div>
-                <a href="#settings" class="nav-item" onclick="appDash.nav('settings', this)"><i class="fa-solid fa-gear"></i> <span>Settings</span></a>
-                <a href="guide.html" class="nav-item"><i class="fa-solid fa-circle-question"></i> <span>Help & Guide</span></a>
-            </nav>
-
-            <button class="collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
-                <i class="fa-solid fa-chevron-left"></i>
-            </button>
+        <!-- VIEW CONTAINER -->
+        <div class="view-container" id="view-container">
             
-            <button class="nav-item logout-btn" onclick="appDash.logout()">
-                <i class="fa-solid fa-right-from-bracket"></i> <span>Log Out</span>
-            </button>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content" id="main-content">
-            
-            <!-- Views Container -->
-            <div id="view-dashboard" class="view active">
-                <header class="view-header">
-                    <h2>Welcome back, <span id="header-name" class="text-gradient">Developer</span></h2>
-                    <button class="btn btn-primary" onclick="appDash.openCreateModal()"><i class="fa-solid fa-plus"></i> New Room</button>
-                </header>
-
+            <!-- OVERVIEW VIEW -->
+            <div class="view active" id="view-overview">
                 <!-- Stats Row -->
-                <div class="stats-row">
-                    <div class="stat-card neu-card animate-on-scroll">
-                        <i class="fa-solid fa-door-open glow-icon"></i>
-                        <div class="stat-info">
-                            <span class="stat-label">Rooms Created</span>
-                            <h3 class="stat-num" id="stat-created">0</h3>
+                <div class="stats-grid">
+                    <div class="stat-card glass-card border-top-blue animate-on-scroll" style="--stagger:1;">
+                        <div class="stat-header">
+                            <span class="icon">🚪</span>
+                            <span class="label">Rooms Created</span>
                         </div>
+                        <h3 class="stat-value" id="stat-created">0</h3>
+                        <div class="sparkline blue"></div>
                     </div>
-                    <div class="stat-card neu-card animate-on-scroll delay-1">
-                        <i class="fa-solid fa-users glow-icon"></i>
-                        <div class="stat-info">
-                            <span class="stat-label">Rooms Joined</span>
-                            <h3 class="stat-num" id="stat-joined">0</h3>
+                    <div class="stat-card glass-card border-top-purple animate-on-scroll" style="--stagger:2;">
+                        <div class="stat-header">
+                            <span class="icon">👥</span>
+                            <span class="label">Sessions Joined</span>
                         </div>
+                        <h3 class="stat-value" id="stat-joined">0</h3>
+                        <div class="sparkline purple"></div>
                     </div>
-                    <div class="stat-card neu-card animate-on-scroll delay-2">
-                        <i class="fa-solid fa-clock glow-icon"></i>
-                        <div class="stat-info">
-                            <span class="stat-label">Total Sessions</span>
-                            <h3 class="stat-num" id="stat-sessions">0</h3>
+                    <div class="stat-card glass-card border-top-green animate-on-scroll" style="--stagger:3;">
+                        <div class="stat-header">
+                            <span class="icon">⏱️</span>
+                            <span class="label">Total Sessions</span>
                         </div>
+                        <h3 class="stat-value" id="stat-sessions">0</h3>
+                        <div class="sparkline green"></div>
                     </div>
-                    <div class="stat-card neu-card animate-on-scroll delay-3">
-                        <i class="fa-solid fa-code glow-icon"></i>
-                        <div class="stat-info">
-                            <span class="stat-label">Lines Written</span>
-                            <h3 class="stat-num" id="stat-lines">0</h3>
+                    <div class="stat-card glass-card border-top-amber animate-on-scroll" style="--stagger:4;">
+                        <div class="stat-header">
+                            <span class="icon">📝</span>
+                            <span class="label">Lines Written</span>
                         </div>
+                        <h3 class="stat-value" id="stat-lines">0</h3>
+                        <div class="sparkline amber"></div>
                     </div>
                 </div>
 
-                <!-- Join Room Section -->
-                <div class="join-section glass-card glow-border animate-on-scroll" style="margin-top:2rem;">
-                    <h3>Join a Room</h3>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <input type="text" id="join-input" class="input-control" placeholder="Enter 6-digit code" maxlength="6" style="text-transform:uppercase; font-size:1.2rem; letter-spacing:5px;">
-                        <button class="btn btn-primary" onclick="appDash.joinRoom()"><i class="fa-solid fa-right-to-bracket"></i> Join</button>
+                <div class="dashboard-split">
+                    <!-- Quick Join -->
+                    <div class="join-section glass-card animate-on-scroll">
+                        <h3>Join a Room</h3>
+                        <p>Enter a 6-digit code to join an existing session.</p>
+                        <div class="code-input-group">
+                            <input type="text" class="code-box" maxlength="1" data-idx="0">
+                            <input type="text" class="code-box" maxlength="1" data-idx="1">
+                            <input type="text" class="code-box" maxlength="1" data-idx="2">
+                            <span class="dash">-</span>
+                            <input type="text" class="code-box" maxlength="1" data-idx="3">
+                            <input type="text" class="code-box" maxlength="1" data-idx="4">
+                            <input type="text" class="code-box" maxlength="1" data-idx="5">
+                        </div>
+                        <button class="btn-primary full-width" id="btn-quick-join">Join Room</button>
+                        
+                        <div class="recent-codes">
+                            <span>Recent:</span>
+                            <div class="chip-container" id="recent-codes-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Recent Rooms -->
-                <div style="margin-top: 3rem;">
-                    <h3 style="margin-bottom: 1.5rem;">Recent Rooms</h3>
-                    <div class="rooms-grid" id="recent-rooms-grid">
-                        <!-- Loaded dynamically -->
-                        <div class="empty-state">
-                            <i class="fa-solid fa-ghost" style="font-size:3rem; color:var(--text-muted); margin-bottom:1rem;"></i>
-                            <p>No active rooms. Create or join one!</p>
+                    <!-- Recent Activity -->
+                    <div class="activity-section glass-card animate-on-scroll">
+                        <div class="section-header-flex">
+                            <h3>Recent Activity</h3>
+                            <button class="btn-text">View All</button>
+                        </div>
+                        <div class="activity-list" id="overview-activity">
+                            <!-- Populated by JS -->
+                            <div class="skeleton-loader" style="height:40px; margin-bottom:10px;"></div>
+                            <div class="skeleton-loader" style="height:40px; margin-bottom:10px;"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Other Views (My Rooms, Joined, Settings) -->
-            <div id="view-my-rooms" class="view">
-                <header class="view-header">
-                    <h2>My Rooms</h2>
-                    <button class="btn btn-primary" onclick="appDash.openCreateModal()"><i class="fa-solid fa-plus"></i> New Room</button>
-                </header>
-                <div class="rooms-grid" id="my-rooms-grid"></div>
+            <!-- MY ROOMS VIEW -->
+            <div class="view" id="view-my-rooms">
+                <div class="view-header">
+                    <div class="title-group">
+                        <h2>My Rooms</h2>
+                        <span class="badge" id="my-rooms-count">0</span>
+                    </div>
+                    <button class="btn-primary" id="btn-new-room">
+                        <span class="icon">+</span> New Room
+                    </button>
+                </div>
+                
+                <div class="controls-bar glass-card">
+                    <div class="filters">
+                        <div class="chip active">All</div>
+                        <div class="chip">JavaScript</div>
+                        <div class="chip">Python</div>
+                    </div>
+                    <div class="view-toggles">
+                        <select class="sort-select">
+                            <option>Recent First</option>
+                            <option>Name A-Z</option>
+                        </select>
+                        <button class="icon-btn active" title="Grid View">🔲</button>
+                        <button class="icon-btn" title="List View">☰</button>
+                    </div>
+                </div>
+
+                <div class="room-grid" id="my-rooms-grid">
+                    <!-- Populated by JS -->
+                </div>
+                
+                <div class="empty-state hidden" id="my-rooms-empty">
+                    <div class="empty-icon">🚪</div>
+                    <h3>No rooms yet</h3>
+                    <p>Create your first room to start collaborating.</p>
+                    <button class="btn-primary" onclick="document.getElementById('btn-new-room').click()">Create Room</button>
+                </div>
             </div>
 
-            <div id="view-joined" class="view">
-                <header class="view-header">
+            <!-- JOINED ROOMS VIEW -->
+            <div class="view" id="view-joined-rooms">
+                <div class="view-header">
                     <h2>Joined Rooms</h2>
-                </header>
-                <div class="rooms-grid" id="joined-rooms-grid"></div>
-            </div>
-
-            <div id="view-settings" class="view">
-                <header class="view-header">
-                    <h2>Settings</h2>
-                </header>
-                <div class="glass-card" style="max-width: 600px; padding: 2rem;">
-                    <p style="color:var(--text-muted)">Settings panel under construction. Profile updates managed via Firebase Auth.</p>
+                </div>
+                <div class="room-grid" id="joined-rooms-grid">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="empty-state hidden" id="joined-rooms-empty">
+                    <div class="empty-icon">👥</div>
+                    <h3>Not collaborating yet</h3>
+                    <p>Join a room using a code to see it here.</p>
                 </div>
             </div>
 
-        </main>
-
-        <!-- Activity Panel (Right Sidebar) -->
-        <aside class="activity-panel glass-card">
-            <h3 style="padding: 1.5rem; border-bottom: 1px solid var(--border-subtle);">Activity</h3>
-            <div class="activity-feed" id="activity-feed">
-                <!-- Loaded dynamically -->
-                <p style="padding:1.5rem; color:var(--text-muted); text-align:center;">No recent activity</p>
-            </div>
-        </aside>
-
-    </div>
-
-    <!-- Create Room Modal -->
-    <div class="modal-overlay" id="create-modal">
-        <div class="modal-content glass-card glow-border" style="width: 400px; max-width: 90%;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
-                <h3>Create New Room</h3>
-                <button class="btn-icon" onclick="document.getElementById('create-modal').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            
-            <div class="input-group">
-                <input type="text" id="new-room-name" class="input-control" required placeholder=" " value="My Dev Project">
-                <label>Room Name</label>
-            </div>
-
-            <div class="input-group" style="margin-bottom: 1.5rem;">
-                <select id="new-room-lang" class="input-control" style="background: rgba(0,0,0,0.5); appearance: auto;">
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
-                    <option value="html">HTML/CSS</option>
-                    <option value="typescript">TypeScript</option>
-                </select>
-                <label style="top:0.6rem; font-size:0.75rem;">Language</label>
-            </div>
-
-            <div class="code-generator glass-card" style="margin-bottom: 1.5rem; padding: 1rem; text-align: center; border-style: dashed;">
-                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Room Access Code</p>
-                <div style="display:flex; justify-content:center; align-items:center; gap:10px;">
-                    <h2 id="generated-code" class="text-gradient-orange" style="letter-spacing: 5px;">---</h2>
-                    <button class="btn-icon" onclick="appDash.generateCode()" title="Regenerate"><i class="fa-solid fa-arrows-rotate"></i></button>
+            <!-- EXPLORE VIEW -->
+            <div class="view" id="view-explore">
+                <div class="view-header">
+                    <h2>Explore Public Rooms</h2>
+                    <div class="search-bar glass-card">
+                        <span class="icon">🔍</span>
+                        <input type="text" placeholder="Search language or tags...">
+                    </div>
+                </div>
+                <div class="room-grid" id="explore-grid">
+                    <!-- Populated by JS -->
                 </div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-                <span>Public Room</span>
-                <label class="switch">
-                    <input type="checkbox" id="new-room-public" checked>
-                    <span class="slider round"></span>
-                </label>
+            <!-- SNAPSHOTS VIEW -->
+            <div class="view" id="view-snapshots">
+                <div class="view-header">
+                    <h2>Saved Snapshots</h2>
+                </div>
+                <div class="snapshots-list" id="snapshots-list">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="empty-state hidden" id="snapshots-empty">
+                    <div class="empty-icon">📸</div>
+                    <h3>No snapshots saved</h3>
+                    <p>Use Ctrl+S inside the editor to save code states.</p>
+                </div>
             </div>
 
-            <button class="btn btn-primary full-width" id="btn-create-room" onclick="appDash.createRoom()">Create Room</button>
         </div>
-    </div>
+    </main>
 
-    <!-- Confirm Delete Modal -->
-    <div class="modal-overlay" id="delete-modal">
-        <div class="modal-content glass-card" style="width: 350px; max-width: 90%; text-align:center;">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size:3rem; color:var(--error); margin-bottom:1rem;"></i>
-            <h3>Delete Room?</h3>
-            <p style="color:var(--text-muted); margin: 1rem 0;">This action cannot be undone. All code and chat history will be lost forever.</p>
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" style="flex:1" onclick="document.getElementById('delete-modal').classList.remove('active')">Cancel</button>
-                <button class="btn" style="flex:1; background:var(--error); color:white;" id="btn-confirm-delete" onclick="appDash.confirmDelete()">Delete</button>
+    <!-- RIGHT NOTIFICATION PANEL -->
+    <aside class="notification-panel" id="notification-panel">
+        <div class="panel-header">
+            <h3>Notifications</h3>
+            <button class="btn-text" id="clear-notifs">Clear All</button>
+            <button class="close-btn" id="close-notifs">×</button>
+        </div>
+        <div class="notif-list" id="notif-list">
+            <!-- Populated by JS -->
+        </div>
+        <div class="empty-state hidden" id="notif-empty">
+            <span class="icon">🔕</span>
+            <p>All caught up!</p>
+        </div>
+    </aside>
+
+    <!-- CREATE ROOM MODAL -->
+    <div class="modal-overlay" id="create-room-modal">
+        <div class="modal-card glow-border">
+            <div class="modal-header">
+                <h2>Create New Room</h2>
+                <button class="close-modal">×</button>
             </div>
+            <form id="create-room-form">
+                <div class="form-group">
+                    <label>Room Name</label>
+                    <input type="text" id="cr-name" placeholder="e.g. Frontend Refactor" required maxlength="50">
+                    <div class="char-count"><span id="cr-name-count">0</span>/50</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Language</label>
+                    <select id="cr-language" required>
+                        <option value="javascript">🟡 JavaScript</option>
+                        <option value="typescript">🔷 TypeScript</option>
+                        <option value="python">🔵 Python</option>
+                        <option value="html">🔴 HTML</option>
+                        <option value="css">💙 CSS</option>
+                        <option value="java">🟠 Java</option>
+                        <option value="cpp">🟣 C++</option>
+                        <option value="go">🩵 Go</option>
+                        <option value="rust">🟤 Rust</option>
+                        <option value="json">💚 JSON</option>
+                        <option value="markdown">⬜ Markdown</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label>Visibility</label>
+                        <div class="toggle-switch-container">
+                            <span class="label-text">Private</span>
+                            <label class="switch">
+                                <input type="checkbox" id="cr-public">
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="label-text">Public</span>
+                        </div>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label>Max Participants: <span id="cr-max-val">5</span></label>
+                        <input type="range" id="cr-max" min="2" max="20" value="5">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Generated Code</label>
+                    <div class="code-display">
+                        <span id="cr-code" class="mono-text">------</span>
+                        <button type="button" class="icon-btn" id="btn-refresh-code" title="Generate New Code">🔄</button>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary close-modal-btn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btn-submit-room">
+                        <span class="btn-text">Create Room</span>
+                        <div class="spinner hidden"></div>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script type="module" src="js/dashboard.js"></script>
+    <script type="module" src="js/notifications.js"></script>
 </body>
 </html>

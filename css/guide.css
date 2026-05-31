@@ -1,65 +1,727 @@
-/* ==========================================================================
-   CodeSync v2.0 - Guide CSS
-   ========================================================================== */
+/* GUIDE SPECIFIC CSS */
 
-/* Reuse Dashboard Sidebar styles but extend main content */
-.guide-header {
-    height: 80px; padding: 0 2rem; display: flex; flex-direction: column; justify-content: center;
-    border-bottom: 1px solid var(--border-subtle); border-radius: 0;
-}
-
-.progress-container {
-    width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 15px;
-}
-.progress-bar {
-    height: 100%; background: var(--accent-primary); width: 0%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0 10px var(--accent-glow);
+.guide-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
 
-.step-dots { display: flex; justify-content: space-between; position: relative; padding: 0 20px; }
-.step-dots::before { content: ''; position: absolute; left: 20px; right: 20px; top: 50%; transform: translateY(-50%); height: 2px; background: rgba(255,255,255,0.05); z-index: 1; }
-.dot {
-    width: 24px; height: 24px; border-radius: 50%; background: var(--bg-surface); border: 2px solid var(--border-strong);
-    position: relative; z-index: 2; cursor: pointer; transition: 0.3s;
-}
-.dot.active { border-color: var(--accent-primary); background: var(--bg-elevated); box-shadow: 0 0 10px var(--accent-glow); transform: scale(1.2); }
-.dot.done { border-color: var(--accent-primary); background: var(--accent-primary); }
-.dot.done::after { content: '\f00c'; font-family: 'FontAwesome'; position: absolute; color: #fff; font-size: 10px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-
-.guide-body {
-    flex: 1; display: flex; overflow: hidden;
+/* Progress Bar */
+.progress-bar-container {
+    padding: 1.5rem;
 }
 
-.guide-mockup-area {
-    flex: 1; background: var(--bg-base); display: flex; align-items: center; justify-content: center; padding: 2rem;
-    border-right: 1px solid var(--border-subtle); position: relative;
-}
-.mockup-frame {
-    width: 100%; max-width: 600px; height: 400px; display: flex; align-items: center; justify-content: center;
-    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
 }
 
-.guide-content-area {
-    width: 450px; background: var(--bg-surface); padding: 3rem 2rem; display: flex; flex-direction: column; overflow-y: auto;
+.progress-track {
+    height: 6px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
 }
-.guide-text { padding: 2rem; margin-bottom: 2rem; }
 
-.pro-tip {
-    background: rgba(68,136,255,0.1); border-left: 4px solid var(--info); padding: 1rem; border-radius: 0 8px 8px 0;
-    font-size: 0.9rem; display: flex; gap: 10px; align-items: flex-start; color: var(--text-secondary);
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color, #bb9af7));
+    border-radius: var(--radius-full);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.pro-tip i { color: var(--info); margin-top: 2px; }
 
+.step-dots {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.step-dot {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.dot-inner {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 2px solid var(--border-color);
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    transition: all 0.3s ease;
+}
+
+.step-dot.active .dot-inner {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(122, 162, 247, 0.4);
+}
+
+.step-dot.completed .dot-inner {
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: #fff;
+    content: '✓';
+}
+
+/* Step Cards */
+.step-cards {
+    position: relative;
+}
+
+.step-card {
+    display: none;
+    padding: 2.5rem;
+    animation: fadeIn 0.4s ease;
+}
+
+.step-card.active {
+    display: block;
+}
+
+.step-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+}
+
+/* Step Content */
+.step-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(122, 162, 247, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.step-content h2 {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.step-content p {
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+}
+
+.feature-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.feature-list li {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.step-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+}
+
+/* Step Visual Area */
+.step-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ===== STEP 1: Auth Mockup ===== */
+.mock-auth-page {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    width: 280px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mock-logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-code);
+}
+
+.mock-google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--bg-secondary);
+}
+
+.mock-google-btn span {
+    width: 20px;
+    height: 20px;
+    background: #4285f4;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.pulse-anim { animation: glowPulse 2s infinite; }
+
+.mock-divider {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.mock-input {
+    height: 38px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.mock-primary-btn {
+    height: 40px;
+    background: var(--primary-color);
+    color: #fff;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* ===== STEP 2: Profile Mockup ===== */
+.mock-profile-card {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--card-shadow);
+}
+
+.mock-avatar-lg {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #fff;
+    font-size: 1.2rem;
+    transition: background 0.3s;
+}
+
+.color-row-mock {
+    display: flex;
+    gap: 8px;
+}
+
+.m-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.m-swatch.pulsing {
+    animation: pulse 1.5s infinite;
+    transform-origin: center;
+}
+
+.mock-name-field {
+    width: 100%;
+    height: 36px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.85rem;
+}
+
+.mock-bio-field {
+    width: 100%;
+    height: 60px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+/* ===== STEP 3: Create Room ===== */
+.mock-modal-anim {
+    padding: 1.5rem;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mock-modal-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mock-input-fill {
+    height: 38px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.85rem;
+}
+
+.text-cursor {
+    animation: blink 1s step-end infinite;
+}
+
+.mock-select-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.m-lang {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.m-lang.active {
+    border-color: var(--primary-color);
+    background: rgba(122, 162, 247, 0.1);
+    color: var(--primary-color);
+}
+
+.mock-code-gen {
+    background: var(--bg-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-family: var(--font-code);
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    border: 1px dashed var(--border-color);
+}
+
+.mock-create-btn {
+    height: 40px;
+    background: var(--primary-color);
+    color: #fff;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* ===== STEP 4: Share Code ===== */
+.mock-share-card {
+    padding: 2rem;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.mock-room-code {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--border-color);
+}
+
+.big-code {
+    font-family: var(--font-code);
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--primary-color);
+}
+
+.mock-copy-btn {
+    padding: 6px 10px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mock-copy-btn.copied {
+    background: var(--success-color);
+    color: #fff;
+    border-color: var(--success-color);
+}
+
+.share-options {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.share-btn {
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.share-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* ===== STEP 5: Presence ===== */
+.mock-presence {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 2rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    min-width: 280px;
+}
+
+.mock-presence-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mock-av {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #fff;
+    font-size: 0.8rem;
+}
+
+.joining-row, .joining-row-2 {
+    opacity: 0;
+    transform: translateX(-20px);
+    animation: slideRight 0.5s forwards;
+}
+
+.joining-row { animation-delay: 1s; }
+.joining-row-2 { animation-delay: 2s; }
+
+.sys-join-msg {
+    font-size: 0.8rem;
+    color: var(--success-color);
+    font-style: italic;
+}
+
+/* ===== STEP 6: Collab Editor ===== */
+.mock-editor-collab {
+    background: #1e1e1e;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    width: 300px;
+    font-family: var(--font-code);
+    font-size: 0.85rem;
+    color: #d4d4d4;
+    line-height: 1.8;
+}
+
+.mock-line { position: relative; padding: 2px 0; }
+
+.with-cursor-blue, .with-cursor-purple { position: relative; }
+
+.cursor-blue-lbl, .cursor-purple-lbl {
+    position: absolute;
+    top: -18px;
+    left: 0;
+    font-size: 0.65rem;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-family: var(--font-ui);
+    color: #fff;
+}
+
+.cursor-blue-lbl { background: #7aa2f7; left: 5.2rem; }
+.cursor-purple-lbl { background: #bb9af7; left: 2rem; }
+
+.cursor-blue { color: #7aa2f7; font-weight: bold; }
+.cursor-purple { color: #bb9af7; font-weight: bold; }
+.blink-cur { animation: blink 1s step-end infinite; }
+.kw { color: #569cd6; }
+.fn { color: #dcdcaa; }
+
+/* ===== STEP 7: Chat Panel ===== */
+.mock-chat-panel {
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.mock-chat-header {
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.mock-messages {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 150px;
+}
+
+.mock-msg {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.mock-msg.own {
+    justify-content: flex-end;
+}
+
+.mock-msg-av {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: bold;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.mock-bubble {
+    padding: 6px 10px;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    font-size: 0.8rem;
+    max-width: 140px;
+}
+
+.own-bubble {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.typing-bubble {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px;
+}
+
+.typing-bubble .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-bubble .dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-bubble .dot:nth-child(2) { animation-delay: -0.16s; }
+
+.mock-chat-input {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    background: var(--bg-secondary);
+}
+
+.send-btn {
+    color: var(--primary-color);
+    cursor: pointer;
+}
+
+/* ===== STEP 8: Console ===== */
+.mock-console-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 300px;
+}
+
+.mock-run-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    background: rgba(158, 206, 106, 0.1);
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    width: max-content;
+    transition: all 0.2s;
+}
+
+.mock-run-btn.running {
+    animation: glowPulse 1s infinite;
+}
+
+.mock-console {
+    padding: 1rem;
+    background: #0d0d0d !important;
+    font-family: var(--font-code);
+    font-size: 0.8rem;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.c-line { color: #c0caf5; }
+.c-line.sys { color: #565f89; font-style: italic; }
+.c-line.log { color: #c0caf5; }
+.c-line.success { color: var(--success-color); }
+.c-line.ret { color: #7aa2f7; }
+
+/* Completion CTA */
+.completion-cta {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: rgba(122, 162, 247, 0.05);
+    border: 1px solid rgba(122, 162, 247, 0.2);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.completion-cta h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    animation: confetti 2s forwards;
+}
+
+/* Guide Navigation */
 .guide-nav {
-    display: flex; justify-content: space-between; margin-top: auto; padding-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
 }
 
-@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes typewriter { from { width: 0; } to { width: 100%; } }
+.nav-dots {
+    display: flex;
+    gap: 0.5rem;
+}
 
-@media (max-width: 1024px) {
-    .guide-body { flex-direction: column; overflow-y: auto; }
-    .guide-mockup-area { border-right: none; border-bottom: 1px solid var(--border-subtle); min-height: 400px; }
-    .guide-content-area { width: 100%; }
-    .guide-header { display: none; /* Simplify on mobile */ }
+.nav-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nav-dot.active {
+    background: var(--primary-color);
+    width: 24px;
+    border-radius: 4px;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .step-layout {
+        grid-template-columns: 1fr;
+    }
+    .step-visual {
+        order: -1;
+    }
+    .step-card { padding: 1.5rem; }
+}
+
+@media (max-width: 768px) {
+    .guide-container { padding: 1rem; }
+    .step-dots { gap: 0.25rem; }
+    .dot-inner { width: 24px; height: 24px; font-size: 0.7rem; }
 }

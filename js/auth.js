@@ -1,265 +1,452 @@
-/**
- * CodeSync v2.0 - Authentication Logic
- */
-import { auth, googleProvider, database, firestore, isDev } from './firebase-config.js';
 import { 
-    signInWithPopup, 
-    signInWithEmailAndPassword, 
-    createUserWithEmailAndPassword, 
+    auth, 
+    db, 
+    googleProvider, 
+    githubProvider,
+    signInWithPopup,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
     sendPasswordResetEmail,
     onAuthStateChanged,
-    updateProfile
-} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, setDoc, getDoc, serverTimestamp as fsServerTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { ref, set, serverTimestamp as rtdbServerTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    doc,
+    getDoc,
+    setDoc,
+    serverTimestamp
+} from './firebase-config.js';
 
-const appAuth = {
-    currentTab: 'signin',
+document.addEventListener('DOMContentLoaded', () => {
+    // Check Auth State
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Already logged in, redirect to dashboard
+            window.location.href = 'dashboard.html';
+        }
+    });
 
-    init: function() {
-        // Auth state listener
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // If logged in, go to dashboard
-                window.location.href = 'dashboard.html';
+    // --- UI Logic ---
+    const tabs = document.querySelectorAll('.tab-btn');
+    const sections = document.querySelectorAll('.form-section');
+    const tabIndicator = document.querySelector('.tab-indicator');
+    const switchLinks = document.querySelectorAll('[data-switch]');
+    
+    function switchTab(tabId) {
+        // Update tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        const activeTab = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+        if (activeTab) activeTab.classList.add('active');
+        
+        // Move indicator
+        if (tabId === 'signin') {
+            tabIndicator.style.transform = 'translateX(0)';
+        } else if (tabId === 'signup') {
+            tabIndicator.style.transform = 'translateX(100%)';
+        }
+
+        // Update sections
+        sections.forEach(s => {
+            s.classList.remove('active');
+            s.style.animation = 'none';
+            s.offsetHeight; // trigger reflow
+        });
+        const activeSection = document.getElementById(`${tabId}-section`);
+        activeSection.classList.add('active');
+        activeSection.style.animation = 'fadeIn 0.3s ease';
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
+    switchLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchTab(e.target.dataset.switch);
+        });
+    });
+
+    document.getElementById('forgot-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        // Hide tabs
+        document.querySelector('.auth-tabs').style.display = 'none';
+        sections.forEach(s => s.classList.remove('active'));
+        document.getElementById('forgot-section').classList.add('active');
+    });
+
+    // Back to signin from forgot
+    document.querySelector('#forgot-section [data-switch="signin"]').addEventListener('click', (e) => {
+        document.querySelector('.auth-tabs').style.display = 'flex';
+    });
+
+    // Password visibility toggle
+    document.querySelectorAll('.toggle-password').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.previousElementSibling.previousElementSibling; // The input field
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                this.textContent = '👁️';
             }
         });
+    });
 
-        this.startTypingDemo();
-    },
-
-    // --- UI Methods ---
-    switchTab: function(tab) {
-        this.currentTab = tab;
-        document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
-        document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
-        
-        document.getElementById('tab-indicator').style.transform = tab === 'signin' ? 'translateX(0)' : 'translateX(100%)';
-        
-        document.getElementById('form-signin').style.display = tab === 'signin' ? 'block' : 'none';
-        document.getElementById('form-signup').style.display = tab === 'signup' ? 'block' : 'none';
-        document.getElementById('form-forgot').style.display = 'none';
-    },
-
-    showForgot: function() {
-        document.getElementById('form-signin').style.display = 'none';
-        document.getElementById('form-signup').style.display = 'none';
-        document.getElementById('form-forgot').style.display = 'block';
-        document.querySelector('.auth-tabs').style.display = 'none';
-    },
-
-    hideForgot: function() {
-        this.switchTab('signin');
-        document.querySelector('.auth-tabs').style.display = 'flex';
-    },
-
-    togglePassword: function(inputId, iconEl) {
+    // --- Validation & Feedback Logic ---
+    function showError(inputId, msg) {
         const input = document.getElementById(inputId);
-        if(input.type === 'password') {
-            input.type = 'text';
-            iconEl.classList.remove('fa-eye-slash');
-            iconEl.classList.add('fa-eye');
-        } else {
-            input.type = 'password';
-            iconEl.classList.remove('fa-eye');
-            iconEl.classList.add('fa-eye-slash');
-        }
-    },
+        const group = input.closest('.input-group');
+        const errorSpan = group.querySelector('.error-msg');
+        group.classList.add('error');
+        errorSpan.textContent = msg;
+        // Shake animation
+        group.style.animation = 'none';
+        group.offsetHeight;
+        group.style.animation = 'shake 0.4s ease';
+    }
 
-    checkStrength: function(val) {
+    function clearError(inputId) {
+        const input = document.getElementById(inputId);
+        const group = input.closest('.input-group');
+        const errorSpan = group.querySelector('.error-msg');
+        group.classList.remove('error');
+        errorSpan.textContent = '';
+    }
+
+    // Live validation
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', () => clearError(input.id));
+    });
+
+    // Password Strength Meter
+    const suPassword = document.getElementById('su-password');
+    const strengthSection = document.querySelector('.password-strength');
+    const bars = document.querySelectorAll('.strength-bars .bar');
+    const strengthLabel = document.querySelector('.strength-label');
+    
+    const reqLen = document.getElementById('req-len');
+    const reqUp = document.getElementById('req-up');
+    const reqNum = document.getElementById('req-num');
+    const reqSp = document.getElementById('req-sp');
+
+    suPassword.addEventListener('focus', () => strengthSection.style.display = 'block');
+    
+    suPassword.addEventListener('input', (e) => {
+        const val = e.target.value;
         let score = 0;
-        if(val.length > 5) score++;
-        if(val.length > 8) score++;
-        if(/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
-        if(/[^A-Za-z0-9]/.test(val)) score++;
+        
+        // Checks
+        const hasLen = val.length >= 8;
+        const hasUp = /[A-Z]/.test(val);
+        const hasNum = /[0-9]/.test(val);
+        const hasSp = /[^A-Za-z0-9]/.test(val);
 
-        const colors = ['var(--border-strong)', '#ff4444', '#ffa500', '#00ff88', '#00ff88'];
-        const labels = ['Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+        reqLen.textContent = hasLen ? '✓ 8+ chars' : '✗ 8+ chars';
+        reqLen.className = hasLen ? 'valid' : '';
+        if(hasLen) score++;
 
-        for(let i=1; i<=4; i++) {
-            document.getElementById(`str-${i}`).style.background = (i <= score) ? colors[score] : colors[0];
+        reqUp.textContent = hasUp ? '✓ uppercase' : '✗ uppercase';
+        reqUp.className = hasUp ? 'valid' : '';
+        if(hasUp) score++;
+
+        reqNum.textContent = hasNum ? '✓ number' : '✗ number';
+        reqNum.className = hasNum ? 'valid' : '';
+        if(hasNum) score++;
+
+        reqSp.textContent = hasSp ? '✓ special char' : '✗ special char';
+        reqSp.className = hasSp ? 'valid' : '';
+        if(hasSp) score++;
+
+        // Update bars
+        bars.forEach(b => b.style.background = 'var(--border-color)');
+        const colors = ['var(--error-color)', 'var(--warning-color)', '#fbbf24', 'var(--success-color)'];
+        const labels = ['Weak', 'Fair', 'Strong', 'Very Strong'];
+        
+        if (val.length > 0) {
+            score = Math.max(1, score);
+            for(let i=0; i<score; i++) {
+                bars[i].style.background = colors[score-1];
+            }
+            strengthLabel.textContent = labels[score-1];
+            strengthLabel.style.color = colors[score-1];
+        } else {
+            strengthLabel.textContent = 'Password strength';
+            strengthLabel.style.color = 'var(--text-muted)';
         }
-        document.getElementById('str-label').innerText = labels[score];
-        document.getElementById('str-label').style.color = colors[score];
-    },
+    });
 
-    showToast: function(msg, type="info") {
+    // Confirm password live match
+    const suConfirm = document.getElementById('su-confirm');
+    const matchInd = document.querySelector('.match-indicator');
+    suConfirm.addEventListener('input', (e) => {
+        if(e.target.value === '') {
+            matchInd.textContent = '';
+        } else if (e.target.value === suPassword.value) {
+            matchInd.textContent = '✓';
+            matchInd.style.color = 'var(--success-color)';
+        } else {
+            matchInd.textContent = '✗';
+            matchInd.style.color = 'var(--error-color)';
+        }
+    });
+
+    // Toast System
+    function showToast(message, type = 'success') {
         const container = document.getElementById('toast-container');
-        const t = document.createElement('div');
-        t.className = `toast ${type}`;
-        t.innerHTML = `<span>${msg}</span>`;
-        container.appendChild(t);
-        setTimeout(() => { t.style.opacity=0; setTimeout(()=>t.remove(), 300); }, 3000);
-    },
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        let icon = '';
+        if(type==='success') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+        if(type==='error') icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
 
-    shake: function() {
-        const box = document.querySelector('.auth-form-container');
-        box.classList.add('shake');
-        setTimeout(() => box.classList.remove('shake'), 400);
-    },
+        toast.innerHTML = `${icon} <span>${message}</span>`;
+        container.appendChild(toast);
 
-    setLoading: function(btnId, isLoading, originalText) {
+        setTimeout(() => {
+            if(container.contains(toast)) toast.remove();
+        }, 4000);
+    }
+
+    function handleFirebaseError(error, formType) {
+        console.error(error);
+        const code = error.code;
+        let msg = "An error occurred. Please try again.";
+        
+        switch(code) {
+            case 'auth/invalid-email': msg = "Invalid email format."; break;
+            case 'auth/user-not-found': msg = "No account found with this email."; break;
+            case 'auth/wrong-password': msg = "Incorrect password."; break;
+            case 'auth/email-already-in-use': msg = "Email is already registered."; break;
+            case 'auth/weak-password': msg = "Password is too weak."; break;
+            case 'auth/too-many-requests': msg = "Too many failed attempts. Try again later."; break;
+            case 'auth/invalid-credential': msg = "Invalid credentials provided."; break;
+        }
+
+        if (formType === 'signin') {
+            if (code.includes('password')) showError('si-password', msg);
+            else if (code.includes('email') || code.includes('user')) showError('si-email', msg);
+            else showToast(msg, 'error');
+            document.getElementById('signin-form').closest('.auth-card').style.animation = 'shake 0.4s';
+        } else if (formType === 'signup') {
+            if (code.includes('email')) showError('su-email', msg);
+            else showToast(msg, 'error');
+        } else {
+            showToast(msg, 'error');
+        }
+    }
+
+    function setLoading(btnId, isLoading) {
         const btn = document.getElementById(btnId);
         if(isLoading) {
-            btn.dataset.text = btn.innerHTML;
-            btn.innerHTML = '<div class="spinner"></div>';
+            btn.classList.add('loading');
             btn.disabled = true;
         } else {
-            btn.innerHTML = btn.dataset.text || originalText;
+            btn.classList.remove('loading');
             btn.disabled = false;
         }
-    },
+    }
 
-    // --- Firebase Auth Methods ---
-    googleSignIn: async function() {
-        if(isDev) return this.mockAuth();
-        this.setLoading('btn-google', true);
+    // --- Firebase Auth Functions ---
+
+    // Create User Document
+    async function createUserDoc(user, additionalData = {}) {
+        const userRef = doc(db, 'users', user.uid);
+        
+        // Generate random color for avatar
+        const colors = ['#7aa2f7', '#bb9af7', '#9ece6a', '#e0af68', '#f7768e', '#73daca', '#ff9e64', '#2ac3de'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        // Get Initials
+        let name = additionalData.fullName || user.displayName || 'Anonymous User';
+        let initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+        const userData = {
+            fullName: name,
+            email: user.email,
+            avatar: { color: randomColor, initials: initials },
+            bio: '',
+            githubUrl: '',
+            linkedinUrl: '',
+            createdAt: serverTimestamp(),
+            lastSeen: serverTimestamp(),
+            stats: {
+                roomsCreated: 0,
+                roomsJoined: 0,
+                totalSessions: 0,
+                linesWritten: 0
+            },
+            preferences: {
+                theme: 'dark',
+                fontSize: 14,
+                tabSize: 2,
+                autoSave: true
+            },
+            rooms: []
+        };
+
+        await setDoc(userRef, userData);
+    }
+
+    // Google Sign In
+    document.getElementById('btn-google').addEventListener('click', async () => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
-            await this.checkAndCreateProfile(result.user);
-            this.showSuccess();
-        } catch(error) {
-            this.handleError(error);
-        } finally {
-            this.setLoading('btn-google', false, 'Continue with Google');
+            // Check if new user
+            const userRef = doc(db, 'users', result.user.uid);
+            const docSnap = await getDoc(userRef);
+            if (!docSnap.exists()) {
+                await createUserDoc(result.user);
+            }
+            showToast("Successfully signed in!");
+            // Redirection handled by onAuthStateChanged
+        } catch (error) {
+            handleFirebaseError(error, 'social');
         }
-    },
+    });
 
-    emailSignIn: async function() {
-        if(isDev) return this.mockAuth();
-        const email = document.getElementById('in-email').value;
-        const pass = document.getElementById('in-password').value;
-        
-        this.setLoading('btn-signin', true);
+    // GitHub Sign In
+    document.getElementById('btn-github').addEventListener('click', async () => {
         try {
-            await signInWithEmailAndPassword(auth, email, pass);
-            this.showSuccess();
-        } catch(error) {
-            this.handleError(error);
-        } finally {
-            this.setLoading('btn-signin', false, 'Sign In');
+            const result = await signInWithPopup(auth, githubProvider);
+            const userRef = doc(db, 'users', result.user.uid);
+            const docSnap = await getDoc(userRef);
+            if (!docSnap.exists()) {
+                await createUserDoc(result.user);
+            }
+            showToast("Successfully signed in!");
+        } catch (error) {
+            handleFirebaseError(error, 'social');
         }
-    },
+    });
 
-    emailSignUp: async function() {
-        if(isDev) return this.mockAuth();
-        const name = document.getElementById('up-name').value;
-        const email = document.getElementById('up-email').value;
-        const pass = document.getElementById('up-password').value;
-        const confirm = document.getElementById('up-confirm').value;
+    // Email Sign In
+    document.getElementById('signin-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('si-email').value;
+        const password = document.getElementById('si-password').value;
 
-        if(pass !== confirm) {
-            this.showToast("Passwords do not match", "error");
-            this.shake();
-            return;
-        }
+        if(!email || !password) return;
 
-        this.setLoading('btn-signup', true);
+        setLoading('btn-signin', true);
         try {
-            const result = await createUserWithEmailAndPassword(auth, email, pass);
-            await updateProfile(result.user, { displayName: name });
-            await this.checkAndCreateProfile(result.user);
-            this.showSuccess();
-        } catch(error) {
-            this.handleError(error);
+            await signInWithEmailAndPassword(auth, email, password);
+            showToast("Successfully signed in!");
+        } catch (error) {
+            handleFirebaseError(error, 'signin');
         } finally {
-            this.setLoading('btn-signup', false, 'Create Account');
+            setLoading('btn-signin', false);
         }
-    },
+    });
 
-    resetPassword: async function() {
-        if(isDev) return this.showToast("Mock email sent", "success");
-        const email = document.getElementById('forgot-email').value;
-        this.setLoading('btn-forgot', true);
+    // Email Sign Up
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('su-name').value;
+        const email = document.getElementById('su-email').value;
+        const password = document.getElementById('su-password').value;
+        const confirm = document.getElementById('su-confirm').value;
+        const terms = document.getElementById('terms-check').checked;
+
+        let isValid = true;
+        if (!name) { showError('su-name', 'Name is required'); isValid = false; }
+        if (!email || !/\S+@\S+\.\S+/.test(email)) { showError('su-email', 'Valid email required'); isValid = false; }
+        if (password.length < 8) { showError('su-password', 'Password must be at least 8 characters'); isValid = false; }
+        if (password !== confirm) { showError('su-confirm', 'Passwords do not match'); isValid = false; }
+        if (!terms) { showToast('You must agree to the terms', 'error'); isValid = false; }
+
+        if (!isValid) return;
+
+        setLoading('btn-signup', true);
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await createUserDoc(userCredential.user, { fullName: name });
+            showToast("Account created successfully!");
+        } catch (error) {
+            handleFirebaseError(error, 'signup');
+        } finally {
+            setLoading('btn-signup', false);
+        }
+    });
+
+    // Password Reset
+    document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('fp-email').value;
+        if(!email) { showError('fp-email', 'Email is required'); return; }
+
+        setLoading('btn-reset', true);
         try {
             await sendPasswordResetEmail(auth, email);
-            this.showToast("Password reset link sent!", "success");
-            this.hideForgot();
-        } catch(error) {
-            this.handleError(error);
+            document.getElementById('reset-success').classList.remove('hidden');
+            document.getElementById('btn-reset').style.display = 'none';
+        } catch (error) {
+            handleFirebaseError(error, 'forgot');
         } finally {
-            this.setLoading('btn-forgot', false, 'Send Reset Link');
+            setLoading('btn-reset', false);
         }
-    },
+    });
 
-    // --- Helpers ---
-    checkAndCreateProfile: async function(user) {
-        try {
-            // We use both Firestore and RTDB just in case, but rely mostly on Firestore for profiles
-            const docRef = doc(firestore, "users", user.uid);
-            const docSnap = await getDoc(docRef);
+    // --- Typwriter Animation for Mockup ---
+    const codeSnippet = [
+        "const room = new Room('dev-squad');",
+        "room.connect();",
+        "",
+        "room.onSync((data) => {",
+        "  renderEditor(data);",
+        "});",
+        "",
+        "console.log('Real-time sync active ⚡');"
+    ];
+
+    const container = document.getElementById('typing-container');
+    let lineIdx = 0;
+    let charIdx = 0;
+
+    function typeCode() {
+        if (lineIdx < codeSnippet.length) {
+            let currentLineText = codeSnippet[lineIdx];
             
-            if (!docSnap.exists()) {
-                const initials = (user.displayName || user.email || '?').substring(0,2).toUpperCase();
-                // Create in Firestore
-                await setDoc(docRef, {
-                    name: user.displayName || user.email.split('@')[0],
-                    email: user.email,
-                    initials: initials,
-                    createdAt: fsServerTimestamp(),
-                    stats: { roomsCreated: 0, roomsJoined: 0, totalSessions: 0, linesWritten: 0 }
-                });
-                
-                // Duplicate minimal info in RTDB for fast real-time access
-                await set(ref(database, `users/${user.uid}/profile`), {
-                    name: user.displayName || user.email.split('@')[0],
-                    initials: initials
-                });
+            // Create line element if start of line
+            if (charIdx === 0) {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'code-line';
+                lineDiv.id = `line-${lineIdx}`;
+                container.appendChild(lineDiv);
             }
-        } catch(e) {
-            console.error("Error creating user profile", e);
-        }
-    },
 
-    handleError: function(error) {
-        let msg = "An error occurred";
-        if(error.code === 'auth/invalid-credential') msg = "Invalid email or password.";
-        if(error.code === 'auth/email-already-in-use') msg = "Email already in use.";
-        if(error.code === 'auth/weak-password') msg = "Password is too weak.";
-        this.showToast(msg, "error");
-        this.shake();
-    },
-
-    showSuccess: function() {
-        document.querySelector('.auth-form-container').classList.add('success-burst');
-        // Let listener redirect
-    },
-
-    mockAuth: function() {
-        this.showToast("Simulation Auth Success", "success");
-        this.showSuccess();
-        setTimeout(() => window.location.href = 'dashboard.html', 1000);
-    },
-
-    // --- Animation ---
-    startTypingDemo: function() {
-        const el = document.getElementById('typing-demo');
-        if(!el) return;
-        const code = `import { SyncEngine } from '@codesync/core';\n\nconst session = new SyncEngine({\n  room: 'PROD_DB',\n  latency: 'sub-ms'\n});\n\nsession.on('change', (diff) => {\n  editor.apply(diff);\n  console.log('Synced!');\n});`;
-        
-        let i = 0;
-        el.innerHTML = '';
-        const interval = setInterval(() => {
-            if (i < code.length) {
-                let char = code.charAt(i);
-                if(char === '\n') char = '<br>';
-                if(char === ' ') char = '&nbsp;';
+            const lineEl = document.getElementById(`line-${lineIdx}`);
+            
+            if (charIdx < currentLineText.length) {
+                // Add char
+                let char = currentLineText.charAt(charIdx);
+                // Basic syntax highlighting hack for the mockup
+                let styledText = currentLineText.substring(0, charIdx + 1)
+                    .replace(/(const|new|return)/g, '<span class="code-keyword">$1</span>')
+                    .replace(/(Room|renderEditor|console)/g, '<span class="code-function">$1</span>')
+                    .replace(/('[^']*')/g, '<span class="code-string">$1</span>');
                 
-                // Simple pseudo syntax highlight
-                if(code.substring(i).startsWith('import')) char = '<span style="color:#c678dd">i</span>';
-                if(code.substring(i).startsWith('const')) char = '<span style="color:#c678dd">c</span>';
-                if(code.substring(i).startsWith('SyncEngine')) char = '<span style="color:#e5c07b">S</span>';
-                
-                el.innerHTML += char;
-                i++;
+                lineEl.innerHTML = styledText + '<span class="code-cursor"></span>';
+                charIdx++;
+                setTimeout(typeCode, Math.random() * 50 + 20); // random typing speed
             } else {
-                clearInterval(interval);
-                el.innerHTML += '<span class="cursor-blink"></span>';
-                setTimeout(() => this.startTypingDemo(), 5000); // loop
+                // End of line
+                lineEl.innerHTML = lineEl.innerHTML.replace('<span class="code-cursor"></span>', '');
+                lineIdx++;
+                charIdx = 0;
+                setTimeout(typeCode, 300); // pause at end of line
             }
-        }, 50);
+        } else {
+            // Loop animation
+            setTimeout(() => {
+                container.innerHTML = '';
+                lineIdx = 0;
+                charIdx = 0;
+                typeCode();
+            }, 5000);
+        }
     }
-};
+    
+    // Start typing animation
+    setTimeout(typeCode, 1000);
 
-window.appAuth = appAuth;
-document.addEventListener('DOMContentLoaded', () => appAuth.init());
+});

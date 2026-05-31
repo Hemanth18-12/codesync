@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Page Not Found | CodeSync</title>
+    <link rel="stylesheet" href="css/global.css">
+    <style>
+        :root { --bg-color: #1a1b26; --bg-secondary: #16172b; --text-primary: #c0caf5; --text-muted: #565f89; --primary-color: #7aa2f7; --secondary-color: #bb9af7; --border-color: #2d2f45; }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1b26;
+            color: #c0caf5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Particle canvas background */
+        #bg-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        /* Giant 404 */
+        .four-oh-four {
+            font-size: clamp(6rem, 20vw, 12rem);
+            font-weight: 900;
+            line-height: 1;
+            background: linear-gradient(135deg, #7aa2f7, #bb9af7, #9ece6a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -4px;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .error-subtitle {
+            color: #565f89;
+            margin-bottom: 3rem;
+            max-width: 400px;
+        }
+
+        /* Astronaut SVG */
+        .astronaut-container {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 3rem;
+            animation: astronautFloat 8s ease-in-out infinite;
+        }
+
+        /* CTA Buttons */
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: #7aa2f7;
+            color: #1a1b26;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn-primary:hover {
+            background: #8caaee;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(122, 162, 247, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #c0caf5;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid #2d2f45;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn-secondary:hover {
+            border-color: #7aa2f7;
+            color: #7aa2f7;
+        }
+
+        /* Logo */
+        .logo {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: #c0caf5;
+            font-weight: 700;
+            font-size: 1.1rem;
+            z-index: 10;
+        }
+        .logo-icon {
+            color: #7aa2f7;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        @keyframes astronautFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-20px) rotate(5deg); }
+            75% { transform: translateY(-10px) rotate(-5deg); }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+
+    <a href="index.html" class="logo">
+        <span class="logo-icon">&lt;/&gt;</span>
+        <span>CodeSync</span>
+    </a>
+
+    <div class="content">
+        <div class="four-oh-four">404</div>
+
+        <!-- Animated Astronaut SVG -->
+        <div class="astronaut-container">
+            <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Helmet -->
+                <circle cx="100" cy="75" r="38" fill="#2d2f45" stroke="#565f89" stroke-width="3"/>
+                <circle cx="100" cy="75" r="26" fill="#7aa2f7" opacity="0.2"/>
+                <ellipse cx="112" cy="66" rx="8" ry="5" fill="rgba(255,255,255,0.3)" transform="rotate(-20 112 66)"/>
+                <!-- Body -->
+                <rect x="70" y="110" width="60" height="55" rx="14" fill="#2d2f45" stroke="#565f89" stroke-width="2"/>
+                <!-- Control Panel on chest -->
+                <rect x="82" y="122" width="36" height="22" rx="5" fill="#1a1b26"/>
+                <circle cx="90" cy="131" r="3" fill="#f7768e"/>
+                <circle cx="100" cy="131" r="3" fill="#e0af68"/>
+                <circle cx="110" cy="131" r="3" fill="#9ece6a"/>
+                <rect x="86" y="137" width="28" height="4" rx="2" fill="#7aa2f7" opacity="0.5"/>
+                <!-- Arms -->
+                <rect x="42" y="112" width="28" height="14" rx="7" fill="#2d2f45" stroke="#565f89" stroke-width="2" transform="rotate(10 42 112)"/>
+                <rect x="130" y="112" width="28" height="14" rx="7" fill="#2d2f45" stroke="#565f89" stroke-width="2" transform="rotate(-10 158 112)"/>
+                <!-- Gloves -->
+                <circle cx="44" cy="127" r="8" fill="#565f89"/>
+                <circle cx="156" cy="127" r="8" fill="#565f89"/>
+                <!-- Legs -->
+                <rect x="78" y="162" width="18" height="28" rx="8" fill="#2d2f45" stroke="#565f89" stroke-width="2"/>
+                <rect x="104" y="162" width="18" height="28" rx="8" fill="#2d2f45" stroke="#565f89" stroke-width="2"/>
+                <!-- Boots -->
+                <ellipse cx="87" cy="191" rx="14" ry="7" fill="#565f89"/>
+                <ellipse cx="113" cy="191" rx="14" ry="7" fill="#565f89"/>
+                <!-- Stars around astronaut -->
+                <circle cx="30" cy="50" r="2" fill="#bb9af7" opacity="0.8">
+                    <animate attributeName="opacity" values="0.8;0.2;0.8" dur="2s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="170" cy="40" r="1.5" fill="#7aa2f7" opacity="0.8">
+                    <animate attributeName="opacity" values="0.8;0.3;0.8" dur="1.5s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="160" cy="160" r="2" fill="#9ece6a" opacity="0.8">
+                    <animate attributeName="opacity" values="0.8;0.1;0.8" dur="2.5s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="40" cy="170" r="1.5" fill="#e0af68" opacity="0.8">
+                    <animate attributeName="opacity" values="0.8;0.2;0.8" dur="1.8s" repeatCount="indefinite"/>
+                </circle>
+                <!-- Rope/tether -->
+                <path d="M 100 113 Q 180 80 200 40" stroke="#565f89" stroke-width="2" stroke-dasharray="5,5" fill="none">
+                    <animate attributeName="d" values="M 100 113 Q 180 80 200 40; M 100 113 Q 175 90 200 40; M 100 113 Q 180 80 200 40" dur="4s" repeatCount="indefinite"/>
+                </path>
+            </svg>
+        </div>
+
+        <h1 class="error-title">Lost in Space</h1>
+        <p class="error-subtitle">The page you're looking for has drifted into the void. Let's get you back to mission control.</p>
+
+        <div class="cta-buttons">
+            <a href="dashboard.html" class="btn-primary">
+                🚀 Go to Dashboard
+            </a>
+            <a href="index.html" class="btn-secondary">
+                🏠 Go Home
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Particle background
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function createStars() {
+            stars = [];
+            for (let i = 0; i < 120; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    r: Math.random() * 1.5 + 0.5,
+                    opacity: Math.random(),
+                    speedY: Math.random() * 0.2 + 0.05,
+                    twinkle: Math.random() * 0.02
+                });
+            }
+        }
+
+        function drawStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => {
+                star.y -= star.speedY;
+                if (star.y < 0) star.y = canvas.height;
+                star.opacity += star.twinkle;
+                if (star.opacity > 1 || star.opacity < 0.1) star.twinkle = -star.twinkle;
+
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(122, 162, 247, ${star.opacity})`;
+                ctx.fill();
+            });
+            requestAnimationFrame(drawStars);
+        }
+
+        window.addEventListener('resize', () => { resize(); createStars(); });
+        resize();
+        createStars();
+        drawStars();
+    </script>
+</body>
+</html>

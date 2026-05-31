@@ -1,94 +1,215 @@
-/**
- * CodeSync v2.0 - Firebase Configuration
- * 
- * Modular SDK implementation (v10.x).
- * Make sure to replace placeholders below before deploying.
- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  GithubAuthProvider, 
+  EmailAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs,
+  updateDoc, 
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  addDoc,
+  deleteDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { 
+  getDatabase, 
+  ref, 
+  set, 
+  onValue, 
+  onDisconnect, 
+  push, 
+  remove, 
+  onChildAdded 
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// ==========================================
-// FIREBASE CONFIGURATION PLACEHOLDERS
-// ==========================================
 const FIREBASE_CONFIG = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDAZ2VaXg4v49ofkod54tulfKL27UgaqSY",
+  authDomain: "codesync-11f70.firebaseapp.com",
+  databaseURL: "https://codesync-11f70-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "codesync-11f70",
+  storageBucket: "codesync-11f70.firebasestorage.app",
+  messagingSenderId: "910021589735",
+  appId: "1:910021589735:web:05bfbd51bfce2d57320042"
 };
 
-/**
- * ==========================================
- * DATABASE STRUCTURE REFERENCE
- * ==========================================
- * 
- * Realtime Database:
- * -----------------
- * rooms/{roomId}/
- *   info: { name: string, language: string, createdBy: string, createdAt: number, isPublic: boolean }
- *   code: { content: string, lastUpdatedBy: string, timestamp: number }
- *   users/{userId}: { name: string, color: string, joinedAt: number }
- *   chat/{messageId}: { text: string, sender: string, uid: string, timestamp: number }
- * 
- * Firestore (or Realtime Database, depending on preference. Here we'll use RTDB for everything for consistency):
- * -----------------
- * users/{userId}/
- *   profile: { name: string, email: string, avatar: string, createdAt: number }
- *   stats: { roomsCreated: number, roomsJoined: number, totalSessions: number, linesWritten: number }
- *   rooms/
- *     created/{roomId}: boolean
- *     joined/{roomId}: boolean
- * 
- * ==========================================
- * SECURITY RULES TEMPLATE
- * ==========================================
- * 
- * {
- *   "rules": {
- *     "users": {
- *       "$uid": {
- *         ".read": "$uid === auth.uid",
- *         ".write": "$uid === auth.uid"
- *       }
- *     },
- *     "rooms": {
- *       "$roomId": {
- *         // Anyone authenticated can read/write to a room for now
- *         ".read": "auth != null",
- *         ".write": "auth != null"
- *       }
- *     }
- *   }
- * }
- */
+/*
+🔥 FIRESTORE STRUCTURE:
+users/{userId}
+  - fullName (string)
+  - email (string)
+  - avatar { color, initials }
+  - bio (string)
+  - githubUrl (string)
+  - linkedinUrl (string)
+  - createdAt (timestamp)
+  - lastSeen (timestamp)
+  - stats { roomsCreated, roomsJoined, totalSessions, linesWritten }
+  - preferences { theme, fontSize, tabSize, autoSave }
+  - rooms (array of roomIds)
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getDatabase } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+rooms/{roomId}
+  - name (string)
+  - description (string)
+  - language (string)
+  - isPublic (boolean)
+  - maxParticipants (number)
+  - tags (array of strings)
+  - ownerId (string)
+  - collaborators (array of userIds)
+  - createdAt (timestamp)
+  - lastActive (timestamp)
 
-let app, auth, database, firestore, googleProvider;
-let isDev = false;
+rooms/{roomId}/snapshots/{snapshotId}
+  - code (string)
+  - language (string)
+  - savedBy (string)
+  - timestamp (timestamp)
+  - label (string)
 
-try {
-    // Check if running without real config (Dev mode)
-    if (FIREBASE_CONFIG.apiKey === "YOUR_API_KEY") {
-        console.warn("⚠️ CodeSync: Firebase credentials missing. Running in Simulation/Dev Mode.");
-        isDev = true;
-    } else {
-        // Initialize Firebase
-        app = initializeApp(FIREBASE_CONFIG);
-        auth = getAuth(app);
-        database = getDatabase(app);
-        firestore = getFirestore(app);
-        googleProvider = new GoogleAuthProvider();
-        
-        console.log("✅ CodeSync: Firebase successfully initialized.");
+notifications/{userId}/items/{notificationId}
+  - type (string)
+  - message (string)
+  - timestamp (timestamp)
+  - read (boolean)
+  - relatedId (string)
+
+🔥 REALTIME DATABASE STRUCTURE:
+rooms/{roomId}/code
+  - content (string)
+  - language (string)
+  - updatedBy (string)
+  - timestamp (number)
+
+rooms/{roomId}/cursors/{userId}
+  - line (number)
+  - column (number)
+  - color (string)
+  - username (string)
+  - timestamp (number)
+
+rooms/{roomId}/typing/{userId}
+  - isTyping (boolean)
+  - timestamp (number)
+
+rooms/{roomId}/chat/{messageId}
+  - text (string)
+  - userId (string)
+  - username (string)
+  - color (string)
+  - timestamp (number)
+  - type (string)
+
+rooms/{roomId}/activeUsers/{userId}
+  - online (boolean)
+  - timestamp (number)
+
+🔥 SECURITY RULES TEMPLATE:
+// FIRESTORE
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
-} catch (error) {
-    console.error("❌ CodeSync: Error initializing Firebase:", error);
+    match /rooms/{roomId} {
+      allow read: if request.auth != null && (resource.data.isPublic == true || request.auth.uid in resource.data.collaborators);
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      
+      match /snapshots/{snapshotId} {
+        allow read, write: if request.auth != null && (get(/databases/$(database)/documents/rooms/$(roomId)).data.isPublic == true || request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.collaborators);
+      }
+    }
+    match /notifications/{userId}/items/{itemId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
 }
 
-// Export the initialized services
-export { app, auth, database, firestore, googleProvider, isDev };
+// REALTIME DATABASE
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
+*/
+
+let app, auth, db, rtdb;
+let googleProvider, githubProvider, emailProvider;
+
+try {
+  // Initialize Firebase App
+  app = initializeApp(FIREBASE_CONFIG);
+  
+  // Initialize Services
+  auth = getAuth(app);
+  db = getFirestore(app);
+  rtdb = getDatabase(app);
+  
+  // Initialize Auth Providers
+  googleProvider = new GoogleAuthProvider();
+  githubProvider = new GithubAuthProvider();
+  emailProvider = new EmailAuthProvider();
+  
+  console.log("🔥 Firebase initialized successfully");
+} catch (error) {
+  console.error("❌ Firebase initialization failed:", error);
+}
+
+export { 
+  app, 
+  auth, 
+  db, 
+  rtdb, 
+  googleProvider, 
+  githubProvider, 
+  emailProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  signOut,
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs,
+  updateDoc, 
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  addDoc,
+  deleteDoc,
+  serverTimestamp,
+  ref, 
+  set, 
+  onValue, 
+  onDisconnect, 
+  push, 
+  remove, 
+  onChildAdded
+};

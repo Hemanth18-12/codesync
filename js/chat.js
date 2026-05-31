@@ -1,180 +1,289 @@
-/**
- * CodeSync v2.0 - Chat Logic
- */
-import { auth, database, isDev } from './firebase-config.js';
-import { ref, push, onChildAdded, set, remove, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+import { rtdb, ref, push, onChildAdded, set, remove } from './firebase-config.js';
 
-const appChat = {
-    roomId: null,
-    chatRef: null,
-    typingRef: null,
-    typingTimeout: null,
-    isTyping: false,
+let chatRef, typingRef;
+let currentUserId, currentUserData;
+let currentRoomId;
+let typingTimeout = null;
+let isFirstLoad = true;
 
-    init: function() {
-        if(isDev) {
-            this.setupMock();
-            return;
-        }
+const COLORS = ['#7aa2f7','#bb9af7','#9ece6a','#e0af68','#f7768e','#73daca','#ff9e64','#2ac3de'];
 
-        const urlParams = new URLSearchParams(window.location.search);
-        this.roomId = urlParams.get('room');
-        this.chatRef = ref(database, `rooms/${this.roomId}/chat`);
-        this.typingRef = ref(database, `rooms/${this.roomId}/typing`);
+export function initChat(roomId, user, userData) {
+    currentRoomId = roomId;
+    currentUserId = user.uid;
+    currentUserData = userData;
 
-        // Setup UI Listeners
-        const input = document.getElementById('chat-input');
-        input.addEventListener('keydown', (e) => {
-            if(e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.sendMessage();
-            } else {
-                this.handleTyping();
-            }
-        });
+    chatRef = ref(rtdb, `rooms/${roomId}/chat`);
+    typingRef = ref(rtdb, `rooms/${roomId}/typing`);
 
-        // Listen for new messages
-        onChildAdded(this.chatRef, (snap) => {
-            const msg = snap.val();
-            this.renderMessage(msg);
-        });
+    setupChatListeners();
+    setupInputListeners();
+}
 
-        // Listen for typing events
-        onValue(this.typingRef, (snap) => {
-            const indicator = document.getElementById('typing-indicator');
-            if(!snap.exists()) {
-                indicator.classList.remove('active');
-                return;
-            }
+function setupChatListeners() {
+    const messagesContainer = document.getElementById('chat-messages');
 
-            const typists = [];
-            snap.forEach(child => {
-                if(child.key !== auth.currentUser.uid) {
-                    typists.push(child.val().name);
-                }
-            });
+    onChildAdded(chatRef, (snap) => {
+        const msg = snap.val();
+        if (!msg) return;
 
-            if(typists.length > 0) {
-                const text = typists.length > 2 ? 'Multiple people are typing' : `${typists.join(' and ')} ${typists.length > 1 ? 'are' : 'is'} typing`;
-                indicator.innerHTML = `${text}<span>.</span><span>.</span><span>.</span>`;
-                indicator.classList.add('active');
-            } else {
-                indicator.classList.remove('active');
-            }
-        });
-    },
-
-    setupMock: function() {
-        document.getElementById('chat-messages').innerHTML = '';
-        this.renderMessage({ text: 'Welcome to the local mock chat!', sender: 'System', uid: 'sys' });
-        
-        const input = document.getElementById('chat-input');
-        input.addEventListener('keydown', (e) => {
-            if(e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                const text = input.value.trim();
-                if(text) {
-                    this.renderMessage({ text: text, sender: 'You', uid: 'mock123', timestamp: Date.now() });
-                    input.value = '';
-                    
-                    // Mock reply
-                    setTimeout(() => {
-                        this.renderMessage({ text: 'Echo: ' + text, sender: 'Bot', uid: 'bot1', timestamp: Date.now() });
-                    }, 1000);
-                }
-            }
-        });
-    },
-
-    handleTyping: function() {
-        if(!this.isTyping) {
-            this.isTyping = true;
-            set(ref(database, `rooms/${this.roomId}/typing/${auth.currentUser.uid}`), { name: auth.currentUser.displayName || 'User' });
-        }
-        clearTimeout(this.typingTimeout);
-        this.typingTimeout = setTimeout(() => {
-            this.isTyping = false;
-            remove(ref(database, `rooms/${this.roomId}/typing/${auth.currentUser.uid}`));
-        }, 2000);
-    },
-
-    sendMessage: function() {
-        const input = document.getElementById('chat-input');
-        const text = input.value.trim();
-        if(!text) return;
-
-        input.value = '';
-        if(isDev) return;
-
-        push(this.chatRef, {
-            text: text,
-            sender: auth.currentUser.displayName || auth.currentUser.email.split('@')[0],
-            uid: auth.currentUser.uid,
-            timestamp: serverTimestamp()
-        });
-
-        // Clear typing
-        clearTimeout(this.typingTimeout);
-        this.isTyping = false;
-        remove(ref(database, `rooms/${this.roomId}/typing/${auth.currentUser.uid}`));
-    },
-
-    renderMessage: function(msg) {
-        const container = document.getElementById('chat-messages');
-        const isSelf = msg.uid === (auth.currentUser ? auth.currentUser.uid : 'mock123');
-        
-        // Remove system msg
-        const sys = container.querySelector('.system-msg');
-        if(sys) sys.remove();
-
-        const el = document.createElement('div');
-        
-        if(msg.uid === 'sys') {
-            el.className = 'system-msg';
-            el.innerText = msg.text;
+        // Skip initial batch render flicker
+        if (isFirstLoad) {
+            renderMessage(msg);
         } else {
-            el.className = `chat-msg ${isSelf ? 'self' : ''}`;
-            
-            // Code block detection
-            let formattedText = msg.text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            if(formattedText.startsWith("```")) {
-                const codeContent = formattedText.replace(/```(.*?)\n?/g, "").trim();
-                formattedText = `<pre style="background:rgba(0,0,0,0.4); padding:10px; border-radius:4px; font-family:var(--font-mono); margin-top:5px; overflow-x:auto;"><code>${codeContent}</code></pre>`;
+            renderMessage(msg);
+            scrollToBottom();
+        }
+    });
+
+    // Mark first load done after brief delay
+    setTimeout(() => {
+        isFirstLoad = false;
+        scrollToBottom();
+    }, 1500);
+
+    // Typing indicator listener
+    import('./firebase-config.js').then(({ onValue }) => {
+        const typingEl = document.getElementById('typing-indicator');
+        const typingText = document.getElementById('typing-text');
+
+        onValue(typingRef, (snap) => {
+            const typingUsers = snap.val() || {};
+            const names = Object.entries(typingUsers)
+                .filter(([uid, data]) => uid !== currentUserId && data.isTyping && Date.now() - data.timestamp < 4000)
+                .map(([, data]) => data.username);
+
+            if (names.length > 0) {
+                typingEl.classList.remove('hidden');
+                if (names.length === 1) typingText.textContent = `${names[0]} is typing`;
+                else if (names.length === 2) typingText.textContent = `${names[0]} and ${names[1]} are typing`;
+                else typingText.textContent = `Multiple people are typing`;
             } else {
-                formattedText = formattedText.replace(/\n/g, '<br>');
+                typingEl.classList.add('hidden');
             }
+        });
+    });
+}
 
-            const initial = msg.sender.charAt(0).toUpperCase();
-            const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Now';
+function setupInputListeners() {
+    const chatInput = document.getElementById('chat-input');
+    const btnSend = document.getElementById('btn-send-chat');
 
-            el.innerHTML = `
-                <div class="msg-avatar" style="background:${isSelf ? 'var(--accent-primary)' : '#444'}">${initial}</div>
-                <div class="msg-content">
-                    <div class="msg-header">
-                        <span class="msg-name">${msg.sender}</span>
-                        <span class="msg-time">${time}</span>
-                    </div>
-                    <div class="msg-bubble">${formattedText}</div>
-                </div>
-            `;
-        }
+    // Auto-resize textarea
+    chatInput.addEventListener('input', () => {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
+        broadcastTyping(true);
+    });
 
-        container.appendChild(el);
-        
-        // Auto scroll if user is near bottom
-        if (container.scrollHeight - container.scrollTop < container.clientHeight + 100 || isSelf) {
-            container.scrollTop = container.scrollHeight;
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
         }
-        
-        // Update unread count if panel is closed
-        const panel = document.getElementById('panel-chat');
-        if(panel.classList.contains('hidden') && !isSelf) {
-            const btn = document.getElementById('btn-toggle-chat');
-            btn.style.color = 'var(--accent-primary)';
-            btn.classList.add('shake');
-            setTimeout(() => btn.classList.remove('shake'), 400);
-        }
+    });
+
+    btnSend.addEventListener('click', sendMessage);
+
+    // Members list toggle
+    const toggleBtn = document.getElementById('btn-toggle-members');
+    const membersList = document.getElementById('members-list');
+    if (toggleBtn && membersList) {
+        toggleBtn.addEventListener('click', () => {
+            membersList.classList.toggle('collapsed');
+            const arrow = toggleBtn.querySelector('span:last-child');
+            if (arrow) arrow.textContent = membersList.classList.contains('collapsed') ? '▼' : '▲';
+        });
     }
-};
 
-window.appChat = appChat;
+    // Close chat panel
+    const btnCloseChat = document.getElementById('btn-close-chat');
+    const panelRight = document.getElementById('panel-right');
+    if (btnCloseChat && panelRight) {
+        btnCloseChat.addEventListener('click', () => {
+            panelRight.classList.toggle('collapsed');
+        });
+    }
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (text.length > 500) {
+        const input = document.getElementById('chat-input');
+        input.style.border = '1px solid var(--error-color)';
+        setTimeout(() => input.style.border = '', 2000);
+        return;
+    }
+
+    const message = {
+        text: text,
+        userId: currentUserId,
+        username: currentUserData.fullName.split(' ')[0],
+        fullName: currentUserData.fullName,
+        color: currentUserData.avatar.color,
+        initials: currentUserData.avatar.initials,
+        timestamp: Date.now(),
+        type: 'message'
+    };
+
+    try {
+        await push(chatRef, message);
+        input.value = '';
+        input.style.height = 'auto';
+        clearTyping();
+    } catch (err) {
+        console.error("Failed to send message:", err);
+    }
+}
+
+function broadcastTyping(isTyping) {
+    if (!currentUserId) return;
+
+    set(ref(rtdb, `rooms/${currentRoomId}/typing/${currentUserId}`), {
+        isTyping: isTyping,
+        username: currentUserData.fullName.split(' ')[0],
+        timestamp: Date.now()
+    });
+
+    // Auto-clear typing after 2.5s
+    if (typingTimeout) clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(clearTyping, 2500);
+}
+
+function clearTyping() {
+    if (!currentUserId) return;
+    remove(ref(rtdb, `rooms/${currentRoomId}/typing/${currentUserId}`));
+}
+
+// --- Message Rendering ---
+let lastMessageUserId = null;
+let lastMessageTime = null;
+let lastMsgGroupEl = null;
+
+function renderMessage(msg) {
+    const container = document.getElementById('chat-messages');
+    const isOwn = msg.userId === currentUserId;
+    const msgTime = new Date(msg.timestamp);
+
+    // Check if this should be grouped with previous
+    const sameUser = msg.userId === lastMessageUserId;
+    const within2Min = lastMessageTime && (msgTime - lastMessageTime) < 120000;
+    const shouldGroup = sameUser && within2Min && lastMsgGroupEl;
+
+    if (msg.type === 'system') {
+        const sys = document.createElement('div');
+        sys.className = 'sys-msg';
+        sys.textContent = msg.text;
+        container.appendChild(sys);
+        return;
+    }
+
+    if (!shouldGroup) {
+        // Create new message group
+        const group = document.createElement('div');
+        group.className = `msg-group ${isOwn ? 'own' : 'others'}`;
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'msg-header';
+        header.innerHTML = `
+            <div class="avatar" style="background:${msg.color}; width:20px; height:20px; font-size:0.55rem;">${msg.initials}</div>
+            <span class="name" style="color:${msg.color}">${msg.fullName || msg.username}</span>
+            <span class="time">${formatTime(msgTime)}</span>
+        `;
+        group.appendChild(header);
+
+        lastMsgGroupEl = group;
+        container.appendChild(group);
+    }
+
+    // Add bubble to current group
+    const bubble = createBubble(msg.text, isOwn);
+    lastMsgGroupEl.appendChild(bubble);
+
+    lastMessageUserId = msg.userId;
+    lastMessageTime = msgTime;
+
+    scrollToBottom();
+}
+
+function createBubble(text, isOwn) {
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+
+    // Detect code blocks
+    if (text.includes('```')) {
+        bubble.innerHTML = parseCodeBlocks(text);
+        // Highlight code blocks
+        bubble.querySelectorAll('pre code').forEach(block => {
+            if (window.Prism) {
+                window.Prism.highlightElement(block);
+            }
+        });
+    } else {
+        // Linkify URLs and escape HTML
+        bubble.innerHTML = linkify(escapeHtml(text));
+    }
+
+    return bubble;
+}
+
+function parseCodeBlocks(text) {
+    // Escape then parse code blocks
+    const parts = text.split('```');
+    let html = '';
+    parts.forEach((part, i) => {
+        if (i % 2 === 0) {
+            html += `<span>${escapeHtml(part)}</span>`;
+        } else {
+            const firstNewline = part.indexOf('\n');
+            const lang = firstNewline > 0 ? part.substring(0, firstNewline).trim() : 'javascript';
+            const code = firstNewline > 0 ? part.substring(firstNewline + 1) : part;
+            html += `<pre><button class="copy-code-btn" onclick="navigator.clipboard.writeText(this.parentElement.querySelector('code').textContent)">📋</button><code class="language-${lang}">${escapeHtml(code)}</code></pre>`;
+        }
+    });
+    return html;
+}
+
+function escapeHtml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function linkify(text) {
+    const urlPattern = /https?:\/\/[^\s]+/g;
+    return text.replace(urlPattern, url => `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--primary-color)">${url}</a>`);
+}
+
+function scrollToBottom() {
+    const container = document.getElementById('chat-messages');
+    if (container) container.scrollTop = container.scrollHeight;
+}
+
+function formatTime(date) {
+    const now = new Date();
+    const diff = now - date;
+
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleDateString();
+}
+
+// Send System Message (called from editor or rooms module)
+export async function sendSystemMessage(text) {
+    if (!chatRef) return;
+    await push(chatRef, {
+        text: text,
+        type: 'system',
+        timestamp: Date.now()
+    });
+}
