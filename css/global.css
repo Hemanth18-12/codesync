@@ -584,6 +584,129 @@ input.invalid {
 .stagger-4 { transition-delay: 400ms; }
 .stagger-5 { transition-delay: 500ms; }
 
+/* --- ADDED PROFESSIONAL ANIMATIONS --- */
+/* 1. ROOM CARD "OPEN" BUTTON */
+.open-room-btn {
+  background: linear-gradient(135deg, #7aa2f7, #bb9af7);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.open-room-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.open-room-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(122, 162, 247, 0.4);
+}
+.open-room-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* 2. CHAT MESSAGE ANIMATION */
+.message {
+  animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 3 & 4. SIDEBAR NAV ITEM HOVER & PAGE LOAD STAGGER */
+.nav-item {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  opacity: 0;
+  animation: navSlideIn 0.4s forwards;
+}
+.nav-item:hover {
+  background: rgba(122,162,247,0.1);
+  border-left: 3px solid #7aa2f7;
+  transform: translateX(4px);
+}
+.nav-item.active {
+  background: rgba(122,162,247,0.15);
+  border-left: 3px solid #7aa2f7;
+  color: #7aa2f7;
+}
+
+.nav-item:nth-child(1){animation-delay:0.05s}
+.nav-item:nth-child(2){animation-delay:0.10s}
+.nav-item:nth-child(3){animation-delay:0.15s}
+.nav-item:nth-child(4){animation-delay:0.20s}
+.nav-item:nth-child(5){animation-delay:0.25s}
+.nav-item:nth-child(6){animation-delay:0.30s}
+.nav-item:nth-child(7){animation-delay:0.35s}
+
+@keyframes navSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 5. TOAST NOTIFICATIONS (Override existing if needed) */
+.toast {
+  animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.toast.removing {
+  animation: toastOut 0.3s ease forwards;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes toastOut {
+  to {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+/* 6. ONLINE PULSE DOT */
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: #9ece6a;
+  border-radius: 50%;
+  animation: livePulse 2s infinite;
+}
+@keyframes livePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(158,206,106,0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(158,206,106,0);
+  }
+}
+
 /* RESPONSIVE */
 @media (max-width: 768px) {
   body { font-size: 14px; }

@@ -1,131 +1,148 @@
 import { rtdb, ref, push, onChildAdded, onValue, set, remove, serverTimestamp } from './firebase-config.js';
-import { currentRoomId, currentUser } from './editor.js';
+import { currentRoomId as roomId, currentUser } from './editor.js';
 
-const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
-const chatMessages = document.getElementById('chat-messages');
+const sendBtn = document.querySelector('#chat-form button[type="submit"]') || document.getElementById('send-btn');
 const typingIndicator = document.getElementById('typing-indicator');
-
 let typingTimeout;
 
-// --- INIT CHAT ---
-window.addEventListener('monaco-ready', () => {
-    if (!currentRoomId || !currentUser) return;
-    
-    const chatRef = ref(rtdb, `rooms/${currentRoomId}/chat`);
-    const typingRef = ref(rtdb, `rooms/${currentRoomId}/typing`);
-    
-    // Listen for new messages
-    onChildAdded(chatRef, (snapshot) => {
-        const data = snapshot.val();
-        appendMessage(data);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    });
-    
-    // Listen for typing indicators
-    onValue(typingRef, (snapshot) => {
-        if (!snapshot.exists()) {
-            typingIndicator.innerText = '';
-            return;
-        }
-        
-        const typers = [];
-        snapshot.forEach(child => {
-            if (child.key !== currentUser.uid && child.val().isTyping) {
-                typers.push(child.val().name);
-            }
-        });
-        
-        if (typers.length === 0) typingIndicator.innerText = '';
-        else if (typers.length === 1) typingIndicator.innerText = `${typers[0]} is typing...`;
-        else typingIndicator.innerText = `${typers.length} people are typing...`;
-    });
-});
+// Use a basic generated color for the user if not available
+const userColor = '#' + Math.floor(Math.random()*16777215).toString(16);
 
 // --- SEND MESSAGE ---
-chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const text = chatInput.value.trim();
-    if (!text) return;
-    
-    chatInput.value = '';
-    
-    // Clear typing status immediately
-    clearTimeout(typingTimeout);
-    set(ref(rtdb, `rooms/${currentRoomId}/typing/${currentUser.uid}`), null);
-    
-    // Get user info from global var (hacky but works since auth.js sets it in localStorage or we fetch it)
-    // We'll rely on the avatar URL stored in the DOM header for speed
-    const bgImage = document.querySelector('.header-avatar')?.style.backgroundImage;
-    const photoURL = bgImage ? bgImage.slice(5, -2) : 'assets/default-avatar.png';
-    const name = document.getElementById('welcome-msg')?.innerText.split(', ')[1] || 'User';
-    
-    try {
-        await push(ref(rtdb, `rooms/${currentRoomId}/chat`), {
-            uid: currentUser.uid,
-            name: name,
-            photoURL: photoURL,
-            text: text,
-            timestamp: Date.now()
-        });
-    } catch (e) {
-        console.error("Failed to send message", e);
+const sendMessage = async (text) => {
+    if (!text.trim()) return;
+    const chatRef = ref(rtdb, `rooms/${roomId}/chat`);
+    await push(chatRef, {
+        text: text.trim(),
+        userId: currentUser.uid,
+        username: currentUser.displayName || currentUser.email,
+        color: userColor,
+        timestamp: Date.now(),
+        type: 'message'
+    });
+};
+
+// --- SEND BUTTON HANDLERS ---
+if (sendBtn) {
+    sendBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        sendMessage(chatInput.value);
+        chatInput.value = '';
+    });
+}
+
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(chatInput.value);
+        chatInput.value = '';
     }
 });
 
-// --- TYPING STATUS ---
-chatInput.addEventListener('input', () => {
-    const name = document.getElementById('welcome-msg')?.innerText.split(', ')[1] || 'User';
+// --- RENDER MESSAGE ---
+function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+const renderMessage = (msg) => {
+    if (msg.type !== 'message') return;
     
-    set(ref(rtdb, `rooms/${currentRoomId}/typing/${currentUser.uid}`), {
-        name: name,
-        isTyping: true
+    const isOwn = msg.userId === currentUser.uid;
+    const messagesDiv = document.getElementById('chat-messages'); // using the ID from editor.html
+    
+    const bubble = document.createElement('div');
+    bubble.className = `message ${isOwn ? 'message-own' : 'message-other'}`;
+    
+    // Add slide in animation from CSS
+    bubble.style.animation = "messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)";
+    bubble.style.marginBottom = "1rem";
+    bubble.style.display = "flex";
+    bubble.style.gap = "0.5rem";
+    if (isOwn) bubble.style.flexDirection = "row-reverse";
+    
+    bubble.innerHTML = `
+        <div class="message-avatar" style="background:${msg.color}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0;">
+            ${msg.username ? msg.username.charAt(0).toUpperCase() : '?'}
+        </div>
+        <div class="message-content" style="max-width: 75%;">
+            <div class="message-name" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; text-align: ${isOwn ? 'right' : 'left'}">
+                ${isOwn ? 'You' : msg.username}
+            </div>
+            <div class="message-bubble" style="background: ${isOwn ? 'var(--primary-color)' : 'var(--bg-secondary)'}; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.9rem;">
+                ${msg.text}
+            </div>
+            <div class="message-time" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; text-align: ${isOwn ? 'right' : 'left'}">
+                ${formatTime(msg.timestamp)}
+            </div>
+        </div>
+    `;
+    messagesDiv.appendChild(bubble);
+};
+
+const scrollToBottom = () => {
+    const messagesDiv = document.getElementById('chat-messages');
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+};
+
+// --- INIT CHAT (RECEIVE MESSAGES) ---
+window.addEventListener('monaco-ready', () => {
+    if (!roomId || !currentUser) return;
+    
+    const chatRef = ref(rtdb, `rooms/${roomId}/chat`);
+    onChildAdded(chatRef, (snapshot) => {
+        const message = snapshot.val();
+        renderMessage(message);
+        scrollToBottom();
+    });
+});
+
+// --- TYPING INDICATOR ---
+chatInput.addEventListener('input', () => {
+    if (!currentUser) return;
+    
+    const typingRef = ref(rtdb, `rooms/${roomId}/typing/${currentUser.uid}`);
+    set(typingRef, {
+        username: currentUser.displayName || currentUser.email || 'Someone',
+        timestamp: Date.now()
     });
     
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => {
-        set(ref(rtdb, `rooms/${currentRoomId}/typing/${currentUser.uid}`), null);
-    }, 2000);
+        remove(typingRef);
+    }, 2500);
 });
 
-// --- RENDER MESSAGE ---
-function appendMessage(data) {
-    const time = new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+window.addEventListener('monaco-ready', () => {
+    if (!roomId || !currentUser) return;
     
-    // Basic Markdown formatting (Code blocks)
-    let formattedText = data.text
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') // sanitize
-        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>') // code blocks
-        .replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:3px;">$1</code>'); // inline code
-    
-    const div = document.createElement('div');
-    div.className = 'chat-msg';
-    div.innerHTML = `
-        <img src="${data.photoURL}" class="chat-avatar" onerror="this.src='assets/default-avatar.png'">
-        <div class="chat-content">
-            <div class="chat-meta">
-                <span class="chat-author">${data.name}</span>
-                <span class="chat-time">${time}</span>
-            </div>
-            <div class="chat-text">${formattedText}</div>
-        </div>
-    `;
-    
-    chatMessages.appendChild(div);
-}
+    const typingUsersRef = ref(rtdb, `rooms/${roomId}/typing`);
+    onValue(typingUsersRef, (snapshot) => {
+        const typingUsers = snapshot.val() || {};
+        const others = Object.values(typingUsers).filter(u => u.username !== (currentUser.displayName || currentUser.email));
+        
+        if (others.length > 0) {
+            typingIndicator.textContent = others.length === 1
+                ? `${others[0].username} is typing...`
+                : `${others.length} people are typing...`;
+            typingIndicator.style.display = 'block';
+        } else {
+            typingIndicator.style.display = 'none';
+        }
+    });
+});
 
-// System Announcements
 export function appendSystemMessage(text) {
     const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const messagesDiv = document.getElementById('chat-messages');
     const div = document.createElement('div');
-    div.className = 'chat-msg';
-    div.style.alignItems = 'center';
+    div.style.textAlign = 'center';
+    div.style.margin = '0.5rem 0';
     div.innerHTML = `
-        <div class="chat-content" style="background: rgba(249, 115, 22, 0.1); padding: 0.5rem; border-radius: 4px; text-align: center; border: 1px solid rgba(249, 115, 22, 0.2);">
-            <span style="font-size: 0.75rem; color: var(--primary-color);">⚙️ SYSTEM • ${time}</span>
-            <div class="chat-text" style="color: var(--primary-color); font-weight: 500;">${text}</div>
-        </div>
+        <span style="font-size: 0.75rem; color: var(--primary-color); background: rgba(249, 115, 22, 0.1); padding: 4px 8px; border-radius: 4px;">
+            ⚙️ ${text} • ${time}
+        </span>
     `;
-    chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    messagesDiv.appendChild(div);
+    scrollToBottom();
 }

@@ -106,6 +106,16 @@ btnLogout.addEventListener('click', async () => {
     }
 });
 
+// --- EVENT LISTENERS ---
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('open-room-btn')) {
+        const roomId = e.target.dataset.roomId;
+        if (roomId) {
+            window.location.href = \`editor.html?room=\${roomId}\`;
+        }
+    }
+});
+
 // --- OVERVIEW DATA LOAD ---
 function loadOverviewData() {
     if (!currentUser || !userData) return;
@@ -210,7 +220,7 @@ function renderRecentRooms(snapshot, source) {
             </div>
             <div class="room-card-footer">
                 <span style="font-size: 0.75rem; color: var(--text-muted)">ID: ${roomId}</span>
-                <button class="btn-secondary" onclick="window.location.href='editor.html?room=${roomId}'">Open</button>
+                <button class="open-room-btn" data-room-id="${roomId}">Open</button>
             </div>
         `;
         grid.appendChild(card);
