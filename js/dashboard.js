@@ -94,6 +94,8 @@ navItems.forEach(item => {
         if (activeView === 'explore') loadExploreRooms(true);
         if (activeView === 'snapshots') loadSnapshots();
         if (activeView === 'overview') loadOverviewData();
+        if (activeView === 'my-rooms') loadMyRooms();
+        if (activeView === 'joined-rooms') loadJoinedRooms();
     });
 });
 
@@ -1100,3 +1102,167 @@ if (btnSnapRestore) {
         }
     });
 }
+
+// --- MY ROOMS AND JOINED ROOMS DATA LOAD ---
+
+async function loadMyRooms() {
+    const grid = document.getElementById('my-rooms-grid');
+    const emptyState = document.getElementById('empty-my-rooms');
+    if (!grid) return;
+
+    // Remove existing cards
+    Array.from(grid.children).forEach(c => {
+        if (c.id !== 'empty-my-rooms') c.remove();
+    });
+
+    try {
+        const q = query(collection(db, 'rooms'), where('owner', '==', currentUser.uid), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            if (emptyState) emptyState.style.display = 'flex';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const roomId = docSnap.id;
+            
+            const card = document.createElement('div');
+            card.className = 'room-card glass-card';
+            card.innerHTML = `
+                <div class="room-card-header" style="justify-content: space-between;">
+                    <div class="room-title-wrapper">
+                        <div class="room-title">${data.name}</div>
+                        <div class="room-lang"><span class="lang-dot" style="background: var(--primary-color)"></span> ${data.language || 'Mixed'}</div>
+                    </div>
+                </div>
+                <div class="room-stats" style="margin-bottom: 1rem;">
+                    <span>👥 ${data.collaborators?.length || 1} members</span>
+                    <span class="active-users"><div class="dot"></div> <span id="my-active-${roomId}">0</span> live</span>
+                </div>
+                <div class="room-card-footer" style="flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: auto;">ID: ${data.roomCode}</span>
+                    <button class="btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${data.roomCode}'); showToast('Room Code Copied!', 'success');">Copy Code</button>
+                    <button class="btn-danger btn-sm" onclick="deleteRoom('${roomId}')">Delete</button>
+                    <button class="btn-primary btn-sm open-room-btn" data-room-id="${roomId}">Open</button>
+                </div>
+            `;
+            grid.appendChild(card);
+
+            // Bind active users
+            onValue(ref(rtdb, `rooms/${roomId}/activeUsers`), (snap) => {
+                const el = document.getElementById(`my-active-${roomId}`);
+                if (el) el.innerText = snap.exists() ? Object.keys(snap.val()).length : 0;
+            });
+        });
+    } catch (error) {
+        console.error("Error loading my rooms:", error);
+    }
+}
+
+window.deleteRoom = async (roomId) => {
+    if (!confirm('Are you sure you want to delete this room? This action cannot be undone.')) return;
+    try {
+        await deleteDoc(doc(db, 'rooms', roomId));
+        showToast('Room deleted successfully.', 'success');
+        loadMyRooms();
+        loadOverviewData(); // Update stats
+    } catch (error) {
+        console.error("Error deleting room:", error);
+        showToast('Failed to delete room.', 'error');
+    }
+};
+
+async function loadJoinedRooms() {
+    const grid = document.getElementById('joined-rooms-grid');
+    const emptyState = document.getElementById('empty-joined-rooms');
+    if (!grid) return;
+
+    // Remove existing cards
+    Array.from(grid.children).forEach(c => {
+        if (c.id !== 'empty-joined-rooms') c.remove();
+    });
+
+    try {
+        const q = query(collection(db, 'rooms'), orderBy('lastActive', 'desc'));
+        const snapshot = await getDocs(q);
+
+        let joinedCount = 0;
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const roomId = docSnap.id;
+            
+            // Check if user is in collaborators array and NOT the owner
+            const isCollaborator = data.collaborators?.some(c => c.userId === currentUser.uid);
+            if (!isCollaborator || data.owner === currentUser.uid) return;
+
+            joinedCount++;
+            
+            const card = document.createElement('div');
+            card.className = 'room-card glass-card';
+            card.innerHTML = `
+                <div class="room-card-header" style="justify-content: space-between;">
+                    <div class="room-title-wrapper">
+                        <div class="room-title">${data.name}</div>
+                        <div class="room-lang"><span class="lang-dot" style="background: var(--primary-color)"></span> ${data.language || 'Mixed'}</div>
+                    </div>
+                </div>
+                <div class="room-owner" style="margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">
+                    By ${data.ownerName || 'Unknown'}
+                </div>
+                <div class="room-stats" style="margin-bottom: 1rem;">
+                    <span>👥 ${data.collaborators?.length || 1} members</span>
+                    <span class="active-users"><div class="dot"></div> <span id="joined-active-${roomId}">0</span> live</span>
+                </div>
+                <div class="room-card-footer" style="flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end;">
+                    <button class="btn-danger btn-sm" onclick="leaveRoom('${roomId}')">Leave</button>
+                    <button class="btn-primary btn-sm open-room-btn" data-room-id="${roomId}">Open</button>
+                </div>
+            `;
+            grid.appendChild(card);
+
+            // Bind active users
+            onValue(ref(rtdb, `rooms/${roomId}/activeUsers`), (snap) => {
+                const el = document.getElementById(`joined-active-${roomId}`);
+                if (el) el.innerText = snap.exists() ? Object.keys(snap.val()).length : 0;
+            });
+        });
+
+        if (joinedCount === 0) {
+            if (emptyState) emptyState.style.display = 'flex';
+        } else {
+            if (emptyState) emptyState.style.display = 'none';
+        }
+
+    } catch (error) {
+        console.error("Error loading joined rooms:", error);
+    }
+}
+
+window.leaveRoom = async (roomId) => {
+    if (!confirm('Are you sure you want to leave this room?')) return;
+    try {
+        const roomDoc = await getDoc(doc(db, 'rooms', roomId));
+        if (roomDoc.exists()) {
+            const data = roomDoc.data();
+            const newCollaborators = (data.collaborators || []).filter(c => c.userId !== currentUser.uid);
+            await updateDoc(doc(db, 'rooms', roomId), { collaborators: newCollaborators });
+            
+            // Update user stat
+            await updateDoc(doc(db, 'users', currentUser.uid), {
+                'stats.roomsJoined': increment(-1)
+            });
+
+            showToast('You left the room.', 'success');
+            loadJoinedRooms();
+            loadOverviewData(); // Update stats
+        }
+    } catch (error) {
+        console.error("Error leaving room:", error);
+        showToast('Failed to leave room.', 'error');
+    }
+};
