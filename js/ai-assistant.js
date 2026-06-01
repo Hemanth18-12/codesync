@@ -2,9 +2,9 @@ import { auth, db, doc, updateDoc, increment } from './firebase-config.js';
 import { onAuthStateChanged } from './firebase-config.js';
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY';
-// Get your FREE API key at: https://aistudio.google.com
-// Click "Get API Key" → Copy and paste it above
+// API key is loaded from js/config.js (not tracked by git)
+// To set up: create js/config.js with: window.GEMINI_API_KEY = 'your-key-here';
+const GEMINI_API_KEY = window.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let conversationHistory = [];

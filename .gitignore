@@ -1,0 +1,15 @@
+# API Keys - never commit these
+js/config.js
+.env
+config.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Dependencies
+node_modules/
