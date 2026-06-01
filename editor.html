@@ -247,6 +247,10 @@
                 <button class="btn-secondary btn-sm" id="btn-download-qr">Download QR Code</button>
             </div>
             
+            <div class="modal-actions" style="justify-content: center; margin-top: 1.5rem;">
+                <button class="btn-primary" onclick="document.getElementById('share-modal').classList.remove('active')" style="width: 100%;">Back</button>
+            </div>
+            
         </div>
     </div>
 
@@ -254,7 +258,6 @@
     <script src="js/config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script type="module" src="js/editor.js"></script>
-    <script type="module" src="js/file-system.js"></script>
     <script type="module" src="js/chat.js"></script>
     <script type="module" src="js/rooms.js"></script>
 </body>

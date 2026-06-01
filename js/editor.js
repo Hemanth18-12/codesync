@@ -1,4 +1,4 @@
-import { auth, db, doc, getDoc, onAuthStateChanged, collection, addDoc, serverTimestamp, rtdb, ref, set, onValue, push, update, remove, get } from './firebase-config.js';
+import { auth, db, doc, getDoc, onAuthStateChanged, collection, addDoc, serverTimestamp, rtdb, ref, set, onValue, push, rtdbUpdate, remove, get } from './firebase-config.js';
 
 // --- GLOBAL STATE ---
 export let editorInstance = null;
@@ -10,6 +10,12 @@ export let isReadOnly = false;
 
 export const getActiveFile = () => activeFile;
 export const setActiveFile = (fileId) => { activeFile = fileId; };
+
+// Local file system (from old file-system.js) — kept as exports for rooms.js compatibility
+export let localFilesMap = new Map();
+export let saveToLocalFile = async (path, content) => {
+    // No-op stub — overridden below when user opens a local folder
+};
 
 // --- DOM ELEMENTS ---
 const monacoContainer = document.getElementById('monaco-container');
@@ -30,6 +36,18 @@ const statusFile = document.getElementById('status-file');
 const activityItems = document.querySelectorAll('.activity-item');
 const sidebar = document.getElementById('editor-sidebar');
 const sidebarPanels = document.querySelectorAll('.sidebar-panel');
+
+// --- TOAST NOTIFICATIONS ---
+window.showToast = function(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    toast.innerHTML = `<span>${icons[type] || '📢'}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 3700);
+};
 
 // --- INITIALIZATION ---
 onAuthStateChanged(auth, async (user) => {
@@ -442,37 +460,113 @@ function createFileDOM(id, file) {
     return div;
 }
 
-// 3. File Operations
-async function createNewFolder(parentId = null) {
-    const name = prompt("Enter folder name:");
-    if(!name) return;
+// 3. File Operations (Inline Input)
+function showInlineInput(parentId, type, action, targetId = null, existingName = '') {
+    const inputContainer = document.createElement('div');
+    inputContainer.className = 'tree-input-container';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = existingName;
+    input.placeholder = type === 'folder' ? 'Folder Name' : 'File Name (e.g. index.js)';
     
-    const newRef = push(ref(rtdb, `rooms/${currentRoomId}/filesystem/folders`));
-    await set(newRef, {
-        name: name,
-        parentId: parentId,
-        createdBy: auth.currentUser?.uid || 'anonymous',
-        createdAt: new Date().toISOString()
+    inputContainer.appendChild(input);
+    
+    let attachTarget = fileTreeDOM;
+    if (parentId) {
+        const parentChildren = document.getElementById(`folder-children-${parentId}`);
+        if (parentChildren) {
+            parentChildren.classList.add('open');
+            const parentItem = document.querySelector(`.folder-item[data-id="${parentId}"]`);
+            if (parentItem) {
+                parentItem.classList.add('open');
+                parentItem.querySelector('.arrow').innerText = '▼';
+            }
+            attachTarget = parentChildren;
+        }
+    } else if (action === 'rename' && targetId) {
+        const targetEl = document.querySelector(`[data-id="${targetId}"]`);
+        if (targetEl) {
+            targetEl.style.display = 'none';
+            targetEl.parentNode.insertBefore(inputContainer, targetEl);
+        }
+    }
+    
+    if (action !== 'rename') {
+        attachTarget.prepend(inputContainer);
+    }
+    
+    input.focus();
+    
+    let isFinished = false;
+    const finish = async (save) => {
+        if (isFinished) return;
+        isFinished = true;
+        
+        const val = input.value.trim();
+        if (action === 'rename' && targetId) {
+            const targetEl = document.querySelector(`[data-id="${targetId}"]`);
+            if (targetEl) targetEl.style.display = '';
+        }
+        inputContainer.remove();
+        
+        if (save && val && val !== existingName) {
+            if (action === 'rename') {
+                const path = type === 'file' ? 'files' : 'folders';
+                await rtdbUpdate(ref(rtdb, `rooms/${currentRoomId}/filesystem/${path}/${targetId}`), { name: val });
+            } else if (action === 'create') {
+                const path = type === 'file' ? 'files' : 'folders';
+                const newRef = push(ref(rtdb, `rooms/${currentRoomId}/filesystem/${path}`));
+                
+                const data = {
+                    name: val,
+                    createdBy: auth.currentUser?.uid || 'anonymous',
+                    createdAt: new Date().toISOString()
+                };
+                
+                if (type === 'file') {
+                    data.content = '';
+                    data.language = getFileLanguage(val);
+                    data.parentFolderId = parentId;
+                    data.updatedAt = new Date().toISOString();
+                } else {
+                    data.parentId = parentId;
+                }
+                
+                // --- Sync to Local Disk if Folder is Opened ---
+                if (window.localDirectoryHandle) {
+                    try {
+                        if (type === 'file') {
+                            const newHandle = await window.localDirectoryHandle.getFileHandle(val, { create: true });
+                            // Re-read local directory to update handles
+                            const treeDOM = document.getElementById('file-tree');
+                            if(treeDOM) {
+                                treeDOM.innerHTML = '';
+                                localFilesMap.clear();
+                                await readLocalDirectory(window.localDirectoryHandle, '', treeDOM);
+                            }
+                        } else {
+                            await window.localDirectoryHandle.getDirectoryHandle(val, { create: true });
+                        }
+                    } catch (err) {
+                        console.error('Failed to create locally:', err);
+                    }
+                }
+                
+                await set(newRef, data);
+                if (type === 'file') openFile(newRef.key);
+            }
+        }
+    };
+    
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') finish(true);
+        if (e.key === 'Escape') finish(false);
     });
+    input.addEventListener('blur', () => finish(true));
 }
 
-async function createNewFile(parentId = null) {
-    const name = prompt("Enter file name (e.g. index.js):");
-    if(!name) return;
-    
-    const newRef = push(ref(rtdb, `rooms/${currentRoomId}/filesystem/files`));
-    await set(newRef, {
-        name: name,
-        content: '',
-        language: getFileLanguage(name),
-        parentFolderId: parentId,
-        createdBy: auth.currentUser?.uid || 'anonymous',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-    });
-    
-    openFile(newRef.key);
-}
+function createNewFolder(parentId = null) { showInlineInput(parentId, 'folder', 'create'); }
+function createNewFile(parentId = null) { showInlineInput(parentId, 'file', 'create'); }
 
 if(btnNewFolder) btnNewFolder.onclick = () => createNewFolder(null);
 if(btnNewFile) btnNewFile.onclick = () => createNewFile(null);
@@ -498,11 +592,9 @@ function showContextMenu(e, id, type) {
 if(ctxMenu) {
     document.getElementById('ctx-new-file').onclick = () => createNewFile(contextTargetId);
     document.getElementById('ctx-new-folder').onclick = () => createNewFolder(contextTargetId);
-    document.getElementById('ctx-rename').onclick = async () => {
-        const newName = prompt("Enter new name:");
-        if(!newName) return;
-        const path = contextTargetType === 'file' ? 'files' : 'folders';
-        await update(ref(rtdb, `rooms/${currentRoomId}/filesystem/${path}/${contextTargetId}`), { name: newName });
+    document.getElementById('ctx-rename').onclick = () => {
+        const existingName = document.querySelector(`[data-id="${contextTargetId}"] .name`)?.innerText || '';
+        showInlineInput(null, contextTargetType, 'rename', contextTargetId, existingName);
     };
     document.getElementById('ctx-delete').onclick = async () => {
         if(confirm(`Are you sure you want to delete this ${contextTargetType}?`)) {
@@ -540,7 +632,7 @@ function openFile(id) {
     }
     
     renderFileTree();
-    updateTabsUI();
+    renderFSTabsUI();
 }
 
 function closeTab(id) {
@@ -552,10 +644,10 @@ function closeTab(id) {
             if(editorInstance) editorInstance.setValue('// No file open');
         }
     }
-    updateTabsUI();
+    renderFSTabsUI();
 }
 
-function updateTabsUI() {
+function renderFSTabsUI() {
     if(!tabsContainerDOM) return;
     tabsContainerDOM.innerHTML = '';
     
@@ -596,7 +688,7 @@ window.addEventListener('monaco-ready', () => {
             
             clearTimeout(autoSaveTimer);
             autoSaveTimer = setTimeout(async () => {
-                await update(ref(rtdb, `rooms/${currentRoomId}/filesystem/files/${activeTabId}`), {
+                await rtdbUpdate(ref(rtdb, `rooms/${currentRoomId}/filesystem/files/${activeTabId}`), {
                     content: content,
                     updatedAt: new Date().toISOString()
                 });
@@ -611,14 +703,14 @@ document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'p') {
         e.preventDefault();
         if(paletteModal) {
-            paletteModal.style.display = 'flex';
+            paletteModal.classList.add('active');
             paletteInput.focus();
             paletteInput.value = '';
             renderPaletteResults('');
         }
     }
-    if (e.key === 'Escape' && paletteModal) {
-        paletteModal.style.display = 'none';
+    if (e.key === 'Escape' && paletteModal && paletteModal.classList.contains('active')) {
+        paletteModal.classList.remove('active');
     }
 });
 
@@ -744,3 +836,101 @@ if(btnInvite) {
         }
     };
 }
+
+// ============================================================================
+// 📂 LOCAL FOLDER OPEN (replaces old file-system.js module)
+// ============================================================================
+let localDirectoryHandle = null;
+
+const btnOpenFolder = document.getElementById('btn-open-folder');
+if(btnOpenFolder) btnOpenFolder.addEventListener('click', openLocalFolder);
+
+async function openLocalFolder() {
+    if (isReadOnly) { alert('This room is read-only.'); return; }
+    try {
+        if (!window.showDirectoryPicker) {
+            alert('Your browser does not support the File System Access API. Please use Chrome, Edge or Opera.');
+            return;
+        }
+        localDirectoryHandle = await window.showDirectoryPicker();
+        window.localDirectoryHandle = localDirectoryHandle;
+        localFilesMap.clear();
+        if(fileTreeDOM) fileTreeDOM.innerHTML = '';
+        await readLocalDirectory(localDirectoryHandle, '', fileTreeDOM);
+    } catch (e) {
+        if (e.name !== 'AbortError') { console.error(e); alert('Failed to open directory.'); }
+    }
+}
+
+async function readLocalDirectory(dirHandle, path, parentEl) {
+    if(!parentEl) return;
+    const entries = [];
+    for await (const entry of dirHandle.values()) {
+        if (['node_modules', '.git', '.firebase', 'dist', 'build'].includes(entry.name)) continue;
+        entries.push(entry);
+    }
+    entries.sort((a, b) => {
+        if (a.kind === b.kind) return a.name.localeCompare(b.name);
+        return a.kind === 'directory' ? -1 : 1;
+    });
+
+    for (const entry of entries) {
+        const currentPath = path ? `${path}/${entry.name}` : entry.name;
+        if (entry.kind === 'directory') {
+            const folderDiv = document.createElement('div');
+            const hdr = document.createElement('div');
+            hdr.className = 'tree-item';
+            hdr.innerHTML = `<span class="arrow">▶</span><span class="icon">📁</span><span class="name">${entry.name}</span>`;
+            const children = document.createElement('div');
+            children.className = 'folder-children';
+            hdr.onclick = () => {
+                hdr.classList.toggle('open');
+                children.classList.toggle('open');
+                hdr.querySelector('.arrow').innerText = hdr.classList.contains('open') ? '▼' : '▶';
+            };
+            folderDiv.appendChild(hdr);
+            folderDiv.appendChild(children);
+            parentEl.appendChild(folderDiv);
+            await readLocalDirectory(entry, currentPath, children);
+        } else {
+            localFilesMap.set(currentPath, entry);
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'tree-item';
+            const icon = getFileIcon(entry.name);
+            fileDiv.innerHTML = `<span class="icon">${icon}</span><span class="name">${entry.name}</span>`;
+            fileDiv.onclick = () => window.openLocalFile(currentPath);
+            parentEl.appendChild(fileDiv);
+        }
+    }
+}
+
+// Override saveToLocalFile to actually write to disk
+saveToLocalFile = async (path, content) => {
+    if (!localDirectoryHandle) return;
+    const handle = localFilesMap.get(path);
+    if (!handle) return;
+    try {
+        const perm = await handle.queryPermission({mode: 'readwrite'});
+        if (perm !== 'granted') {
+            const np = await handle.requestPermission({mode: 'readwrite'});
+            if (np !== 'granted') return;
+        }
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+    } catch (e) { console.error('Failed to save to local file system', e); }
+};
+
+window.openLocalFile = async (path) => {
+    if (isReadOnly) { alert('This room is read-only.'); return; }
+    const handle = localFilesMap.get(path);
+    if (!handle) return;
+    try {
+        const file = await handle.getFile();
+        const content = await file.text();
+        const lang = getFileLanguage(path.split('/').pop());
+        await set(ref(rtdb, `rooms/${currentRoomId}/workspace/${path.replace(/\//g, '_')}`), {
+            content, language: lang, originalPath: path
+        });
+    } catch (e) { console.error('Error reading file', e); }
+};

@@ -4,10 +4,10 @@ import {
 } from './firebase-config.js';
 import { 
     editorInstance, currentUser, currentRoomId, setEditorContent, 
-    setReadOnly, hideLoading, updateTabsUI, getActiveFile, setActiveFile
+    setReadOnly, hideLoading, updateTabsUI, getActiveFile, setActiveFile,
+    localFilesMap, saveToLocalFile
 } from './editor.js';
 import { appendSystemMessage } from './chat.js';
-import { localFilesMap, saveToLocalFile } from './file-system.js';
 
 let roomData = null;
 let isOwner = false;
@@ -73,10 +73,10 @@ function setupPresence() {
     const connectedRef = ref(rtdb, '.info/connected');
     activeUsersRef = ref(rtdb, `rooms/${currentRoomId}/activeUsers/${currentUser.uid}`);
     
-    // Fast name/avatar fetch from DOM header
-    const bgImage = document.querySelector('.header-avatar')?.style.backgroundImage;
-    const photoURL = bgImage ? bgImage.slice(5, -2) : 'assets/default-avatar.png';
-    const name = document.getElementById('welcome-msg')?.innerText.split(', ')[1] || 'User';
+    // Fast name/avatar fetch from Firebase Auth currentUser
+    const photoURL = currentUser?.photoURL || 'assets/default-avatar.png';
+    const name = currentUser?.displayName || 'User';
+
 
     onValue(connectedRef, (snap) => {
         if (snap.val() === true) {
