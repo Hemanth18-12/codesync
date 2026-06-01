@@ -1,7 +1,7 @@
 import { 
     auth, db, rtdb, collection, doc, getDoc, getDocs, setDoc, updateDoc, 
     onSnapshot, query, where, orderBy, limit, startAfter, addDoc, serverTimestamp, 
-    ref, set, onValue, onAuthStateChanged, signOut, increment, arrayUnion
+    ref, set, onValue, onAuthStateChanged, signOut, increment, arrayUnion, deleteDoc
 } from './firebase-config.js';
 
 // --- GLOBAL STATE ---
@@ -108,15 +108,27 @@ btnLogout.addEventListener('click', async () => {
 
 // --- EVENT LISTENERS ---
 document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.open-room-btn');
-    if (btn) {
-        const roomId = btn.getAttribute('data-room-id');
-        if (roomId && roomId !== 'undefined' && roomId !== 'null') {
-            window.location.href = `editor.html?room=${roomId}`;
-        } else {
-            console.error('Room ID missing on Open button', btn);
-        }
+  const btn = e.target.closest(
+    '.open-room-btn, .btn-open, [data-action="open"]'
+  );
+  if (btn) {
+    e.preventDefault();
+    e.stopPropagation();
+    const roomId = btn.getAttribute('data-room-id')
+      || btn.dataset.roomId
+      || btn.closest('[data-room-id]')
+          ?.getAttribute('data-room-id');
+    
+    console.log('Opening room:', roomId);
+    
+    if (!roomId || roomId === 'undefined' 
+        || roomId === 'null' || roomId === '') {
+      showToast('Room ID not found', 'error');
+      return;
     }
+    window.location.href = 
+      `editor.html?room=${roomId}`;
+  }
 });
 
 // --- OVERVIEW DATA LOAD ---
@@ -484,54 +496,289 @@ if (document.getElementById('explore-section')
 }
 
 // --- SNAPSHOTS DATA LOAD ---
-async function loadSnapshots() {
-    const list = document.getElementById('snapshot-list');
-    const emptyState = document.getElementById('empty-snapshots');
-    
-    // Remove existing items
-    Array.from(list.children).forEach(c => {
-        if (c.id !== 'empty-snapshots') c.remove();
+const loadSnapshots = async () => {
+  const snapshotsList = 
+    document.getElementById('snapshots-list')
+    || document.getElementById('snapshot-list')
+    || document.getElementById('snapshots-container')
+    || document.querySelector('.snapshots-list');
+  
+  if (!snapshotsList) return;
+
+  // Show loading skeleton
+  snapshotsList.innerHTML = `
+    <div class="loading-state">
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line"></div>
+    </div>
+  `;
+
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Get all rooms owned by user
+    const roomsQuery = query(
+      collection(db, 'rooms'),
+      where('owner', '==', user.uid)
+    );
+    const roomsSnap = await getDocs(roomsQuery);
+
+    let allSnapshots = [];
+
+    // Get snapshots from each room
+    for (const roomDoc of roomsSnap.docs) {
+      const snapshotsRef = collection(
+        db, 'rooms', roomDoc.id, 'snapshots'
+      );
+      const snapshotsSnap = await getDocs(
+        snapshotsRef
+      );
+      
+      snapshotsSnap.forEach((snap) => {
+        allSnapshots.push({
+          id: snap.id,
+          roomId: roomDoc.id,
+          roomName: roomDoc.data().name,
+          language: roomDoc.data().language,
+          ...snap.data()
+        });
+      });
+    }
+
+    // Sort by timestamp newest first
+    allSnapshots.sort((a, b) => {
+      const timeA = a.timestamp?.toMillis?.() 
+        || a.timestamp || 0;
+      const timeB = b.timestamp?.toMillis?.() 
+        || b.timestamp || 0;
+      return timeB - timeA;
     });
 
-    try {
-        // Query user's snapshots subcollection
-        const q = query(collection(db, `users/${currentUser.uid}/snapshots`), orderBy('timestamp', 'desc'), limit(20));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            if (emptyState) emptyState.classList.remove('hidden');
-            return;
-        }
-        
-        if (emptyState) emptyState.classList.add('hidden');
-
-        snapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            const time = data.timestamp ? new Date(data.timestamp.toMillis()).toLocaleString() : 'Unknown';
-            
-            const item = document.createElement('div');
-            item.className = 'snapshot-item';
-            item.innerHTML = `
-                <div class="snap-info">
-                    <h4>${data.label || 'Unnamed Snapshot'}</h4>
-                    <div class="snap-meta">
-                        <span>Room: ${data.roomName || data.roomId}</span>
-                        <span>${time}</span>
-                        <span>${data.lineCount || 0} lines</span>
-                    </div>
-                </div>
-                <div class="snap-actions">
-                    <button class="btn-secondary btn-sm" onclick="viewSnapshot('${docSnap.id}', '${encodeURIComponent(data.code || '')}', '${data.roomId}')">View</button>
-                    <button class="btn-primary btn-sm" onclick="window.location.href='editor.html?room=${data.roomId}&restore=${docSnap.id}'">Restore</button>
-                </div>
-            `;
-            list.appendChild(item);
-        });
-
-    } catch (error) {
-        console.error("Snapshot error:", error);
-        showToast("Failed to load snapshots", "error");
+    // Show empty state
+    if (allSnapshots.length === 0) {
+      snapshotsList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📸</div>
+          <h3>No Snapshots Yet</h3>
+          <p>Open a room and save a snapshot 
+            to see it here</p>
+          <button 
+            class="btn-primary"
+            onclick="showSection('my-rooms')">
+            Go to My Rooms
+          </button>
+        </div>
+      `;
+      return;
     }
+
+    // Render snapshots
+    snapshotsList.innerHTML = '';
+    allSnapshots.forEach((snap, index) => {
+      const item = document.createElement('div');
+      item.className = 'snapshot-item';
+      item.style.animationDelay = 
+        `${index * 50}ms`;
+      item.classList.add('animate-in');
+
+      const date = snap.timestamp
+        ? new Date(
+            snap.timestamp?.toMillis?.() 
+            || snap.timestamp
+          ).toLocaleDateString()
+        : 'Unknown date';
+
+      const preview = snap.code
+        ? snap.code.substring(0, 80) + '...'
+        : 'No preview available';
+
+      item.innerHTML = `
+        <div class="snapshot-header">
+          <div class="snapshot-info">
+            <h4 class="snapshot-label">
+              ${snap.label || 'Snapshot'}
+            </h4>
+            <span class="snapshot-room">
+              📁 ${snap.roomName || 'Unknown Room'}
+            </span>
+          </div>
+          <span class="language-badge 
+            lang-${snap.language}">
+            ${snap.language || 'code'}
+          </span>
+        </div>
+        <div class="snapshot-meta">
+          <span>🕐 ${date}</span>
+          <span>📝 ${snap.lineCount || 0} lines</span>
+        </div>
+        <div class="snapshot-preview">
+          <code>${escapeHtml(preview)}</code>
+        </div>
+        <div class="snapshot-actions">
+          <button 
+            class="btn-secondary snapshot-view-btn"
+            data-snapshot-id="${snap.id}"
+            data-room-id="${snap.roomId}">
+            👁 View
+          </button>
+          <button 
+            class="btn-primary snapshot-restore-btn"
+            data-snapshot-id="${snap.id}"
+            data-room-id="${snap.roomId}"
+            data-code="${encodeURIComponent(
+              snap.code || '')}">
+            ♻️ Restore
+          </button>
+          <button 
+            class="btn-danger snapshot-delete-btn"
+            data-snapshot-id="${snap.id}"
+            data-room-id="${snap.roomId}">
+            🗑️ Delete
+          </button>
+        </div>
+      `;
+      snapshotsList.appendChild(item);
+    });
+
+    // View snapshot handler
+    document.querySelectorAll('.snapshot-view-btn')
+      .forEach(btn => {
+      btn.addEventListener('click', () => {
+        const roomId = btn.dataset.roomId;
+        const snapId = btn.dataset.snapshotId;
+        const snap = allSnapshots.find(
+          s => s.id === snapId
+        );
+        if (snap) showSnapshotModal(snap);
+      });
+    });
+
+    // Restore snapshot handler
+    document.querySelectorAll(
+      '.snapshot-restore-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const roomId = btn.dataset.roomId;
+        if (confirm(
+          'Restore this snapshot? Current code will be replaced.')) {
+          window.location.href = 
+            `editor.html?room=${roomId}&restore=${btn.dataset.snapshotId}`;
+        }
+      });
+    });
+
+    // Delete snapshot handler
+    document.querySelectorAll(
+      '.snapshot-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this snapshot?')) 
+          return;
+        try {
+          await deleteDoc(doc(
+            db, 'rooms', btn.dataset.roomId,
+            'snapshots', btn.dataset.snapshotId
+          ));
+          showToast('Snapshot deleted', 'success');
+          loadSnapshots(); // Reload list
+        } catch (err) {
+          showToast('Failed to delete', 'error');
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error('Snapshots error:', error);
+    snapshotsList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <h3>Failed to load snapshots</h3>
+        <p>${error.message}</p>
+        <button 
+          class="btn-primary"
+          onclick="loadSnapshots()">
+          Try Again
+        </button>
+      </div>
+    `;
+  }
+};
+
+// Show snapshot in modal
+const showSnapshotModal = (snap) => {
+  const modal = document.getElementById(
+    'snapshot-modal')
+    || createSnapshotModal();
+  
+  const codeEl = modal.querySelector(
+    '#snapshot-modal-code');
+  const titleEl = modal.querySelector(
+    '#snapshot-modal-title');
+  
+  if (titleEl) titleEl.textContent = 
+    snap.label || 'Snapshot';
+  if (codeEl) codeEl.textContent = 
+    snap.code || '';
+  
+  modal.classList.add('active');
+};
+
+const createSnapshotModal = () => {
+  const modal = document.createElement('div');
+  modal.id = 'snapshot-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-card" 
+      style="max-width:800px;width:90%;">
+      <div class="modal-header">
+        <h2 id="snapshot-modal-title">
+          Snapshot
+        </h2>
+        <button class="icon-btn" 
+          onclick="document.getElementById(
+          'snapshot-modal').classList
+          .remove('active')">✕</button>
+      </div>
+      <div style="background:#0d0d0d;
+        border-radius:8px;padding:1rem;
+        overflow:auto;max-height:500px;">
+        <pre><code id="snapshot-modal-code"
+          style="color:#c0caf5;
+          font-family:JetBrains Mono,monospace;
+          font-size:13px;">
+        </code></pre>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary"
+          onclick="document.getElementById(
+          'snapshot-modal').classList
+          .remove('active')">
+          Close
+        </button>
+        <button class="btn-primary"
+          onclick="navigator.clipboard.writeText(
+          document.getElementById(
+          'snapshot-modal-code').textContent);
+          showToast('Code copied!','success')">
+          📋 Copy Code
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  return modal;
+};
+
+// Call loadSnapshots when snapshots 
+// section is clicked in sidebar
+const snapshotsNavItem = 
+  document.getElementById('nav-snapshots')
+  || document.querySelector(
+    '[data-section="snapshots"]');
+
+if (snapshotsNavItem) {
+  snapshotsNavItem.addEventListener(
+    'click', loadSnapshots);
 }
 
 // Global functions for inline onclicks

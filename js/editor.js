@@ -1,4 +1,4 @@
-import { auth, db, doc, getDoc, onAuthStateChanged } from './firebase-config.js';
+import { auth, db, doc, getDoc, onAuthStateChanged, collection, addDoc, serverTimestamp } from './firebase-config.js';
 
 // --- GLOBAL STATE ---
 export let editorInstance = null;
@@ -250,3 +250,33 @@ if (btnRefreshPreview) {
         if(editorInstance) updatePreview(editorInstance.getValue(), editorInstance.getModel().getLanguageId());
     });
 }
+
+// --- SNAPSHOTS ---
+export const saveSnapshot = async (label) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const code = window.monacoEditor?.getValue() || editorInstance?.getValue() || '';
+    const lineCount = code.split('\n').length;
+
+    // Save to Firestore
+    await addDoc(
+      collection(db, 'rooms', currentRoomId, 'snapshots'),
+      {
+        label: label || `Snapshot ${new Date().toLocaleString()}`,
+        code: code,
+        language: editorInstance?.getModel().getLanguageId() || 'javascript',
+        savedBy: user.uid,
+        savedByName: user.displayName || user.email,
+        timestamp: serverTimestamp(),
+        lineCount: lineCount
+      }
+    );
+
+    if (typeof showToast !== 'undefined') showToast('📸 Snapshot saved!', 'success');
+  } catch (error) {
+    console.error('Snapshot error:', error);
+    if (typeof showToast !== 'undefined') showToast('Failed to save snapshot', 'error');
+  }
+};
