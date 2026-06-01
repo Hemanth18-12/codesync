@@ -375,6 +375,14 @@ function getFileIcon(filename) {
     return '📄';
 }
 
+function getDefaultContent(lang, name) {
+    if (lang === 'javascript') return `// CodeSync JavaScript Environment\n// File: ${name}\n\nconsole.log("Hello, World!");\n`;
+    if (lang === 'html') return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>${name}</title>\n</head>\n<body>\n  <h1>Hello from CodeSync!</h1>\n</body>\n</html>`;
+    if (lang === 'css') return `/* ${name} */\n\nbody {\n  margin: 0;\n  padding: 0;\n  background-color: #f0f0f0;\n}\n`;
+    if (lang === 'python') return `# CodeSync Python Environment\n# File: ${name}\n\nprint("Hello, World!")\n`;
+    return `// CodeSync - ${name}\n// Type your code here...\n`;
+}
+
 // 1. Initialize Real-time Listeners
 window.addEventListener('monaco-ready', () => {
     if(!currentRoomId) return;
@@ -524,8 +532,9 @@ function showInlineInput(parentId, type, action, targetId = null, existingName =
                 };
                 
                 if (type === 'file') {
-                    data.content = '';
-                    data.language = getFileLanguage(val);
+                    const lang = getFileLanguage(val);
+                    data.content = getDefaultContent(lang, val);
+                    data.language = lang;
                     data.parentFolderId = parentId;
                     data.updatedAt = new Date().toISOString();
                 } else {
@@ -929,8 +938,88 @@ window.openLocalFile = async (path) => {
         const file = await handle.getFile();
         const content = await file.text();
         const lang = getFileLanguage(path.split('/').pop());
-        await set(ref(rtdb, `rooms/${currentRoomId}/workspace/${path.replace(/\//g, '_')}`), {
+        await set(ref(rtdb, `rooms/${currentRoomId}/workspace/${path.replace(/\\//g, '_')}`), {
             content, language: lang, originalPath: path
         });
     } catch (e) { console.error('Error reading file', e); }
 };
+
+// ============================================================================
+// 🖥️ COMPILER & TERMINAL
+// ============================================================================
+const btnRunCode = document.getElementById('btn-run-code');
+const terminalPanel = document.getElementById('terminal-panel');
+const terminalOutput = document.getElementById('terminal-output');
+const btnClearTerminal = document.getElementById('btn-clear-terminal');
+const btnCloseTerminal = document.getElementById('btn-close-terminal');
+
+function logToTerminal(message, type = 'log') {
+    const el = document.createElement('div');
+    el.className = type;
+    el.innerText = typeof message === 'object' ? JSON.stringify(message, null, 2) : String(message);
+    terminalOutput.appendChild(el);
+    terminalOutput.scrollTop = terminalOutput.scrollHeight;
+}
+
+if(btnCloseTerminal) btnCloseTerminal.onclick = () => terminalPanel.classList.remove('active');
+if(btnClearTerminal) btnClearTerminal.onclick = () => terminalOutput.innerHTML = '';
+
+if(btnRunCode) {
+    btnRunCode.onclick = () => {
+        if(!editorInstance) return;
+        const code = editorInstance.getValue();
+        const lang = editorInstance.getModel().getLanguageId();
+        
+        if (lang === 'html' || lang === 'css') {
+            // HTML/CSS should trigger the Live Preview iframe instead of Terminal
+            if(previewPanel) previewPanel.classList.add('active');
+            if(btnRefreshPreview) btnRefreshPreview.click();
+            return;
+        }
+        
+        if (lang === 'javascript') {
+            // Open terminal
+            terminalPanel.classList.add('active');
+            terminalOutput.innerHTML = ''; // Auto clear on new run
+            logToTerminal(`> Running ${activeTabId}...`, 'info');
+            
+            // Trap console.log
+            const originalLog = console.log;
+            const originalError = console.error;
+            const originalWarn = console.warn;
+            const originalInfo = console.info;
+            
+            console.log = (...args) => { logToTerminal(args.join(' '), 'log'); originalLog(...args); };
+            console.error = (...args) => { logToTerminal(args.join(' '), 'error'); originalError(...args); };
+            console.warn = (...args) => { logToTerminal(args.join(' '), 'warn'); originalWarn(...args); };
+            console.info = (...args) => { logToTerminal(args.join(' '), 'info'); originalInfo(...args); };
+            
+            try {
+                // Execute JS securely using new Function to isolate slightly from global block scopes
+                const exec = new Function(code);
+                exec();
+                logToTerminal(`\n[Process exited 0]`, 'info');
+            } catch (err) {
+                console.error(err.toString());
+                logToTerminal(`\n[Process exited 1]`, 'info');
+            }
+            
+            // Restore
+            console.log = originalLog;
+            console.error = originalError;
+            console.warn = originalWarn;
+            console.info = originalInfo;
+        } else {
+            terminalPanel.classList.add('active');
+            logToTerminal(`CodeSync currently only supports native execution for JavaScript, HTML, and CSS in the browser.\nLanguage '${lang}' requires a backend compilation API.`, 'error');
+        }
+    };
+}
+
+// Ctrl+Enter to Run
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if(btnRunCode) btnRunCode.click();
+    }
+});

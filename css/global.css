@@ -196,6 +196,28 @@ ul {
   filter: brightness(0.95);
 }
 
+.btn-success {
+  background-color: var(--success-color);
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+}
+.btn-success:hover {
+  transform: scale(1.03);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 16px rgba(74, 222, 128, 0.4);
+}
+.btn-success:active {
+  transform: scale(0.97);
+}
+
 .btn-danger {
   background-color: transparent;
   color: var(--error-color);

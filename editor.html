@@ -43,6 +43,7 @@
 
         <div class="header-right">
             <button class="btn-primary btn-sm" id="btn-invite" title="Invite Collaborators">📤 Invite</button>
+            <button class="btn-success btn-sm" id="btn-run-code" title="Run Code (Ctrl+Enter)">▶ Run</button>
             <button class="btn-secondary btn-sm" id="btn-format" title="Format Code (Shift+Alt+F)">✨ Format</button>
             <button class="btn-secondary btn-sm" id="btn-snapshot" title="Save Snapshot">📸 Save</button>
             <button class="btn-secondary btn-sm" id="btn-preview-toggle">👁️ Preview</button>
@@ -110,9 +111,25 @@
 
             <div class="split-view">
                 
-                <!-- MONACO WRAPPER -->
-                <div class="monaco-wrapper">
-                    <div id="monaco-container"></div>
+                <!-- MONACO WRAPPER & TERMINAL -->
+                <div class="editor-terminal-container">
+                    <div class="monaco-wrapper">
+                        <div id="monaco-container"></div>
+                    </div>
+                    
+                    <!-- TERMINAL OUTPUT PANEL -->
+                    <div class="terminal-panel" id="terminal-panel">
+                        <div class="terminal-header">
+                            <div class="terminal-tabs">
+                                <span class="terminal-tab active">OUTPUT</span>
+                            </div>
+                            <div class="terminal-actions">
+                                <button class="icon-btn" id="btn-clear-terminal" title="Clear Output">🚫</button>
+                                <button class="icon-btn" id="btn-close-terminal" title="Close Panel">✕</button>
+                            </div>
+                        </div>
+                        <div class="terminal-output" id="terminal-output"></div>
+                    </div>
                 </div>
 
                 <!-- LIVE PREVIEW PANEL -->
