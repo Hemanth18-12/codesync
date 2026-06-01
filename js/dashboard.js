@@ -881,12 +881,7 @@ document.getElementById('btn-quick-create').addEventListener('click', () => {
 
 // Generate 6 char room code
 const generateRoomCode = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 const createRoom = async (roomName, language, isPublic) => {
@@ -935,10 +930,44 @@ const createRoom = async (roomName, language, isPublic) => {
     // Close modal
     document.getElementById('create-modal').classList.remove('active');
 
-    showToast('Room created! Redirecting...', 'success');
-    setTimeout(() => {
-      window.location.href = `editor.html?room=${roomRef.id}`;
-    }, 600);
+    // Show Success Modal
+    const successModal = document.getElementById('room-success-modal');
+    if (successModal) {
+      document.getElementById('success-room-name').textContent = roomName;
+      
+      const codeDisplay = document.getElementById('success-room-code-display');
+      codeDisplay.innerHTML = '';
+      finalCode.split('').forEach(digit => {
+        const box = document.createElement('div');
+        box.className = 'code-box filled';
+        box.textContent = digit;
+        codeDisplay.appendChild(box);
+      });
+      
+      successModal.classList.add('active');
+      startConfetti();
+      
+      const shareUrl = `${window.location.origin}/editor.html?room=${roomRef.id}`;
+      
+      document.getElementById('btn-success-copy').onclick = () => {
+        navigator.clipboard.writeText(finalCode);
+        showToast('Room Code Copied!', 'success');
+      };
+      
+      document.getElementById('btn-success-share').onclick = () => {
+        successModal.classList.remove('active');
+        openShareModal(roomName, finalCode, shareUrl);
+      };
+      
+      document.getElementById('btn-success-open').onclick = () => {
+        window.location.href = `editor.html?room=${roomRef.id}`;
+      };
+    } else {
+      showToast('Room created! Redirecting...', 'success');
+      setTimeout(() => {
+        window.location.href = `editor.html?room=${roomRef.id}`;
+      }, 600);
+    }
 
   } catch (error) {
     console.error('Create room error:', error);
@@ -983,20 +1012,42 @@ document.getElementById('btn-quick-join').addEventListener('click', () => {
 const codeBoxes = document.querySelectorAll('.code-box');
 codeBoxes.forEach((box, i) => {
     box.addEventListener('input', (e) => {
+        // Only allow digits
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
         if(e.target.value && i < codeBoxes.length - 1) codeBoxes[i+1].focus();
+        
+        // Auto submit if all 6 filled and this is the last one
+        if(i === 5 && Array.from(codeBoxes).every(b => b.value)) {
+            document.getElementById('btn-join-submit').click();
+        }
     });
     box.addEventListener('keydown', (e) => {
         if(e.key === 'Backspace' && !e.target.value && i > 0) codeBoxes[i-1].focus();
     });
+    box.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        if (pastedData) {
+            const digits = pastedData.split('');
+            for (let j = 0; j < digits.length; j++) {
+                if (codeBoxes[j]) codeBoxes[j].value = digits[j];
+            }
+            if (digits.length === 6) {
+                document.getElementById('btn-join-submit').click();
+            } else if (codeBoxes[digits.length]) {
+                codeBoxes[digits.length].focus();
+            }
+        }
+    });
 });
 
 document.getElementById('btn-join-submit').addEventListener('click', () => {
-    const code = Array.from(codeBoxes).map(b => b.value).join('').toUpperCase();
-    if (code.length === 6) {
+    const code = Array.from(codeBoxes).map(b => b.value).join('');
+    if (code.length === 6 && /^\d{6}$/.test(code)) {
         window.joinRoom(code);
     } else {
         codeBoxes.forEach(b => { if(!b.value) { b.classList.add('error'); setTimeout(()=>b.classList.remove('error'),400); } });
-        showToast("Please enter a 6-character code.", "error");
+        showToast("Please enter a valid 6-digit code.", "error");
     }
 });
 
@@ -1145,6 +1196,7 @@ async function loadMyRooms() {
                 </div>
                 <div class="room-card-footer" style="flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end;">
                     <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: auto;">ID: ${data.roomCode}</span>
+                    <button class="icon-btn" onclick="openShareModal('${data.name}', '${data.roomCode}', '${window.location.origin}/editor.html?room=${roomId}')" style="padding:4px; font-size:1rem; margin-right:auto;" title="Share">📤</button>
                     <button class="btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${data.roomCode}'); showToast('Room Code Copied!', 'success');">Copy Code</button>
                     <button class="btn-danger btn-sm" onclick="deleteRoom('${roomId}')">Delete</button>
                     <button class="btn-primary btn-sm open-room-btn" data-room-id="${roomId}">Open</button>
@@ -1266,3 +1318,134 @@ window.leaveRoom = async (roomId) => {
         showToast('Failed to leave room.', 'error');
     }
 };
+
+// --- SHARE MODAL AND CONFETTI ---
+window.openShareModal = (roomName, code, url) => {
+    const modal = document.getElementById('share-modal');
+    if (!modal) return;
+    
+    document.getElementById('share-room-name').textContent = roomName;
+    document.getElementById('share-room-code').textContent = code;
+    document.getElementById('share-room-url').value = url;
+    
+    document.getElementById('btn-share-copy-code').onclick = () => {
+        navigator.clipboard.writeText(code);
+        showToast('Room code copied!', 'success');
+    };
+    
+    document.getElementById('btn-share-copy-url').onclick = () => {
+        navigator.clipboard.writeText(url);
+        showToast('URL copied to clipboard!', 'success');
+    };
+    
+    document.getElementById('share-wa').onclick = () => {
+        const text = encodeURIComponent(`🚀 Join me on CodeSync!\n\nRoom: ${roomName}\nCode: ${code}\n\nJoin here: ${url}\n\nCodeSync — Real-time collaborative code editor`);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+    };
+    
+    document.getElementById('share-tg').onclick = () => {
+        const text = encodeURIComponent(`🚀 Join my CodeSync room!\nRoom: ${roomName} | Code: ${code}`);
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`, '_blank');
+    };
+    
+    document.getElementById('share-tw').onclick = () => {
+        const text = encodeURIComponent(`Coding together on CodeSync! 🚀\nRoom: ${roomName} | Code: ${code}\nJoin me: ${url}\n#CodeSync #Coding #Collaboration`);
+        window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+    };
+    
+    document.getElementById('share-li').onclick = () => {
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+    };
+    
+    document.getElementById('share-em').onclick = () => {
+        const subject = encodeURIComponent(`Join my CodeSync Room: ${roomName}`);
+        const body = encodeURIComponent(`Hi!\n\nI'd like to invite you to collaborate on CodeSync.\n\nRoom Name: ${roomName}\nRoom Code: ${code}\nDirect Link: ${url}\n\nSteps to join:\n1. Go to ${window.location.origin}\n2. Sign in or create account\n3. Enter room code: ${code}\n\nSee you there! 🚀`);
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    };
+    
+    document.getElementById('share-ig').onclick = () => {
+        navigator.clipboard.writeText(`🚀 Join my CodeSync room!\nRoom Code: ${code}\nDownload and join at: ${window.location.origin}`);
+        showToast('📋 Copied for Instagram! Paste in your story or DM', 'success');
+    };
+    
+    const qrContainer = document.getElementById('qr-container');
+    const qrCodeEl = document.getElementById('qrcode');
+    qrContainer.style.display = 'none';
+    
+    document.getElementById('share-qr').onclick = () => {
+        if (qrContainer.style.display === 'none') {
+            qrContainer.style.display = 'flex';
+            qrCodeEl.innerHTML = '';
+            new QRCode(qrCodeEl, {
+                text: url,
+                width: 150,
+                height: 150
+            });
+        } else {
+            qrContainer.style.display = 'none';
+        }
+    };
+    
+    document.getElementById('btn-download-qr').onclick = () => {
+        const img = qrCodeEl.querySelector('img');
+        if (img && img.src) {
+            const a = document.createElement('a');
+            a.href = img.src;
+            a.download = `CodeSync-Room-${code}.png`;
+            a.click();
+        } else {
+            const canvas = qrCodeEl.querySelector('canvas');
+            if (canvas) {
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = `CodeSync-Room-${code}.png`;
+                a.click();
+            }
+        }
+    };
+    
+    modal.classList.add('active');
+};
+
+function startConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    
+    const particles = [];
+    const colors = ['#f97316', '#7aa2f7', '#bb9af7', '#9ece6a', '#e0af68'];
+    for(let i=0; i<100; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            r: Math.random() * 6 + 2,
+            dx: Math.random() * 4 - 2,
+            dy: Math.random() * 5 + 2,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        });
+    }
+    
+    let animationId;
+    let startTime = Date.now();
+    function animate() {
+        if (Date.now() - startTime > 2000) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            cancelAnimationFrame(animationId);
+            return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+            p.x += p.dx;
+            p.y += p.dy;
+            if(p.y > canvas.height) { p.y = 0; p.x = Math.random() * canvas.width; }
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        });
+        animationId = requestAnimationFrame(animate);
+    }
+    animate();
+}
