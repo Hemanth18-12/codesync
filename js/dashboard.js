@@ -108,10 +108,13 @@ btnLogout.addEventListener('click', async () => {
 
 // --- EVENT LISTENERS ---
 document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('open-room-btn')) {
-        const roomId = e.target.dataset.roomId;
-        if (roomId) {
+    const btn = e.target.closest('.open-room-btn');
+    if (btn) {
+        const roomId = btn.getAttribute('data-room-id');
+        if (roomId && roomId !== 'undefined' && roomId !== 'null') {
             window.location.href = `editor.html?room=${roomId}`;
+        } else {
+            console.error('Room ID missing on Open button', btn);
         }
     }
 });
@@ -518,7 +521,7 @@ async function loadSnapshots() {
                     </div>
                 </div>
                 <div class="snap-actions">
-                    <button class="btn-secondary btn-sm" onclick="viewSnapshot('${docSnap.id}', '${encodeURIComponent(data.code || '')}')">View</button>
+                    <button class="btn-secondary btn-sm" onclick="viewSnapshot('${docSnap.id}', '${encodeURIComponent(data.code || '')}', '${data.roomId}')">View</button>
                     <button class="btn-primary btn-sm" onclick="window.location.href='editor.html?room=${data.roomId}&restore=${docSnap.id}'">Restore</button>
                 </div>
             `;
@@ -811,6 +814,42 @@ function setupNotifications() {
             notifBadge.classList.remove('hidden');
         } else {
             notifBadge.classList.add('hidden');
+        }
+    });
+}
+
+// --- MISSING BUTTON HANDLERS ---
+
+// "Load More" button in Explore view
+const btnLoadMore = document.getElementById('btn-load-more');
+if (btnLoadMore) {
+    btnLoadMore.addEventListener('click', () => {
+        loadExploreRooms();
+    });
+}
+
+// "Restore in Editor" button inside snapshot preview modal
+// Reads the roomId stored on the last-clicked Restore button in the snapshot list
+let _snapRestoreRoomId = null;
+let _snapRestoreId = null;
+
+// Override viewSnapshot to also capture roomId and snapId for Restore btn
+window.viewSnapshot = (id, encodedCode, roomId) => {
+    const code = decodeURIComponent(encodedCode);
+    document.getElementById('snap-modal-code').innerText = code;
+    document.getElementById('snap-modal').classList.add('active');
+    _snapRestoreRoomId = roomId || null;
+    _snapRestoreId = id || null;
+};
+
+const btnSnapRestore = document.getElementById('btn-snap-restore');
+if (btnSnapRestore) {
+    btnSnapRestore.addEventListener('click', () => {
+        if (_snapRestoreRoomId && _snapRestoreId) {
+            document.getElementById('snap-modal').classList.remove('active');
+            window.location.href = `editor.html?room=${_snapRestoreRoomId}&restore=${_snapRestoreId}`;
+        } else {
+            showToast('Could not determine room for this snapshot.', 'error');
         }
     });
 }

@@ -21,7 +21,7 @@ const statusError = document.getElementById('status-error');
 const activeUsersBar = document.getElementById('active-users-bar');
 
 // --- INIT ROOM ---
-window.addEventListener('monaco-ready', async () => {
+async function initRoom() {
     if (!currentRoomId || !currentUser) return;
     
     try {
@@ -58,7 +58,15 @@ window.addEventListener('monaco-ready', async () => {
         statusConnection.style.display = 'none';
         hideLoading();
     }
-});
+}
+
+// Guard against race condition: if monaco-ready already fired before
+// this module registered its listener, call initRoom() directly.
+if (window.__monacoReady) {
+    initRoom();
+} else {
+    window.addEventListener('monaco-ready', initRoom);
+}
 
 // --- PRESENCE SYSTEM ---
 function setupPresence() {

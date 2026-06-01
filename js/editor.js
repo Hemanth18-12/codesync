@@ -79,6 +79,8 @@ function initMonaco() {
         editorInstance.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, formatCode);
 
         // Dispatch custom event to notify other modules Monaco is ready
+        // Set flag BEFORE dispatching so any late-registering listeners can check it
+        window.__monacoReady = true;
         window.dispatchEvent(new CustomEvent('monaco-ready'));
     });
 }
@@ -129,6 +131,15 @@ export function hideLoading() {
         setTimeout(() => loadingOverlay.style.display = 'none', 300);
     }
 }
+
+// Safety timeout — force-hide the loading screen after 10s
+// in case Firebase RTDB never responds (e.g., auth delay, network issue)
+setTimeout(() => {
+    if (loadingOverlay && loadingOverlay.style.display !== 'none') {
+        console.warn('CodeSync: Force-hiding loading screen after 10s timeout');
+        hideLoading();
+    }
+}, 10000);
 
 // --- TABS MANAGEMENT ---
 export function updateTabsUI(activeId) {
