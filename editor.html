@@ -117,18 +117,45 @@
                         <div id="monaco-container"></div>
                     </div>
                     
-                    <!-- TERMINAL OUTPUT PANEL -->
-                    <div class="terminal-panel" id="terminal-panel">
-                        <div class="terminal-header">
-                            <div class="terminal-tabs">
-                                <span class="terminal-tab active">OUTPUT</span>
-                            </div>
-                            <div class="terminal-actions">
-                                <button class="icon-btn" id="btn-clear-terminal" title="Clear Output">🚫</button>
-                                <button class="icon-btn" id="btn-close-terminal" title="Close Panel">✕</button>
+                    <!-- BOTTOM PANEL (COMPILER) -->
+                    <div class="bottom-panel" id="bottom-panel">
+                        <div class="panel-resize-handle" id="panel-resize-handle"></div>
+                        <div class="panel-tabs">
+                            <div class="panel-tab active" data-target="tab-terminal">Terminal</div>
+                            <div class="panel-tab" data-target="tab-output">Output</div>
+                            <div class="panel-tab" data-target="tab-input">Input</div>
+                            <div class="panel-tab" data-target="tab-problems">Problems <span class="tab-badge" id="problems-badge">0</span></div>
+                            <div style="margin-left:auto; display:flex; gap:4px; align-items:center; padding-right:8px;">
+                                <button class="run-btn" id="compiler-run-btn" title="Run Code (Ctrl+Enter)">▶ Run</button>
+                                <button class="icon-btn" id="compiler-clear-btn" title="Clear Tab">✕</button>
+                                <button class="icon-btn" id="compiler-collapse-btn" title="Collapse Panel">^</button>
                             </div>
                         </div>
-                        <div class="terminal-output" id="terminal-output"></div>
+                        
+                        <div id="tab-terminal" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+                            <div class="terminal-output" id="terminal-output">
+                                <div class="terminal-welcome">
+                                    <span style="color:#9ece6a">CodeSync Terminal</span>
+                                    <span style="color:#565f89">— Type code and press Enter</span>
+                                </div>
+                            </div>
+                            <div class="terminal-input-line">
+                                <span class="terminal-prompt">❯</span>
+                                <input type="text" class="terminal-input-field" id="terminal-input" autocomplete="off" spellcheck="false" placeholder="Type command here...">
+                            </div>
+                        </div>
+                        
+                        <div id="tab-output" style="display:none; flex:1; overflow:hidden;">
+                            <div class="terminal-output" id="compiler-output"></div>
+                        </div>
+
+                        <div id="tab-input" style="display:none; flex:1; overflow:hidden;">
+                            <textarea class="stdin-textarea" id="stdin-input" placeholder="Enter input for your program one value per line..."></textarea>
+                        </div>
+
+                        <div id="tab-problems" style="display:none; flex:1; overflow:hidden;">
+                            <div class="terminal-output" id="problems-output"></div>
+                        </div>
                     </div>
                 </div>
 

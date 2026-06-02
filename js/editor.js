@@ -69,8 +69,9 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // --- MONACO EDITOR SETUP ---
+require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+
 function initMonaco() {
-    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' }});
     require(['vs/editor/editor.main'], function () {
         
         editorInstance = monaco.editor.create(monacoContainer, {
@@ -96,11 +97,25 @@ function initMonaco() {
         // Add Format shortcut (Shift+Alt+F)
         editorInstance.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, formatCode);
 
-        // Dispatch custom event to notify other modules Monaco is ready
-        // Set flag BEFORE dispatching so any late-registering listeners can check it
+        // Make editor globally accessible for safety
+        window.monacoEditor = editorInstance;
+        window.editorInstance = editorInstance;
         window.__monacoReady = true;
+
+        // Dispatch custom event to notify other modules Monaco is ready
         window.dispatchEvent(new CustomEvent('monaco-ready'));
+        
+        hideLoadingScreen();
     });
+}
+
+function hideLoadingScreen() {
+  const loadingElements = document.querySelectorAll('.editor-loading, #editor-loading, [id*="loading"], [id*="sync"]');
+  loadingElements.forEach(el => {
+    el.style.transition = 'opacity 0.5s ease';
+    el.style.opacity = '0';
+    setTimeout(() => { el.style.display = 'none'; }, 500);
+  });
 }
 
 // --- EXPORTED METHODS FOR OTHER MODULES ---
@@ -947,79 +962,536 @@ window.openLocalFile = async (path) => {
 // ============================================================================
 // 🖥️ COMPILER & TERMINAL
 // ============================================================================
-const btnRunCode = document.getElementById('btn-run-code');
-const terminalPanel = document.getElementById('terminal-panel');
-const terminalOutput = document.getElementById('terminal-output');
-const btnClearTerminal = document.getElementById('btn-clear-terminal');
-const btnCloseTerminal = document.getElementById('btn-close-terminal');
 
-function logToTerminal(message, type = 'log') {
-    const el = document.createElement('div');
-    el.className = type;
-    el.innerText = typeof message === 'object' ? JSON.stringify(message, null, 2) : String(message);
-    terminalOutput.appendChild(el);
-    terminalOutput.scrollTop = terminalOutput.scrollHeight;
-}
+const PISTON_API = 'https://emkc.org/api/v2/piston/execute';
 
-if(btnCloseTerminal) btnCloseTerminal.onclick = () => terminalPanel.classList.remove('active');
-if(btnClearTerminal) btnClearTerminal.onclick = () => terminalOutput.innerHTML = '';
+const PISTON_LANGUAGES = {
+  javascript: { language: 'javascript', version: '18.15.0', fileName: 'main.js' },
+  typescript: { language: 'typescript', version: '5.0.3', fileName: 'main.ts' },
+  python: { language: 'python', version: '3.10.0', fileName: 'main.py' },
+  java: { language: 'java', version: '15.0.2', fileName: 'Main.java' },
+  cpp: { language: 'c++', version: '10.2.0', fileName: 'main.cpp' },
+  c: { language: 'c', version: '10.2.0', fileName: 'main.c' },
+  csharp: { language: 'csharp', version: '6.12.0', fileName: 'main.cs' },
+  go: { language: 'go', version: '1.16.2', fileName: 'main.go' },
+  rust: { language: 'rust', version: '1.50.0', fileName: 'main.rs' },
+  php: { language: 'php', version: '8.0.2', fileName: 'main.php' },
+  ruby: { language: 'ruby', version: '3.0.1', fileName: 'main.rb' },
+  swift: { language: 'swift', version: '5.3.3', fileName: 'main.swift' },
+  kotlin: { language: 'kotlin', version: '1.4.31', fileName: 'main.kt' },
+  bash: { language: 'bash', version: '5.1.0', fileName: 'main.sh' },
+  r: { language: 'r', version: '4.1.1', fileName: 'main.r' }
+};
 
-if(btnRunCode) {
-    btnRunCode.onclick = () => {
-        if(!editorInstance) return;
-        const code = editorInstance.getValue();
-        const lang = editorInstance.getModel().getLanguageId();
-        
-        if (lang === 'html' || lang === 'css') {
-            // HTML/CSS should trigger the Live Preview iframe instead of Terminal
-            if(previewPanel) previewPanel.classList.add('active');
-            if(btnRefreshPreview) btnRefreshPreview.click();
-            return;
-        }
-        
-        if (lang === 'javascript') {
-            // Open terminal
-            terminalPanel.classList.add('active');
-            terminalOutput.innerHTML = ''; // Auto clear on new run
-            logToTerminal(`> Running ${activeTabId}...`, 'info');
-            
-            // Trap console.log
-            const originalLog = console.log;
-            const originalError = console.error;
-            const originalWarn = console.warn;
-            const originalInfo = console.info;
-            
-            console.log = (...args) => { logToTerminal(args.join(' '), 'log'); originalLog(...args); };
-            console.error = (...args) => { logToTerminal(args.join(' '), 'error'); originalError(...args); };
-            console.warn = (...args) => { logToTerminal(args.join(' '), 'warn'); originalWarn(...args); };
-            console.info = (...args) => { logToTerminal(args.join(' '), 'info'); originalInfo(...args); };
-            
-            try {
-                // Execute JS securely using new Function to isolate slightly from global block scopes
-                const exec = new Function(code);
-                exec();
-                logToTerminal(`\n[Process exited 0]`, 'info');
-            } catch (err) {
-                console.error(err.toString());
-                logToTerminal(`\n[Process exited 1]`, 'info');
-            }
-            
-            // Restore
-            console.log = originalLog;
-            console.error = originalError;
-            console.warn = originalWarn;
-            console.info = originalInfo;
-        } else {
-            terminalPanel.classList.add('active');
-            logToTerminal(`CodeSync currently only supports native execution for JavaScript, HTML, and CSS in the browser.\nLanguage '${lang}' requires a backend compilation API.`, 'error');
-        }
-    };
-}
+// MAIN RUN CODE FUNCTION
+const runCode = async () => {
+  if (!monacoEditor) return;
 
-// Ctrl+Enter to Run
-document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if(btnRunCode) btnRunCode.click();
+  const code = monacoEditor.getValue();
+  if (!code.trim()) {
+    appendOutput('warn', 'Editor is empty. Write some code first!');
+    return;
+  }
+
+  // Get currentLanguage dynamically from editor status or global state
+  const language = document.getElementById('status-lang')?.innerText.toLowerCase() || 'javascript';
+  const stdin = document.getElementById('stdin-input')?.value || '';
+
+  // Update run button state
+  setRunButtonState('running');
+  
+  // Switch to output tab
+  switchTab('output');
+  
+  // Clear previous output
+  clearOutput();
+  
+  // Show running message
+  appendOutput('info', `▶ Running ${getLanguageDisplayName(language)}...`);
+  appendOutput('divider', '─'.repeat(50));
+
+  const startTime = Date.now();
+
+  try {
+    let result;
+
+    // JavaScript: run in browser (faster)
+    if (language === 'javascript') {
+      result = await runJSLocally(code, stdin);
     }
+    // HTML: render in preview
+    else if (language === 'html') {
+      result = runHTMLPreview(code);
+    }
+    // All others: use Piston API (FREE)
+    else {
+      result = await runWithPiston(code, language, stdin);
+    }
+
+    const execTime = ((Date.now() - startTime) / 1000).toFixed(3);
+
+    // Display output
+    if (result.stdout && result.stdout.trim()) {
+      result.stdout.trim().split('\n').forEach(line => {
+          appendOutput('output', line);
+      });
+    }
+
+    if (result.stderr && result.stderr.trim()) {
+      appendOutput('divider', '─'.repeat(50));
+      result.stderr.trim().split('\n').forEach(line => {
+          appendOutput('error', line);
+      });
+    }
+
+    if (!result.stdout && !result.stderr) {
+      appendOutput('muted', '(No output produced)');
+    }
+
+    appendOutput('divider', '─'.repeat(50));
+    
+    if (result.stderr) {
+      appendOutput('error', `✕ Error | Time: ${execTime}s`);
+      setRunButtonState('error');
+    } else {
+      appendOutput('success', `✓ Executed in ${execTime}s`);
+      setRunButtonState('success');
+    }
+
+  } catch (error) {
+    appendOutput('error', `✕ Failed: ${error.message}`);
+    appendOutput('muted', 'Check your internet connection');
+    setRunButtonState('error');
+  }
+
+  // Reset button after 2 seconds
+  setTimeout(() => {
+    setRunButtonState('idle');
+  }, 2000);
+};
+
+// Run JavaScript locally in sandbox
+const runJSLocally = (code, stdin) => {
+  return new Promise((resolve) => {
+    const logs = [];
+    const errors = [];
+    const start = Date.now();
+
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.sandbox = 'allow-scripts';
+    document.body.appendChild(iframe);
+
+    const handler = (e) => {
+      if (!e.data?.csType) return;
+      if (e.data.csType === 'log') {
+        logs.push(e.data.value);
+      }
+      if (e.data.csType === 'error') {
+        errors.push(e.data.value);
+      }
+      if (e.data.csType === 'done') {
+        window.removeEventListener('message', handler);
+        document.body.removeChild(iframe);
+        resolve({
+          stdout: logs.join('\n'),
+          stderr: errors.join('\n'),
+          time: ((Date.now()-start)/1000).toFixed(3)
+        });
+      }
+    };
+
+    window.addEventListener('message', handler);
+
+    iframe.srcdoc = `<!DOCTYPE html>
+<html><body><script>
+const p = window.parent;
+const send = (type, value) => p.postMessage({csType:type, value}, '*');
+  
+const fmt = (...a) => a.map(x => 
+  x === null ? 'null' :
+  x === undefined ? 'undefined' :
+  typeof x === 'object' ? JSON.stringify(x, null, 2) : String(x)
+).join(' ');
+
+console.log = (...a) => send('log', fmt(...a));
+console.error = (...a) => send('error', fmt(...a));
+console.warn = (...a) => send('log', '⚠ ' + fmt(...a));
+console.info = (...a) => send('log', 'ℹ ' + fmt(...a));
+console.table = (d) => send('log', JSON.stringify(d, null, 2));
+window.alert = (...a) => send('log', fmt(...a));
+window.prompt = () => '${stdin.split('\\n')[0] || ''}';
+
+try {
+  ${code}
+  send('done', null);
+} catch(e) {
+  send('error', e.message + '\\n' + (e.stack || ''));
+  send('done', null);
+}
+<\/script></body></html>`;
+
+    setTimeout(() => {
+      window.removeEventListener('message', handler);
+      try { document.body.removeChild(iframe); } catch(e) {}
+      resolve({
+        stdout: logs.join('\n'),
+        stderr: errors.join('\n') || '⏱ Execution timed out (10s)',
+        time: '10.000'
+      });
+    }, 10000);
+  });
+};
+
+// Run with Piston API (FREE - no key needed)
+const runWithPiston = async (code, language, stdin) => {
+  const lang = PISTON_LANGUAGES[language] || PISTON_LANGUAGES[language.toLowerCase()];
+  if (!lang) {
+    return { stdout: '', stderr: `Language "${language}" not supported yet` };
+  }
+
+  const response = await fetch(PISTON_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      language: lang.language,
+      version: lang.version,
+      files: [{ name: lang.fileName, content: code }],
+      stdin: stdin || '',
+      args: [],
+      compile_timeout: 10000,
+      run_timeout: 10000
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Piston API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  return {
+    stdout: data.run?.stdout || '',
+    stderr: data.run?.stderr || data.compile?.stderr || '',
+    time: data.run?.code === 0 ? 'Success' : 'Error'
+  };
+};
+
+// Run HTML in preview panel
+const runHTMLPreview = (code) => {
+  const preview = document.getElementById('html-preview-frame') || document.getElementById('preview-iframe') || document.createElement('iframe');
+  
+  if (preview) {
+    const doc = preview.contentDocument || preview.contentWindow.document;
+    doc.open();
+    doc.write(code);
+    doc.close();
+  }
+  
+  switchTab('preview');
+  
+  return { stdout: 'HTML rendered in preview', stderr: '' };
+};
+
+// OUTPUT PANEL FUNCTIONS
+const appendOutput = (type, text) => {
+  const output = document.getElementById('output-content') || document.getElementById('compiler-output') || document.querySelector('.output-area');
+  
+  if (!output) return;
+
+  if (type === 'divider') {
+    const div = document.createElement('div');
+    div.className = 'output-divider';
+    div.textContent = text;
+    div.style.cssText = `color: #2d2f45; font-size: 11px; padding: 2px 0;`;
+    output.appendChild(div);
+    output.scrollTop = output.scrollHeight;
+    return;
+  }
+
+  const colors = {
+    output:  '#c0caf5', error:   '#f7768e', warn:    '#e0af68',
+    success: '#9ece6a', info:    '#7aa2f7', muted:   '#565f89', input:   '#bb9af7'
+  };
+
+  const prefixes = {
+    output: '', error: '✕ ', warn: '⚠ ', success: '✓ ', info: 'ℹ ', muted: '  ', input: '❯ '
+  };
+
+  const line = document.createElement('div');
+  line.className = 'output-line';
+  line.style.cssText = `
+    color: ${colors[type] || '#c0caf5'};
+    padding: 1px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    animation: lineSlideIn 0.1s ease;
+  `;
+  line.textContent = (prefixes[type] || '') + text;
+
+  output.appendChild(line);
+  output.scrollTop = output.scrollHeight;
+};
+
+const clearOutput = () => {
+  const output = document.getElementById('output-content') || document.getElementById('compiler-output') || document.querySelector('.output-area');
+  if (output) output.innerHTML = '';
+};
+
+// TERMINAL (interactive, type and run)
+const terminal = {
+  history: [],
+  historyIndex: -1,
+  
+  init() {
+    const input = document.getElementById('terminal-input');
+    if (!input) return;
+
+    input.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const cmd = input.value.trim();
+        if (!cmd) return;
+
+        this.history.unshift(cmd);
+        this.historyIndex = -1;
+        input.value = '';
+
+        this.appendLine('input', cmd);
+        await this.execute(cmd);
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (this.historyIndex < this.history.length - 1) {
+          this.historyIndex++;
+          input.value = this.history[this.historyIndex];
+        }
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (this.historyIndex > 0) {
+          this.historyIndex--;
+          input.value = this.history[this.historyIndex];
+        } else {
+          this.historyIndex = -1;
+          input.value = '';
+        }
+      }
+    });
+  },
+
+  async execute(cmd) {
+    const lang = document.getElementById('status-lang')?.innerText.toLowerCase() || 'javascript';
+    const stdin = document.getElementById('stdin-input')?.value || '';
+
+    this.appendLine('info', `Running ${lang}...`);
+
+    try {
+      let result;
+      if (lang === 'javascript') {
+        result = await runJSLocally(cmd, stdin);
+      } else {
+        result = await runWithPiston(cmd, lang, stdin);
+      }
+
+      if (result.stdout) {
+        result.stdout.split('\n').forEach(l => {
+          if (l.trim()) this.appendLine('output', l);
+        });
+      }
+      if (result.stderr) {
+        result.stderr.split('\n').forEach(l => {
+          if (l.trim()) this.appendLine('error', l);
+        });
+      }
+      if (!result.stdout && !result.stderr) {
+        this.appendLine('muted', 'No output');
+      }
+    } catch (err) {
+      this.appendLine('error', err.message);
+    }
+  },
+
+  appendLine(type, text) {
+    const termOut = document.getElementById('terminal-output') || document.querySelector('.terminal-output');
+    if (!termOut) return;
+
+    const colors = {
+      input: '#bb9af7', output: '#c0caf5', error: '#f7768e',
+      warn: '#e0af68', info: '#7aa2f7', muted: '#565f89'
+    };
+
+    const prefixes = {
+      input: '❯ ', output: '  ', error: '✕ ', warn: '⚠ ', info: 'ℹ ', muted: '  '
+    };
+
+    const line = document.createElement('div');
+    line.style.cssText = `
+      color: ${colors[type] || '#c0caf5'};
+      padding: 1px 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: pre-wrap;
+    `;
+    line.textContent = (prefixes[type] || '') + text;
+    
+    termOut.appendChild(line);
+    termOut.scrollTop = termOut.scrollHeight;
+  },
+
+  clear() {
+    const termOut = document.getElementById('terminal-output');
+    if (termOut) {
+      termOut.innerHTML = `
+        <div style="color:#565f89; padding:8px 12px; font-size:12px; font-family:'JetBrains Mono'">
+          CodeSync Terminal — Type code + Enter to run
+        </div>`;
+    }
+  }
+};
+
+// RUN BUTTON STATE
+const setRunButtonState = (state) => {
+  const btns = document.querySelectorAll('.run-btn, #run-btn, [id*="run"]');
+  
+  btns.forEach(btn => {
+    btn.className = btn.className.replace(/running|success|error/g, '').trim();
+    
+    switch(state) {
+      case 'running':
+        btn.classList.add('running');
+        btn.innerHTML = '<span class="spinner"></span> Running...';
+        btn.disabled = true;
+        break;
+      case 'success':
+        btn.classList.add('success');
+        btn.innerHTML = '✓ Done';
+        btn.disabled = false;
+        break;
+      case 'error':
+        btn.classList.add('error');
+        btn.innerHTML = '✕ Error';
+        btn.disabled = false;
+        break;
+      default:
+        btn.innerHTML = '▶ Run';
+        btn.disabled = false;
+    }
+  });
+};
+
+// TAB SWITCHING
+const switchTab = (tabName) => {
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel-content, [id^="tab-"]').forEach(c => c.style.display = 'none');
+
+  const tab = document.querySelector(`[data-target="tab-${tabName}"]`) || document.querySelector(`[data-tab="${tabName}"]`);
+  const content = document.getElementById(`tab-${tabName}`) || document.getElementById(`panel-${tabName}`);
+
+  if (tab) tab.classList.add('active');
+  if (content) content.style.display = 'flex';
+};
+
+// GET LANGUAGE DISPLAY NAME
+const getLanguageDisplayName = (lang) => {
+  const names = {
+    javascript: 'JavaScript', typescript: 'TypeScript', python: 'Python 3',
+    java: 'Java', cpp: 'C++', c: 'C', csharp: 'C#', go: 'Go', rust: 'Rust',
+    php: 'PHP', ruby: 'Ruby', swift: 'Swift', kotlin: 'Kotlin', html: 'HTML', bash: 'Bash'
+  };
+  return names[lang] || lang;
+};
+
+// KEYBOARD SHORTCUT — Ctrl+Enter to run
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault();
+    runCode();
+  }
 });
+
+// Wire Run buttons
+document.addEventListener('DOMContentLoaded', () => {
+  terminal.init();
+  
+  document.querySelectorAll('.run-btn, #run-btn, [id*="run"]').forEach(btn => {
+    btn.addEventListener('click', runCode);
+  });
+
+  document.querySelectorAll('.panel-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.target || tab.dataset.tab;
+      if (target) {
+        switchTab(target.replace('tab-', ''));
+      }
+    });
+  });
+
+  const btnClear = document.getElementById('compiler-clear-btn');
+  if (btnClear) {
+    btnClear.addEventListener('click', () => {
+      const activeTab = document.querySelector('.panel-tab.active')?.dataset.target || 'tab-output';
+      if (activeTab === 'tab-terminal') terminal.clear();
+      else if (activeTab === 'tab-output') clearOutput();
+      else if (activeTab === 'tab-input') {
+        const stdin = document.getElementById('stdin-input');
+        if (stdin) stdin.value = '';
+      }
+    });
+  }
+  
+  const btnCollapse = document.getElementById('compiler-collapse-btn');
+  const bottomPanel = document.getElementById('bottom-panel');
+  let isPanelCollapsed = false;
+  if(btnCollapse && bottomPanel) {
+      btnCollapse.addEventListener('click', () => {
+          if(isPanelCollapsed) {
+              bottomPanel.style.height = '200px';
+              btnCollapse.innerText = '^';
+              isPanelCollapsed = false;
+          } else {
+              bottomPanel.style.height = '35px';
+              btnCollapse.innerText = 'v';
+              isPanelCollapsed = true;
+          }
+      });
+  }
+  
+  // Panel Resizing Logic
+  const resizer = document.getElementById('panel-resize-handle');
+  if(resizer && bottomPanel) {
+      let isResizing = false;
+      let startY, startHeight;
+      
+      resizer.addEventListener('mousedown', (e) => {
+          isResizing = true;
+          startY = e.clientY;
+          startHeight = parseInt(document.defaultView.getComputedStyle(bottomPanel).height, 10);
+          document.body.style.cursor = 'ns-resize';
+          document.body.style.userSelect = 'none';
+      });
+      
+      window.addEventListener('mousemove', (e) => {
+          if(!isResizing) return;
+          const newHeight = startHeight - (e.clientY - startY);
+          if(newHeight >= 80 && newHeight <= 500) {
+              bottomPanel.style.height = `${newHeight}px`;
+          }
+      });
+      
+      window.addEventListener('mouseup', () => {
+          if(isResizing) {
+              isResizing = false;
+              document.body.style.cursor = 'default';
+              document.body.style.userSelect = 'auto';
+          }
+      });
+  }
+});
+
