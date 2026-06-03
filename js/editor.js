@@ -11,10 +11,10 @@ export let isReadOnly = false;
 export const getActiveFile = () => activeFile;
 export const setActiveFile = (fileId) => { activeFile = fileId; };
 
-// Local file system (from old file-system.js) — kept as exports for rooms.js compatibility
+// Local file system (from old file-system.js) â€” kept as exports for rooms.js compatibility
 export let localFilesMap = new Map();
 export let saveToLocalFile = async (path, content) => {
-    // No-op stub — overridden below when user opens a local folder
+    // No-op stub â€” overridden below when user opens a local folder
 };
 
 // --- DOM ELEMENTS ---
@@ -27,10 +27,10 @@ const previewIframe = document.getElementById('preview-iframe');
 const btnRefreshPreview = document.getElementById('btn-refresh-preview');
 const tabsContainer = document.getElementById('editor-tabs');
 
-// Status Bar
-const statusLang = document.getElementById('status-lang');
-const statusCursor = document.getElementById('status-cursor');
-const statusFile = document.getElementById('status-file');
+// Status Bar â€” use helper functions so null elements don't crash at module load
+function getStatusLang()   { return document.getElementById('sb-language'); }
+function getStatusCursor() { return document.getElementById('sb-cursor'); }
+function getStatusFile()   { return null; }
 
 // Layout
 const activityItems = document.querySelectorAll('.activity-item');
@@ -43,8 +43,8 @@ window.showToast = function(message, type = 'success') {
     if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-    toast.innerHTML = `<span>${icons[type] || '📢'}</span><span>${message}</span>`;
+    const icons = { success: 'âœ…', error: 'âŒ', warning: 'âš ï¸', info: 'â„¹ï¸' };
+    toast.innerHTML = `<span>${icons[type] || 'ðŸ“¢'}</span><span>${message}</span>`;
     container.appendChild(toast);
     setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 3700);
 };
@@ -89,9 +89,11 @@ function initMonaco() {
             renderWhitespace: "selection"
         });
 
-        // Update status bar cursor pos
+        // Update status bar cursor pos â€” update both visible and legacy hidden elements
         editorInstance.onDidChangeCursorPosition((e) => {
-            statusCursor.innerText = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
+            const pos = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
+            const el1 = document.getElementById('status-position'); if(el1) el1.innerText = pos;
+            const el2 = document.getElementById('status-cursor');   if(el2) el2.innerText = pos;
         });
 
         // Add Format shortcut (Shift+Alt+F)
@@ -123,7 +125,7 @@ export function setEditorContent(content, language, fileId) {
     if (!editorInstance) return;
     
     activeFile = fileId;
-    statusFile.innerText = fileId;
+    const sf = getStatusFile(); if(sf) sf.innerText = fileId;
     
     // Update language model
     const langMap = {
@@ -137,7 +139,9 @@ export function setEditorContent(content, language, fileId) {
     if (fileId === 'main') mappedLang = language || 'javascript'; // legacy support
     
     monaco.editor.setModelLanguage(editorInstance.getModel(), mappedLang);
-    statusLang.innerText = mappedLang.charAt(0).toUpperCase() + mappedLang.slice(1);
+    const displayName = mappedLang.charAt(0).toUpperCase() + mappedLang.slice(1);
+    const sl = getStatusLang(); if(sl) sl.innerText = displayName;
+    const slang2 = document.getElementById('sb-language'); if(slang2) slang2.innerText = displayName;
     
     // Set value without triggering our own change events immediately
     if (editorInstance.getValue() !== content) {
@@ -165,7 +169,7 @@ export function hideLoading() {
     }
 }
 
-// Safety timeout — force-hide the loading screen after 10s
+// Safety timeout â€” force-hide the loading screen after 10s
 // in case Firebase RTDB never responds (e.g., auth delay, network issue)
 setTimeout(() => {
     if (loadingOverlay && loadingOverlay.style.display !== 'none') {
@@ -243,31 +247,32 @@ if (btnFormat) btnFormat.addEventListener('click', formatCode);
 let previewTimeout;
 
 function updatePreview(content, lang) {
-    if (!previewPanel.classList.contains('active')) return;
+    const pp = document.getElementById('preview-panel');
+    const pi = document.getElementById('preview-iframe');
+    if (!pp || !pp.classList.contains('active') || !pi) return;
     
     clearTimeout(previewTimeout);
     previewTimeout = setTimeout(() => {
         let finalHtml = content;
         
         if (lang === 'javascript') {
-            // Wrap in basic HTML to execute
-            finalHtml = `<!DOCTYPE html><html><body><script>${content}</script></body></html>`;
+            // Wrap in basic HTML to execute â€” use srcdoc to avoid CORS
+            finalHtml = `<!DOCTYPE html><html><body><script>${content.replace(/<\/script>/gi,'<\\/script>')}<\/script></body></html>`;
         } else if (lang === 'markdown') {
-            // Fallback since we don't have marked.js loaded
             finalHtml = `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:20px;white-space:pre-wrap;">${content}</body></html>`;
         }
         
-        const doc = previewIframe.contentDocument || previewIframe.contentWindow.document;
-        doc.open();
-        doc.write(finalHtml);
-        doc.close();
+        // CORS-safe: use srcdoc instead of contentDocument.write()
+        pi.srcdoc = finalHtml;
     }, 1000); // 1s debounce
 }
 
 if (btnPreview) {
     btnPreview.addEventListener('click', () => {
-        previewPanel.classList.toggle('active');
-        if (previewPanel.classList.contains('active')) {
+        const pp = document.getElementById('preview-panel');
+        if (!pp) return;
+        pp.classList.toggle('active');
+        if (pp.classList.contains('active')) {
             btnPreview.classList.add('active');
             btnPreview.style.background = 'rgba(249, 115, 22, 0.2)';
             if(editorInstance) updatePreview(editorInstance.getValue(), editorInstance.getModel().getLanguageId());
@@ -307,7 +312,7 @@ export const saveSnapshot = async (label) => {
       }
     );
 
-    if (typeof showToast !== 'undefined') showToast('📸 Snapshot saved!', 'success');
+    if (typeof showToast !== 'undefined') showToast('ðŸ“¸ Snapshot saved!', 'success');
   } catch (error) {
     console.error('Snapshot error:', error);
     if (typeof showToast !== 'undefined') showToast('Failed to save snapshot', 'error');
@@ -315,7 +320,7 @@ export const saveSnapshot = async (label) => {
 };
 
 // ============================================================================
-// 🆕 FEATURE 1 — VS CODE STYLE FILE SYSTEM
+// ðŸ†• FEATURE 1 â€” VS CODE STYLE FILE SYSTEM
 // ============================================================================
 
 const fileTreeDOM = document.getElementById('file-tree');
@@ -369,25 +374,25 @@ function getFileLanguage(filename) {
 
 function getFileIcon(filename) {
     const ext = filename.split('.').pop().toLowerCase();
-    if (['js','jsx','mjs'].includes(ext)) return '🟡';
-    if (['ts','tsx'].includes(ext)) return '🔵';
-    if (['py','pyw'].includes(ext)) return '🐍';
-    if (['java'].includes(ext)) return '☕';
-    if (['cpp','cxx','cc','c','h','hpp'].includes(ext)) return '🔷';
-    if (['html','htm'].includes(ext)) return '🟠';
-    if (['css','scss','sass'].includes(ext)) return '🔵';
-    if (['json','jsonc'].includes(ext)) return '🟡';
-    if (['md','mdx'].includes(ext)) return '📝';
-    if (['txt'].includes(ext)) return '📄';
-    if (['go'].includes(ext)) return '🔵';
-    if (['rs'].includes(ext)) return '🦀';
-    if (['php'].includes(ext)) return '🐘';
-    if (['rb'].includes(ext)) return '💎';
-    if (['swift'].includes(ext)) return '🍊';
-    if (['kt'].includes(ext)) return '🟣';
-    if (['sh','bash','zsh'].includes(ext)) return '⬛';
-    if (['sql'].includes(ext)) return '🗄️';
-    return '📄';
+    if (['js','jsx','mjs'].includes(ext)) return 'ðŸŸ¡';
+    if (['ts','tsx'].includes(ext)) return 'ðŸ”µ';
+    if (['py','pyw'].includes(ext)) return 'ðŸ';
+    if (['java'].includes(ext)) return 'â˜•';
+    if (['cpp','cxx','cc','c','h','hpp'].includes(ext)) return 'ðŸ”·';
+    if (['html','htm'].includes(ext)) return 'ðŸŸ ';
+    if (['css','scss','sass'].includes(ext)) return 'ðŸ”µ';
+    if (['json','jsonc'].includes(ext)) return 'ðŸŸ¡';
+    if (['md','mdx'].includes(ext)) return 'ðŸ“';
+    if (['txt'].includes(ext)) return 'ðŸ“„';
+    if (['go'].includes(ext)) return 'ðŸ”µ';
+    if (['rs'].includes(ext)) return 'ðŸ¦€';
+    if (['php'].includes(ext)) return 'ðŸ˜';
+    if (['rb'].includes(ext)) return 'ðŸ’Ž';
+    if (['swift'].includes(ext)) return 'ðŸŠ';
+    if (['kt'].includes(ext)) return 'ðŸŸ£';
+    if (['sh','bash','zsh'].includes(ext)) return 'â¬›';
+    if (['sql'].includes(ext)) return 'ðŸ—„ï¸';
+    return 'ðŸ“„';
 }
 
 function getDefaultContent(lang, name) {
@@ -440,7 +445,7 @@ function createFolderDOM(id, folder) {
     const header = document.createElement('div');
     header.className = 'tree-item folder-item';
     header.dataset.id = id;
-    header.innerHTML = `<span class="arrow">▶</span><span class="icon">📁</span><span class="name">${folder.name}</span>`;
+    header.innerHTML = `<span class="arrow">▶</span><span class="icon">ðŸ“</span><span class="name">${folder.name}</span>`;
     
     const childrenContainer = document.createElement('div');
     childrenContainer.className = 'folder-children';
@@ -458,7 +463,7 @@ function createFolderDOM(id, folder) {
         header.classList.toggle('open');
         childrenContainer.classList.toggle('open');
         const arrow = header.querySelector('.arrow');
-        arrow.innerText = header.classList.contains('open') ? '▼' : '▶';
+        arrow.innerText = header.classList.contains('open') ? 'â–¼' : '▶';
     };
     
     header.oncontextmenu = (e) => showContextMenu(e, id, 'folder');
@@ -502,7 +507,7 @@ function showInlineInput(parentId, type, action, targetId = null, existingName =
             const parentItem = document.querySelector(`.folder-item[data-id="${parentId}"]`);
             if (parentItem) {
                 parentItem.classList.add('open');
-                parentItem.querySelector('.arrow').innerText = '▼';
+                parentItem.querySelector('.arrow').innerText = 'â–¼';
             }
             attachTarget = parentChildren;
         }
@@ -651,7 +656,7 @@ function openFile(id) {
             editorInstance.setValue(file.content || '');
         }
         
-        document.getElementById('status-lang').innerText = mappedLang;
+        const el = document.getElementById('sb-language'); if(el) el.innerText = mappedLang;
         document.getElementById('status-file').innerText = file.name;
     }
     
@@ -684,7 +689,7 @@ function renderFSTabsUI() {
             <span class="file-icon">${getFileIcon(file.name)}</span>
             <span class="tab-label">${file.name}</span>
             <span class="unsaved-dot"></span>
-            <span class="tab-close">×</span>
+            <span class="tab-close">Ã—</span>
         `;
         div.onclick = () => openFile(id);
         div.querySelector('.tab-close').onclick = (e) => {
@@ -762,7 +767,7 @@ function renderPaletteResults(query) {
 }
 
 // ============================================================================
-// 🆕 FEATURE 3 — SHARE ROOM FEATURE (Editor Side)
+// ðŸ†• FEATURE 3 â€” SHARE ROOM FEATURE (Editor Side)
 // ============================================================================
 
 window.openShareModal = (roomName, code, url) => {
@@ -784,17 +789,17 @@ window.openShareModal = (roomName, code, url) => {
     };
     
     document.getElementById('share-wa').onclick = () => {
-        const text = encodeURIComponent(`🚀 Join me on CodeSync!\n\nRoom: ${roomName}\nCode: ${code}\n\nJoin here: ${url}\n\nCodeSync — Real-time collaborative code editor`);
+        const text = encodeURIComponent(`ðŸš€ Join me on CodeSync!\n\nRoom: ${roomName}\nCode: ${code}\n\nJoin here: ${url}\n\nCodeSync â€” Real-time collaborative code editor`);
         window.open(`https://wa.me/?text=${text}`, '_blank');
     };
     
     document.getElementById('share-tg').onclick = () => {
-        const text = encodeURIComponent(`🚀 Join my CodeSync room!\nRoom: ${roomName} | Code: ${code}`);
+        const text = encodeURIComponent(`ðŸš€ Join my CodeSync room!\nRoom: ${roomName} | Code: ${code}`);
         window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`, '_blank');
     };
     
     document.getElementById('share-tw').onclick = () => {
-        const text = encodeURIComponent(`Coding together on CodeSync! 🚀\nRoom: ${roomName} | Code: ${code}\nJoin me: ${url}\n#CodeSync #Coding #Collaboration`);
+        const text = encodeURIComponent(`Coding together on CodeSync! ðŸš€\nRoom: ${roomName} | Code: ${code}\nJoin me: ${url}\n#CodeSync #Coding #Collaboration`);
         window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
     };
     
@@ -804,13 +809,13 @@ window.openShareModal = (roomName, code, url) => {
     
     document.getElementById('share-em').onclick = () => {
         const subject = encodeURIComponent(`Join my CodeSync Room: ${roomName}`);
-        const body = encodeURIComponent(`Hi!\n\nI'd like to invite you to collaborate on CodeSync.\n\nRoom Name: ${roomName}\nRoom Code: ${code}\nDirect Link: ${url}\n\nSteps to join:\n1. Go to ${window.location.origin}\n2. Sign in or create account\n3. Enter room code: ${code}\n\nSee you there! 🚀`);
+        const body = encodeURIComponent(`Hi!\n\nI'd like to invite you to collaborate on CodeSync.\n\nRoom Name: ${roomName}\nRoom Code: ${code}\nDirect Link: ${url}\n\nSteps to join:\n1. Go to ${window.location.origin}\n2. Sign in or create account\n3. Enter room code: ${code}\n\nSee you there! ðŸš€`);
         window.location.href = `mailto:?subject=${subject}&body=${body}`;
     };
     
     document.getElementById('share-ig').onclick = () => {
-        navigator.clipboard.writeText(`🚀 Join my CodeSync room!\nRoom Code: ${code}\nDownload and join at: ${window.location.origin}`);
-        showToast('📋 Copied for Instagram! Paste in your story or DM', 'success');
+        navigator.clipboard.writeText(`ðŸš€ Join my CodeSync room!\nRoom Code: ${code}\nDownload and join at: ${window.location.origin}`);
+        showToast('ðŸ“‹ Copied for Instagram! Paste in your story or DM', 'success');
     };
     
     const qrContainer = document.getElementById('qr-container');
@@ -862,7 +867,7 @@ if(btnInvite) {
 }
 
 // ============================================================================
-// 📂 LOCAL FOLDER OPEN (replaces old file-system.js module)
+// ðŸ“‚ LOCAL FOLDER OPEN (replaces old file-system.js module)
 // ============================================================================
 let localDirectoryHandle = null;
 
@@ -904,13 +909,13 @@ async function readLocalDirectory(dirHandle, path, parentEl) {
             const folderDiv = document.createElement('div');
             const hdr = document.createElement('div');
             hdr.className = 'tree-item';
-            hdr.innerHTML = `<span class="arrow">▶</span><span class="icon">📁</span><span class="name">${entry.name}</span>`;
+            hdr.innerHTML = `<span class="arrow">▶</span><span class="icon">ðŸ“</span><span class="name">${entry.name}</span>`;
             const children = document.createElement('div');
             children.className = 'folder-children';
             hdr.onclick = () => {
                 hdr.classList.toggle('open');
                 children.classList.toggle('open');
-                hdr.querySelector('.arrow').innerText = hdr.classList.contains('open') ? '▼' : '▶';
+                hdr.querySelector('.arrow').innerText = hdr.classList.contains('open') ? 'â–¼' : '▶';
             };
             folderDiv.appendChild(hdr);
             folderDiv.appendChild(children);
@@ -960,10 +965,11 @@ window.openLocalFile = async (path) => {
 };
 
 // ============================================================================
-// 🖥️ COMPILER & TERMINAL
+// ðŸ–¥ï¸ COMPILER & TERMINAL â€” implemented below in the NEW COMPILER section
 // ============================================================================
 
-const PISTON_API = 'https://emkc.org/api/v2/piston/execute';
+// Compat shims: old code may call these; new implementations are at bottom of file
+
 
 const PISTON_LANGUAGES = {
   javascript: { language: 'javascript', version: '18.15.0', fileName: 'main.js' },
@@ -984,164 +990,95 @@ const PISTON_LANGUAGES = {
 };
 
 // MAIN RUN CODE FUNCTION
-const runCode = async () => {
-  if (!monacoEditor) return;
-
-  const code = monacoEditor.getValue();
-  if (!code.trim()) {
-    appendOutput('warn', 'Editor is empty. Write some code first!');
-    return;
-  }
-
-  // Get currentLanguage dynamically from editor status or global state
-  const language = document.getElementById('status-lang')?.innerText.toLowerCase() || 'javascript';
-  const stdin = document.getElementById('stdin-input')?.value || '';
-
-  // Update run button state
-  setRunButtonState('running');
-  
-  // Switch to output tab
-  switchTab('output');
-  
-  // Clear previous output
-  clearOutput();
-  
-  // Show running message
-  appendOutput('info', `▶ Running ${getLanguageDisplayName(language)}...`);
-  appendOutput('divider', '─'.repeat(50));
-
-  const startTime = Date.now();
-
-  try {
-    let result;
-
-    // JavaScript: run in browser (faster)
-    if (language === 'javascript') {
-      result = await runJSLocally(code, stdin);
-    }
-    // HTML: render in preview
-    else if (language === 'html') {
-      result = runHTMLPreview(code);
-    }
-    // All others: use Piston API (FREE)
-    else {
-      result = await runWithPiston(code, language, stdin);
-    }
-
-    const execTime = ((Date.now() - startTime) / 1000).toFixed(3);
-
-    // Display output
-    if (result.stdout && result.stdout.trim()) {
-      result.stdout.trim().split('\n').forEach(line => {
-          appendOutput('output', line);
-      });
-    }
-
-    if (result.stderr && result.stderr.trim()) {
-      appendOutput('divider', '─'.repeat(50));
-      result.stderr.trim().split('\n').forEach(line => {
-          appendOutput('error', line);
-      });
-    }
-
-    if (!result.stdout && !result.stderr) {
-      appendOutput('muted', '(No output produced)');
-    }
-
-    appendOutput('divider', '─'.repeat(50));
-    
-    if (result.stderr) {
-      appendOutput('error', `✕ Error | Time: ${execTime}s`);
-      setRunButtonState('error');
-    } else {
-      appendOutput('success', `✓ Executed in ${execTime}s`);
-      setRunButtonState('success');
-    }
-
-  } catch (error) {
-    appendOutput('error', `✕ Failed: ${error.message}`);
-    appendOutput('muted', 'Check your internet connection');
-    setRunButtonState('error');
-  }
-
-  // Reset button after 2 seconds
-  setTimeout(() => {
-    setRunButtonState('idle');
-  }, 2000);
-};
-
-// Run JavaScript locally in sandbox
 const runJSLocally = (code, stdin) => {
   return new Promise((resolve) => {
     const logs = [];
     const errors = [];
-    const start = Date.now();
+    const startTime = performance.now();
+    let isDone = false;
 
     const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.sandbox = 'allow-scripts';
+    iframe.setAttribute('sandbox', 'allow-scripts');
+    iframe.style.cssText = 'display:none;width:0;height:0;position:absolute;left:-9999px;';
     document.body.appendChild(iframe);
 
-    const handler = (e) => {
-      if (!e.data?.csType) return;
-      if (e.data.csType === 'log') {
-        logs.push(e.data.value);
-      }
-      if (e.data.csType === 'error') {
-        errors.push(e.data.value);
-      }
-      if (e.data.csType === 'done') {
-        window.removeEventListener('message', handler);
-        document.body.removeChild(iframe);
-        resolve({
-          stdout: logs.join('\n'),
-          stderr: errors.join('\n'),
-          time: ((Date.now()-start)/1000).toFixed(3)
-        });
-      }
+    const cleanup = () => {
+      window.removeEventListener('message', messageHandler);
+      clearTimeout(timeoutId);
+      setTimeout(() => {
+        try { if (document.body.contains(iframe)) document.body.removeChild(iframe); } catch(e) {}
+      }, 100);
     };
 
-    window.addEventListener('message', handler);
-
-    iframe.srcdoc = `<!DOCTYPE html>
-<html><body><script>
-const p = window.parent;
-const send = (type, value) => p.postMessage({csType:type, value}, '*');
-  
-const fmt = (...a) => a.map(x => 
-  x === null ? 'null' :
-  x === undefined ? 'undefined' :
-  typeof x === 'object' ? JSON.stringify(x, null, 2) : String(x)
-).join(' ');
-
-console.log = (...a) => send('log', fmt(...a));
-console.error = (...a) => send('error', fmt(...a));
-console.warn = (...a) => send('log', '⚠ ' + fmt(...a));
-console.info = (...a) => send('log', 'ℹ ' + fmt(...a));
-console.table = (d) => send('log', JSON.stringify(d, null, 2));
-window.alert = (...a) => send('log', fmt(...a));
-window.prompt = () => '${stdin.split('\\n')[0] || ''}';
-
-try {
-  ${code}
-  send('done', null);
-} catch(e) {
-  send('error', e.message + '\\n' + (e.stack || ''));
-  send('done', null);
-}
-<\/script></body></html>`;
-
-    setTimeout(() => {
-      window.removeEventListener('message', handler);
-      try { document.body.removeChild(iframe); } catch(e) {}
+    const finish = () => {
+      if (isDone) return;
+      isDone = true;
+      cleanup();
       resolve({
         stdout: logs.join('\n'),
-        stderr: errors.join('\n') || '⏱ Execution timed out (10s)',
-        time: '10.000'
+        stderr: errors.join('\n'),
+        time: ((performance.now() - startTime) / 1000).toFixed(3),
+        status: errors.length ? 'Runtime Error' : 'Accepted'
       });
+    };
+
+    const messageHandler = (event) => {
+      if (event.source !== iframe.contentWindow) return;
+      const data = event.data;
+      if (!data || !data.__csCompiler) return;
+      if (data.type === 'log')   logs.push(String(data.value ?? ''));
+      if (data.type === 'error') errors.push(String(data.value ?? ''));
+      if (data.type === 'done')  finish();
+    };
+
+    window.addEventListener('message', messageHandler);
+
+    const timeoutId = setTimeout(() => {
+      if (isDone) return;
+      isDone = true;
+      cleanup();
+      resolve({ stdout: logs.join('\n'), stderr: 'â± Execution timed out (10s)', time: '10.000', status: 'Time Limit Exceeded' });
     }, 10000);
+
+    const stdinArr = stdin ? stdin.split('\n') : [];
+    const stdinJson = JSON.stringify(stdinArr);
+    const safeCode = code.replace(/<\/script>/gi, '<\\/script>');
+
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><script>'
+      + '(function(){'
+      + 'var __p=window.parent;'
+      + 'var __s=function(t,v){try{__p.postMessage({__csCompiler:true,type:t,value:v},"*");}catch(e){}};'
+      + 'var __fmt=function(v){if(v===null)return"null";if(v===undefined)return"undefined";if(typeof v==="object"){try{return JSON.stringify(v,null,2);}catch(e){return String(v);}}return String(v);};'
+      + 'var __fmtAll=function(a){return Array.from(a).map(__fmt).join(" ");};'
+      + 'window.console={'
+      + '  log:function(){__s("log",__fmtAll(arguments));}'
+      + ', error:function(){__s("error",__fmtAll(arguments));}'
+      + ', warn:function(){__s("log","\u26a0 "+__fmtAll(arguments));}'
+      + ', info:function(){__s("log","\u2139 "+__fmtAll(arguments));}'
+      + ', table:function(d){try{__s("log",JSON.stringify(d,null,2));}catch(e){__s("log",String(d));}}'
+      + ', dir:function(d){__s("log",__fmt(d));}'
+      + ', clear:function(){}'
+      + '};'
+      + 'window.alert=function(m){__s("log","alert: "+String(m));};'
+      + 'window.confirm=function(){return true;};'
+      + 'var __stdinLines=' + stdinJson + ';'
+      + 'window.prompt=function(m){if(m)__s("log",String(m));return __stdinLines.shift()||"";};'
+      + 'try{'
+      + safeCode
+      + ';__s("done",null);'
+      + '}catch(e){'
+      + '__s("error",(e.name||"Error")+": "+e.message);'
+      + '__s("done",null);'
+      + '}'
+      + '})();'
+      + '<\/script></body></html>';
+
+    iframe.srcdoc = html;
   });
 };
+
+
+
 
 // Run with Piston API (FREE - no key needed)
 const runWithPiston = async (code, language, stdin) => {
@@ -1179,59 +1116,119 @@ const runWithPiston = async (code, language, stdin) => {
 
 // Run HTML in preview panel
 const runHTMLPreview = (code) => {
-  const preview = document.getElementById('html-preview-frame') || document.getElementById('preview-iframe') || document.createElement('iframe');
-  
-  if (preview) {
-    const doc = preview.contentDocument || preview.contentWindow.document;
-    doc.open();
-    doc.write(code);
-    doc.close();
-  }
-  
+  // Switch to preview tab
   switchTab('preview');
   
-  return { stdout: 'HTML rendered in preview', stderr: '' };
+  // Find or create preview iframe
+  let previewFrame = document.getElementById(
+    'html-preview-frame');
+  
+  if (!previewFrame) {
+    const previewPanel = 
+      document.getElementById('panel-preview')
+      || document.querySelector(
+        '.panel-preview');
+    if (!previewPanel) {
+      return {
+        stdout: 'Preview panel not found',
+        stderr: ''
+      };
+    }
+    previewFrame = document.createElement(
+      'iframe');
+    previewFrame.id = 'html-preview-frame';
+    previewFrame.style.cssText = 
+      'width:100%;height:100%;border:none;' +
+      'background:white;';
+    previewPanel.appendChild(previewFrame);
+  }
+
+  // Use srcdoc to avoid CORS
+  // This is the ONLY safe way to inject HTML
+  previewFrame.srcdoc = code;
+  
+  return {
+    stdout: '✓ HTML rendered in Preview tab',
+    stderr: ''
+  };
 };
 
 // OUTPUT PANEL FUNCTIONS
 const appendOutput = (type, text) => {
-  const output = document.getElementById('output-content') || document.getElementById('compiler-output') || document.querySelector('.output-area');
-  
+  const output = 
+    document.getElementById('output-content')
+    || document.querySelector('.output-area')
+    || document.getElementById('compiler-output')
+    || document.getElementById('terminal-output');
   if (!output) return;
 
   if (type === 'divider') {
     const div = document.createElement('div');
-    div.className = 'output-divider';
+    div.style.cssText = `
+      color: #2d2f45;
+      padding: 2px 12px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono',monospace;
+      user-select: none;
+    `;
     div.textContent = text;
-    div.style.cssText = `color: #2d2f45; font-size: 11px; padding: 2px 0;`;
     output.appendChild(div);
     output.scrollTop = output.scrollHeight;
     return;
   }
 
-  const colors = {
-    output:  '#c0caf5', error:   '#f7768e', warn:    '#e0af68',
-    success: '#9ece6a', info:    '#7aa2f7', muted:   '#565f89', input:   '#bb9af7'
+  const config = {
+    output:  { 
+      color: '#c0caf5', 
+      prefix: '' 
+    },
+    error:   { 
+      color: '#f7768e', 
+      prefix: '✕ ',
+      bg: 'rgba(247,118,142,0.05)'
+    },
+    warn:    { 
+      color: '#e0af68', 
+      prefix: 'âš  ' 
+    },
+    success: { 
+      color: '#9ece6a', 
+      prefix: '✓ ' 
+    },
+    info:    { 
+      color: '#7aa2f7', 
+      prefix: 'â„¹ ' 
+    },
+    muted:   { 
+      color: '#565f89', 
+      prefix: '' 
+    },
+    input:   { 
+      color: '#bb9af7', 
+      prefix: 'â¯ ' 
+    }
   };
 
-  const prefixes = {
-    output: '', error: '✕ ', warn: '⚠ ', success: '✓ ', info: 'ℹ ', muted: '  ', input: '❯ '
-  };
-
+  const cfg = config[type] 
+    || config.output;
+  
   const line = document.createElement('div');
-  line.className = 'output-line';
   line.style.cssText = `
-    color: ${colors[type] || '#c0caf5'};
+    color: ${cfg.color};
+    background: ${cfg.bg || 'transparent'};
     padding: 1px 12px;
     font-size: 13px;
-    line-height: 1.6;
+    line-height: 1.7;
     font-family: 'JetBrains Mono', monospace;
     white-space: pre-wrap;
-    word-break: break-all;
-    animation: lineSlideIn 0.1s ease;
+    word-break: break-word;
+    animation: lineSlideIn 0.12s ease;
+    border-left: ${cfg.bg 
+      ? '2px solid ' + cfg.color 
+      : '2px solid transparent'};
   `;
-  line.textContent = (prefixes[type] || '') + text;
-
+  
+  line.textContent = cfg.prefix + text;
   output.appendChild(line);
   output.scrollTop = output.scrollHeight;
 };
@@ -1286,7 +1283,7 @@ const terminal = {
   },
 
   async execute(cmd) {
-    const lang = document.getElementById('status-lang')?.innerText.toLowerCase() || 'javascript';
+    const lang = document.getElementById('sb-language')?.innerText.toLowerCase() || 'javascript';
     const stdin = document.getElementById('stdin-input')?.value || '';
 
     this.appendLine('info', `Running ${lang}...`);
@@ -1327,7 +1324,7 @@ const terminal = {
     };
 
     const prefixes = {
-      input: '❯ ', output: '  ', error: '✕ ', warn: '⚠ ', info: 'ℹ ', muted: '  '
+      input: 'â¯ ', output: '  ', error: '✕ ', warn: 'âš  ', info: 'â„¹ ', muted: '  '
     };
 
     const line = document.createElement('div');
@@ -1350,7 +1347,7 @@ const terminal = {
     if (termOut) {
       termOut.innerHTML = `
         <div style="color:#565f89; padding:8px 12px; font-size:12px; font-family:'JetBrains Mono'">
-          CodeSync Terminal — Type code + Enter to run
+          CodeSync Terminal â€” Type code + Enter to run
         </div>`;
     }
   }
@@ -1408,7 +1405,7 @@ const getLanguageDisplayName = (lang) => {
   return names[lang] || lang;
 };
 
-// KEYBOARD SHORTCUT — Ctrl+Enter to run
+// KEYBOARD SHORTCUT â€” Ctrl+Enter to run
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === 'Enter') {
     e.preventDefault();
@@ -1495,3 +1492,522 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ============================================================================
+// NEW FEATURES
+// ============================================================================
+
+const formatErrorOutput = (stderr) => {
+  if (!stderr) return '';
+  
+  return stderr.split('\n').map(line => {
+    // Highlight line numbers
+    line = line.replace(
+      /line (\d+)/gi,
+      'line $1'
+    );
+    // Highlight error types
+    line = line.replace(
+      /^(ReferenceError|TypeError|SyntaxError|RangeError|URIError|EvalError):/,
+      '$1:'
+    );
+    return line;
+  }).join('\n');
+};
+
+const executionHistory = [];
+
+// After each run, save to history
+const saveToHistory = (code, result, lang) => {
+  executionHistory.unshift({
+    code: code.substring(0, 200),
+    stdout: result.stdout,
+    stderr: result.stderr,
+    language: lang,
+    time: result.time,
+    timestamp: new Date().toLocaleTimeString()
+  });
+  
+  // Keep last 10 runs only
+  if (executionHistory.length > 10) {
+    executionHistory.pop();
+  }
+  
+  updateHistoryPanel();
+};
+
+const updateHistoryPanel = () => {
+  const historyEl = document.getElementById(
+    'execution-history');
+  if (!historyEl) return;
+  
+  historyEl.innerHTML = executionHistory
+    .map((run, i) => `
+      <div class="history-item" 
+        data-index="${i}"
+        onclick="restoreFromHistory(${i})">
+        <span class="history-lang">
+          ${run.language}
+        </span>
+        <span class="history-time">
+          ${run.timestamp}
+        </span>
+        <span class="history-status 
+          ${run.stderr ? 'error' : 'success'}">
+          ${run.stderr ? '✕' : '✓'}
+        </span>
+      </div>
+    `).join('');
+};
+
+window.restoreFromHistory = (index) => {
+  const run = executionHistory[index];
+  if (!run || !window.monacoEditor) return;
+  window.monacoEditor.setValue(run.code);
+  if (window.showToast) window.showToast('Code restored from history', 
+    'success');
+};
+
+const updateProblemsTab = () => {
+  if (!window.monacoEditor) return;
+  
+  const model = window.monacoEditor.getModel();
+  if (!model) return;
+
+  // Get Monaco markers (errors/warnings)
+  const markers = monaco.editor
+    .getModelMarkers({ resource: model.uri });
+  
+  const problemsEl = document.getElementById(
+    'problems-list')
+    || document.querySelector('.problems-list')
+    || document.getElementById('problems-output');
+  
+  if (!problemsEl) return;
+
+  // Update problems tab badge
+  const badge = document.querySelector(
+    '[data-tab="problems"] .tab-badge')
+    || document.getElementById('problems-badge');
+  if (badge) {
+    badge.textContent = markers.length;
+    badge.style.display = markers.length > 0 
+      ? 'inline' : 'none';
+  }
+
+  if (markers.length === 0) {
+    problemsEl.innerHTML = `
+      <div style="color:#565f89;
+        padding:16px;font-size:12px;
+        font-family:'JetBrains Mono'">
+        ✓ No problems detected
+      </div>
+    `;
+    return;
+  }
+
+  problemsEl.innerHTML = markers.map(m => `
+    <div class="problem-item 
+      problem-${m.severity === 8 
+        ? 'error' : 'warning'}"
+      onclick="goToLine(${m.startLineNumber})" style="cursor: pointer; padding: 4px; border-bottom: 1px solid #2d2f45; display: flex; align-items: center; gap: 8px;">
+      <span class="problem-icon" style="color: ${m.severity === 8 ? '#f7768e' : '#e0af68'}">
+        ${m.severity === 8 ? '✕' : 'âš '}
+      </span>
+      <span class="problem-message" style="flex: 1; color: #c0caf5;">
+        ${m.message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+      </span>
+      <span class="problem-location" style="color: #565f89; font-size: 11px;">
+        Ln ${m.startLineNumber}, 
+        Col ${m.startColumn}
+      </span>
+    </div>
+  `).join('');
+};
+
+window.goToLine = (lineNumber) => {
+  if (!window.monacoEditor) return;
+  window.monacoEditor.revealLineInCenter(lineNumber);
+  window.monacoEditor.setPosition({ 
+    lineNumber, column: 1 
+  });
+  window.monacoEditor.focus();
+};
+
+const updateStatusBar = () => {
+  if (!window.monacoEditor) return;
+
+  // Update cursor position
+  const pos = window.monacoEditor.getPosition();
+  const posEl = document.getElementById('sb-cursor');
+  if (posEl && pos) {
+    posEl.textContent = `Ln ${pos.lineNumber}, Col ${pos.column}`;
+  }
+
+  // Update language
+  const langEl = document.getElementById('sb-language');
+  if (langEl) {
+    const currentLanguage = langEl.innerText.toLowerCase() || 'javascript';
+    langEl.textContent = getLanguageDisplayName(currentLanguage);
+  }
+
+  // Update errors/warnings count
+  const model = window.monacoEditor.getModel();
+  if (model) {
+    const markers = monaco.editor.getModelMarkers({ resource: model.uri });
+    const errors = markers.filter(m => m.severity === 8).length;
+    const warnings = markers.filter(m => m.severity === 4).length;
+    
+    const errEl = document.getElementById('sb-problems');
+    if (errEl) {
+      errEl.textContent = `✕ ${errors}  âš  ${warnings}`;
+      errEl.style.color = errors > 0 ? '#f7768e' : warnings > 0 ? '#e0af68' : '#1a1b26';
+    }
+  }
+};
+
+const updateRunButton = (language) => {
+  const langIcons = {
+    javascript: 'ðŸŸ¡',
+    typescript: 'ðŸ”µ',
+    python:     'ðŸ',
+    java:       'â˜•',
+    cpp:        'âš™ï¸',
+    c:          'ðŸ”§',
+    csharp:     'ðŸ”·',
+    go:         'ðŸ”µ',
+    rust:       'ðŸ¦€',
+    php:        'ðŸ˜',
+    ruby:       'ðŸ’Ž',
+    html:       'ðŸŒ',
+    swift:      'ðŸŠ',
+    kotlin:     'ðŸŸ£',
+    bash:       'â¬›'
+  };
+
+  const icon = langIcons[language.toLowerCase()] || '▶';
+  const name = getLanguageDisplayName(language);
+  
+  document.querySelectorAll(
+    '.run-btn, #run-btn, [id*="run-btn"]').forEach(btn => {
+    if (!btn.classList.contains('running')) {
+      btn.innerHTML = `${icon} Run ${name}`;
+    }
+  });
+};
+
+window.addEventListener('monaco-ready', () => {
+  if(window.monacoEditor) {
+    window.monacoEditor.onDidChangeModelContent(() => {
+      setTimeout(updateProblemsTab, 1000);
+      updateStatusBar();
+    });
+    window.monacoEditor.onDidChangeCursorPosition(updateStatusBar);
+    
+    // Initial updates
+    updateProblemsTab();
+    updateStatusBar();
+    
+    const observer = new MutationObserver(() => {
+        const currentLanguage = document.getElementById('sb-language')?.innerText.toLowerCase() || 'javascript';
+        updateRunButton(currentLanguage);
+    });
+    const statusLangEl = document.getElementById('sb-language');
+    if (statusLangEl) {
+        observer.observe(statusLangEl, { childList: true, characterData: true, subtree: true });
+        updateRunButton(statusLangEl.innerText.toLowerCase());
+    }
+  }
+});
+
+// ============================================================================
+// ðŸ†• COMPILER & TERMINAL LOGIC
+// ============================================================================
+
+window.currentLanguage = 'javascript'; // Default
+
+// 1. UTILS
+const runBtn = document.getElementById('run-code-btn');
+const headerRunBtn = document.getElementById('btn-run-code');
+const outputLines = document.getElementById('output-lines');
+const progressBar = document.getElementById('run-progress-bar');
+const langBadge = document.getElementById('panel-lang-badge');
+
+const getLangName = (lang) => {
+  const map = {
+    'javascript': 'JavaScript', 'typescript': 'TypeScript', 'python': 'Python',
+    'java': 'Java', 'cpp': 'C++', 'c': 'C', 'csharp': 'C#', 'go': 'Go',
+    'rust': 'Rust', 'php': 'PHP', 'ruby': 'Ruby', 'swift': 'Swift',
+    'kotlin': 'Kotlin', 'html': 'HTML', 'css': 'CSS', 'bash': 'Bash',
+    'sql': 'SQL', 'r': 'R'
+  };
+  return map[lang] || lang;
+};
+
+const getLangColor = (lang) => {
+  const map = {
+    'javascript': '#F7DF1E', 'typescript': '#3178C6', 'python': '#3776AB',
+    'java': '#ED8B00', 'cpp': '#00599C', 'c': '#A8B9CC', 'csharp': '#239120',
+    'go': '#00ADD8', 'rust': '#CE422B', 'php': '#777BB4', 'ruby': '#CC342D',
+    'swift': '#FA7343', 'kotlin': '#7F52FF', 'html': '#E34F26', 'css': '#1572B6',
+    'bash': '#4EAA25', 'sql': '#336791', 'r': '#276DC3'
+  };
+  return map[lang] || '#c0caf5';
+};
+
+// 2. TABS LOGIC
+const switchBottomTab = (tabId) => {
+  document.querySelectorAll('.panel-tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.panel-tab-content').forEach(content => content.classList.remove('active'));
+  
+  const targetBtn = document.querySelector(`.panel-tab-btn[data-tab="${tabId}"]`);
+  const targetContent = document.getElementById(`tab-${tabId}`);
+  
+  if (targetBtn) targetBtn.classList.add('active');
+  if (targetContent) targetContent.classList.add('active');
+};
+
+document.querySelectorAll('.panel-tab-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    switchBottomTab(e.currentTarget.dataset.tab);
+  });
+});
+
+// 3. RESIZE HANDLE JS
+const panel = document.getElementById('bottom-panel');
+const handle = document.getElementById('panel-resize-handle');
+let isResizing = false;
+
+if(handle) {
+    handle.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'ns-resize';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const newHeight = window.innerHeight - e.clientY;
+    if (newHeight >= 120 && newHeight <= window.innerHeight * 0.8) {
+        panel.style.height = `${newHeight}px`;
+    }
+    });
+
+    window.addEventListener('mouseup', () => {
+    if (isResizing) {
+        isResizing = false;
+        handle.classList.remove('dragging');
+        document.body.style.cursor = 'default';
+    }
+    });
+
+    handle.addEventListener('dblclick', () => {
+    const currentHeight = parseInt(window.getComputedStyle(panel).height);
+    if (currentHeight > 250) {
+        panel.style.height = '200px';
+    } else {
+        panel.style.height = '50vh';
+    }
+    });
+}
+
+// Maximize/Close Actions
+document.getElementById('maximize-panel-btn')?.addEventListener('click', () => {
+  if(panel) panel.style.height = '80vh';
+});
+document.getElementById('close-panel-btn')?.addEventListener('click', () => {
+  if(panel) panel.style.display = 'none'; // Or set height to 0
+});
+
+// 4. RUN COMPILER LOGIC
+const clearOutputPanel = () => {
+  if (outputLines) outputLines.innerHTML = '';
+};
+
+const appendToOutput = (type, text) => {
+  if (!outputLines) return;
+  const line = document.createElement('div');
+  line.className = `output-line type-${type}`;
+  line.textContent = text;
+  outputLines.appendChild(line);
+  outputLines.scrollTop = outputLines.scrollHeight;
+};
+
+const showOutputMessage = (type, msg) => {
+  clearOutputPanel();
+  appendToOutput(type, msg);
+  switchBottomTab('output');
+};
+
+const setRunState = (state, lang) => {
+  if (!runBtn) return;
+  runBtn.className = '';
+  if (state === 'running') {
+    runBtn.classList.add('running');
+    runBtn.innerHTML = `â³ Running...`;
+    progressBar?.classList.add('running');
+  } else if (state === 'success') {
+    runBtn.classList.add('success');
+    runBtn.innerHTML = `✓ Done`;
+    progressBar?.classList.remove('running');
+  } else if (state === 'error') {
+    runBtn.classList.add('error');
+    runBtn.innerHTML = `✕ Error`;
+    progressBar?.classList.remove('running');
+  } else {
+    runBtn.innerHTML = `▶ Run`;
+    progressBar?.classList.remove('running');
+  }
+};
+
+let runCount = 0;
+
+const runCode = async () => {
+  if (!window.monacoEditor) return;
+
+  const code = window.monacoEditor.getValue();
+  if (!code.trim()) {
+    showOutputMessage('warn', 'Editor is empty!');
+    return;
+  }
+
+  const language = window.currentLanguage || 'javascript';
+  const stdin = document.getElementById('stdin-input')?.value || '';
+
+  runCount++;
+  const runNum = runCount;
+  const runTime = new Date().toLocaleTimeString();
+
+  setRunState('running', language);
+  switchBottomTab('output');
+  clearOutputPanel();
+
+  appendToOutput('divider', `── Run #${runNum} · ${getLangName(language)} · ${runTime} ─────────────────`);
+  appendToOutput('info', `▶ Running ${getLangName(language)}...`);
+
+  const startMs = performance.now();
+
+  try {
+    let result;
+    if (language === 'javascript') {
+      result = await runJSLocally(code, stdin);
+    } else if (language === 'html' || language === 'css') {
+      document.getElementById('preview-iframe').srcdoc = `<!DOCTYPE html><html><body>${code}</body></html>`;
+      switchBottomTab('preview');
+      setRunState('idle', language);
+      return;
+    } else {
+      result = await runWithPiston(code, language, stdin);
+    }
+
+    const ms = performance.now() - startMs;
+    const secs = (ms / 1000).toFixed(3);
+
+    clearOutputPanel();
+    appendToOutput('divider', `── Run #${runNum} · ${getLangName(language)} · ${runTime} ─────────────────`);
+
+    if (result.stdout?.trim()) {
+      result.stdout.trim().split('\n').forEach(line => appendToOutput('output', line));
+    }
+    if (result.stderr?.trim()) {
+      appendToOutput('divider', '');
+      result.stderr.trim().split('\n').forEach(line => appendToOutput('error', line));
+    }
+    if (!result.stdout?.trim() && !result.stderr?.trim()) {
+      appendToOutput('muted', '(Program produced no output)');
+    }
+
+    const hasError = !!result.stderr?.trim();
+    appendToOutput('divider', hasError ? `── ✕ Failed · ${secs}s ───────` : `── ✓ Completed · ${secs}s ────`);
+    setRunState(hasError ? 'error' : 'success', language);
+
+  } catch (err) {
+    clearOutputPanel();
+    appendToOutput('error', `✕ Compiler Error: ${err.message}`);
+    appendToOutput('muted', 'Check your internet connection');
+    appendToOutput('divider', '── ✕ Failed ─────────────────');
+    setRunState('error', language);
+  }
+
+  setTimeout(() => setRunState('idle', language), 2500);
+};
+
+if (runBtn) {
+  runBtn.addEventListener('click', runCode);
+}
+if (headerRunBtn) {
+  headerRunBtn.addEventListener('click', runCode);
+}
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault();
+    runCode();
+  }
+});
+
+// 5. UPDATE COMPILER BADGES ON LANGUAGE CHANGE
+const updateCompilerBadges = (lang) => {
+  window.currentLanguage = lang;
+  if (langBadge) {
+    langBadge.innerHTML = `<span style="color:${getLangColor(lang)}">â—</span> ${getLangName(lang)}`;
+    langBadge.style.borderColor = getLangColor(lang);
+  }
+  const terminalPrefix = document.getElementById('terminal-lang-prefix');
+  if (terminalPrefix) {
+    terminalPrefix.textContent = lang.substring(0, 3);
+    terminalPrefix.style.color = getLangColor(lang);
+  }
+  const previewTabBtn = document.getElementById('preview-tab-btn');
+  if (previewTabBtn) {
+    previewTabBtn.style.display = (lang === 'html' || lang === 'css') ? 'flex' : 'none';
+  }
+};
+
+window.addEventListener('monaco-ready', () => {
+  const checkLang = () => {
+    const statusLangEl = document.getElementById('sb-language');
+    if (statusLangEl) {
+      updateCompilerBadges(statusLangEl.innerText.toLowerCase());
+    }
+  };
+  checkLang();
+  const elToObserve = document.getElementById('sb-language');
+  if (elToObserve) {
+    new MutationObserver(checkLang).observe(elToObserve, { childList: true, characterData: true, subtree: true });
+  }
+});
+
+// 6. TERMINAL JS
+const terminalLines = document.getElementById('terminal-lines');
+const terminalInput = document.getElementById('terminal-input-field');
+
+const appendTerminal = (text, type = 'output', prefix = '') => {
+  if (!terminalLines) return;
+  const line = document.createElement('div');
+  line.className = `terminal-line terminal-line-${type}`;
+  line.innerHTML = `<span class="terminal-prefix">${prefix}</span><span class="terminal-text">${text}</span>`;
+  terminalLines.appendChild(line);
+  terminalLines.scrollTop = terminalLines.scrollHeight;
+};
+
+if (terminalInput) {
+  terminalInput.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      const val = terminalInput.value.trim();
+      if (!val) return;
+      appendTerminal(val, 'input', 'â¯ ');
+      terminalInput.value = '';
+      
+      const lang = window.currentLanguage;
+      if (lang === 'javascript') {
+        const res = await runJSLocally(val, '');
+        if (res.stdout) appendTerminal(res.stdout, 'output');
+        if (res.stderr) appendTerminal(res.stderr, 'error');
+      } else {
+        appendTerminal('Interactive terminal only supports JS locally right now.', 'warn');
+      }
+    } else if (e.key === 'l' && e.ctrlKey) {
+      e.preventDefault();
+      terminalLines.innerHTML = '<div style="color:#565f89;padding:8px 16px;font-size:12px;font-family:\'JetBrains Mono\'">CodeSync Terminal â€” type code + Enter to run</div>';
+    }
+  });
+}

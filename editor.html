@@ -7,12 +7,13 @@
     <link rel="stylesheet" href="css/global.css">
     <link rel="stylesheet" href="css/editor.css">
     
-    <!-- Monaco Editor Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
     <script src="https://unpkg.com/prettier@2.8.8/standalone.js"></script>
     <script src="https://unpkg.com/prettier@2.8.8/parser-babel.js"></script>
     <script src="https://unpkg.com/prettier@2.8.8/parser-html.js"></script>
     <script src="https://unpkg.com/prettier@2.8.8/parser-postcss.js"></script>
+    
+    <!-- Monaco Editor Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
 </head>
 <body class="editor-layout">
 
@@ -117,75 +118,210 @@
                         <div id="monaco-container"></div>
                     </div>
                     
-                    <!-- BOTTOM PANEL (COMPILER) -->
-                    <div class="bottom-panel" id="bottom-panel">
-                        <div class="panel-resize-handle" id="panel-resize-handle"></div>
-                        <div class="panel-tabs">
-                            <div class="panel-tab active" data-target="tab-terminal">Terminal</div>
-                            <div class="panel-tab" data-target="tab-output">Output</div>
-                            <div class="panel-tab" data-target="tab-input">Input</div>
-                            <div class="panel-tab" data-target="tab-problems">Problems <span class="tab-badge" id="problems-badge">0</span></div>
-                            <div style="margin-left:auto; display:flex; gap:4px; align-items:center; padding-right:8px;">
-                                <button class="run-btn" id="compiler-run-btn" title="Run Code (Ctrl+Enter)">▶ Run</button>
-                                <button class="icon-btn" id="compiler-clear-btn" title="Clear Tab">✕</button>
-                                <button class="icon-btn" id="compiler-collapse-btn" title="Collapse Panel">^</button>
-                            </div>
-                        </div>
-                        
-                        <div id="tab-terminal" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                            <div class="terminal-output" id="terminal-output">
-                                <div class="terminal-welcome">
-                                    <span style="color:#9ece6a">CodeSync Terminal</span>
-                                    <span style="color:#565f89">— Type code and press Enter</span>
-                                </div>
-                            </div>
-                            <div class="terminal-input-line">
-                                <span class="terminal-prompt">❯</span>
-                                <input type="text" class="terminal-input-field" id="terminal-input" autocomplete="off" spellcheck="false" placeholder="Type command here...">
-                            </div>
-                        </div>
-                        
-                        <div id="tab-output" style="display:none; flex:1; overflow:hidden;">
-                            <div class="terminal-output" id="compiler-output"></div>
-                        </div>
+                    <!-- BOTTOM COMPILER PANEL -->
+<div id="bottom-panel">
 
-                        <div id="tab-input" style="display:none; flex:1; overflow:hidden;">
-                            <textarea class="stdin-textarea" id="stdin-input" placeholder="Enter input for your program one value per line..."></textarea>
-                        </div>
+  <!-- Resize Handle -->
+  <div id="panel-resize-handle"></div>
 
-                        <div id="tab-problems" style="display:none; flex:1; overflow:hidden;">
-                            <div class="terminal-output" id="problems-output"></div>
-                        </div>
-                    </div>
-                </div>
+  <!-- Progress Bar (shows when running) -->
+  <div class="run-progress-bar" 
+    id="run-progress-bar"></div>
 
-                <!-- LIVE PREVIEW PANEL -->
-                <div class="preview-panel" id="preview-panel">
-                    <div class="preview-header">
-                        <span>Live Preview</span>
-                        <button class="icon-btn" id="btn-refresh-preview" title="Refresh">🔄</button>
-                    </div>
-                    <iframe class="preview-iframe" id="preview-iframe" sandbox="allow-scripts allow-modals"></iframe>
-                </div>
+  <!-- Tabs Bar -->
+  <div id="panel-tabs-bar">
 
-            </div>
+    <button class="panel-tab-btn active" 
+      data-tab="terminal">
+      <span class="tab-icon">⌨</span>
+      TERMINAL
+    </button>
 
-        </main>
+    <button class="panel-tab-btn" 
+      data-tab="output">
+      <span class="tab-icon">▶</span>
+      OUTPUT
+    </button>
+
+    <button class="panel-tab-btn" 
+      data-tab="input">
+      <span class="tab-icon">⌨</span>
+      INPUT
+    </button>
+
+    <button class="panel-tab-btn" 
+      data-tab="problems">
+      <span class="tab-icon">⚠</span>
+      PROBLEMS
+      <span class="tab-error-badge" 
+        id="problems-badge">0</span>
+    </button>
+
+    <button class="panel-tab-btn" 
+      data-tab="preview"
+      id="preview-tab-btn"
+      style="display:none">
+      <span class="tab-icon">👁</span>
+      PREVIEW
+    </button>
+
+    <!-- Right side actions -->
+    <div class="panel-actions">
+      <span class="panel-lang-badge" 
+        id="panel-lang-badge">
+        🟡 JavaScript
+      </span>
+      <button id="run-code-btn" 
+        title="Run Code (Ctrl+Enter)">
+        ▶ Run
+      </button>
+      <button class="panel-action-btn" 
+        id="maximize-panel-btn" 
+        title="Maximize Panel">⬆</button>
+      <button class="panel-action-btn" 
+        id="close-panel-btn"
+        title="Close Panel">✕</button>
     </div>
+  </div>
 
-    <!-- STATUS BAR -->
-    <footer class="status-bar">
-        <div class="status-left">
-            <span class="status-item" id="status-connection">⚡ Connected</span>
-            <span class="status-item" id="status-error" style="color: var(--error-color); display: none;">✕ Disconnected</span>
-            <span class="status-item" id="status-file">main</span>
-        </div>
-        <div class="status-right">
-            <span class="status-item" id="status-cursor">Ln 1, Col 1</span>
-            <span class="status-item" id="status-lang">JavaScript</span>
-            <span class="status-item">UTF-8</span>
-        </div>
-    </footer>
+  <!-- TERMINAL TAB -->
+  <div class="panel-tab-content active" 
+    id="tab-terminal">
+    <div id="terminal-lines">
+      <div style="color:#565f89;
+        padding:8px 16px;font-size:12px;
+        font-family:'JetBrains Mono'">
+        CodeSync Terminal — 
+        type code + Enter to run
+      </div>
+    </div>
+    <div id="terminal-input-row">
+      <span class="terminal-lang-prefix"
+        id="terminal-lang-prefix"
+        style="color:#F7DF1E">js</span>
+      <span class="terminal-prompt-sym">
+        ❯
+      </span>
+      <input type="text" 
+        id="terminal-input-field"
+        placeholder="Type code here..."
+        autocomplete="off"
+        spellcheck="false"/>
+    </div>
+  </div>
+
+  <!-- OUTPUT TAB -->
+  <div class="panel-tab-content" 
+    id="tab-output">
+    <div id="output-lines">
+      <div class="output-idle-state">
+        <div class="idle-icon">▶</div>
+        <p>Press <kbd>Ctrl+Enter</kbd> 
+          to run your code</p>
+        <p style="font-size:11px">
+          Powered by Piston API · 
+          15+ languages supported
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT TAB -->
+  <div class="panel-tab-content" 
+    id="tab-input">
+    <div id="stdin-wrapper">
+      <div class="stdin-header">
+        <span>
+          Program Input (stdin) — 
+          one value per line
+        </span>
+        <button class="panel-action-btn"
+          onclick="document.getElementById(
+          'stdin-input').value=''">
+          Clear
+        </button>
+      </div>
+      <textarea id="stdin-input"
+        placeholder="Enter input values here...
+Example:
+5
+Hello World
+John Doe"
+        spellcheck="false">
+      </textarea>
+    </div>
+  </div>
+
+  <!-- PROBLEMS TAB -->
+  <div class="panel-tab-content" 
+    id="tab-problems">
+    <div id="problems-list">
+      <div class="problems-empty">
+        <span>✓</span>
+        <span>No problems detected</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW TAB (HTML only) -->
+  <div class="panel-tab-content" 
+    id="tab-preview">
+    <div class="preview-toolbar">
+      <button class="preview-size-btn active"
+        onclick="setPreviewSize('100%')">
+        🖥 Desktop
+      </button>
+      <button class="preview-size-btn"
+        onclick="setPreviewSize('768px')">
+        💻 Tablet
+      </button>
+      <button class="preview-size-btn"
+        onclick="setPreviewSize('375px')">
+        📱 Mobile
+      </button>
+      <button class="panel-action-btn"
+        onclick="openPreviewNewTab()"
+        style="margin-left:auto">
+        ↗ Open
+      </button>
+    </div>
+    <iframe id="html-preview-frame"
+      sandbox="allow-scripts allow-same-origin"
+      style="flex:1;border:none;
+        background:white;width:100%">
+    </iframe>
+  </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div id="editor-status-bar">
+  <div class="status-bar-left">
+    <div class="status-bar-item">
+      ⎇ main
+    </div>
+    <div class="status-bar-item" 
+      id="sb-problems">
+      ✕ 0 ⚠ 0
+    </div>
+  </div>
+  <div class="status-bar-right">
+    <div class="status-bar-item" 
+      id="sb-cursor">
+      Ln 1, Col 1
+    </div>
+    <div class="status-bar-item" 
+      id="sb-language">
+      JavaScript
+    </div>
+    <div class="status-bar-item">
+      UTF-8
+    </div>
+    <div class="status-bar-item">
+      Spaces: 2
+    </div>
+  </div>
+</div>
 
     <!-- ROOM SETTINGS MODAL -->
     <div class="modal-overlay" id="settings-modal">
