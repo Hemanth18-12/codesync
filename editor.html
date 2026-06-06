@@ -159,13 +159,7 @@
         id="problems-badge">0</span>
     </button>
 
-    <button class="panel-tab-btn" 
-      data-tab="preview"
-      id="preview-tab-btn"
-      style="display:none">
-      <span class="tab-icon">👁</span>
-      PREVIEW
-    </button>
+
 
     <!-- Right side actions -->
     <div class="panel-actions">
@@ -265,34 +259,7 @@ John Doe"
     </div>
   </div>
 
-  <!-- PREVIEW TAB (HTML only) -->
-  <div class="panel-tab-content" 
-    id="tab-preview">
-    <div class="preview-toolbar">
-      <button class="preview-size-btn active"
-        onclick="setPreviewSize('100%')">
-        🖥 Desktop
-      </button>
-      <button class="preview-size-btn"
-        onclick="setPreviewSize('768px')">
-        💻 Tablet
-      </button>
-      <button class="preview-size-btn"
-        onclick="setPreviewSize('375px')">
-        📱 Mobile
-      </button>
-      <button class="panel-action-btn"
-        onclick="openPreviewNewTab()"
-        style="margin-left:auto">
-        ↗ Open
-      </button>
-    </div>
-    <iframe id="html-preview-frame"
-      sandbox="allow-scripts allow-same-origin"
-      style="flex:1;border:none;
-        background:white;width:100%">
-    </iframe>
-  </div>
+
 
 </div>
 
@@ -437,7 +404,6 @@ John Doe"
     </div>
 
     <!-- CORE LOGIC MODULES -->
-    <script src="js/config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script type="module" src="js/editor.js"></script>
     <script type="module" src="js/chat.js"></script>

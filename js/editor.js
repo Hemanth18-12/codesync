@@ -1,5 +1,7 @@
 import { auth, db, doc, getDoc, onAuthStateChanged, collection, addDoc, serverTimestamp, rtdb, ref, set, onValue, push, rtdbUpdate, remove, get } from './firebase-config.js';
 
+const PISTON_API = 'https://emkc.org/api/v2/piston/execute';
+
 // --- GLOBAL STATE ---
 export let editorInstance = null;
 export let currentUser = null;
@@ -26,6 +28,10 @@ const previewPanel = document.getElementById('preview-panel');
 const previewIframe = document.getElementById('preview-iframe');
 const btnRefreshPreview = document.getElementById('btn-refresh-preview');
 const tabsContainer = document.getElementById('editor-tabs');
+
+function getPreviewFrame() {
+    return document.getElementById('html-preview-frame') || document.getElementById('preview-iframe');
+}
 
 // Status Bar â€” use helper functions so null elements don't crash at module load
 function getStatusLang()   { return document.getElementById('sb-language'); }
@@ -248,8 +254,9 @@ let previewTimeout;
 
 function updatePreview(content, lang) {
     const pp = document.getElementById('preview-panel');
-    const pi = document.getElementById('preview-iframe');
-    if (!pp || !pp.classList.contains('active') || !pi) return;
+    const pi = getPreviewFrame();
+    if (!pi) return;
+    if (pp && !pp.classList.contains('active')) return;
     
     clearTimeout(previewTimeout);
     previewTimeout = setTimeout(() => {
@@ -270,6 +277,12 @@ function updatePreview(content, lang) {
 if (btnPreview) {
     btnPreview.addEventListener('click', () => {
         const pp = document.getElementById('preview-panel');
+        if (!pp && typeof switchBottomTab === 'function') {
+            document.getElementById('preview-tab-btn')?.style.setProperty('display', 'flex');
+            switchBottomTab('preview');
+            if(editorInstance) updatePreview(editorInstance.getValue(), editorInstance.getModel().getLanguageId());
+            return;
+        }
         if (!pp) return;
         pp.classList.toggle('active');
         if (pp.classList.contains('active')) {
@@ -429,11 +442,6 @@ const langToExt = {
   r:          'r',
   plaintext:  'txt'
 };
-
-function getLanguageDisplayName(lang) {
-  if (!lang) return 'Plaintext';
-  return lang.charAt(0).toUpperCase() + lang.slice(1);
-}
 
 function getFileIconHTML(filename) {
   if (window.fileIcons) {
@@ -990,7 +998,7 @@ function showInlineInput(parentId, type, action, targetId = null, existingName =
                 
                 if (type === 'file') {
                     const lang = getFileLanguage(val);
-                    data.content = getDefaultContent(lang, val);
+                    data.content = getDefaultContent(val);
                     data.language = lang;
                     data.parentFolderId = parentId;
                     data.updatedAt = new Date().toISOString();
@@ -1032,85 +1040,7 @@ function showInlineInput(parentId, type, action, targetId = null, existingName =
 }
 
 function createNewFolder(parentId = null) { showInlineInput(parentId, 'folder', 'create'); }
-async function createNewFile(
-  filename, parentFolderId) {
-
-  if (!filename || !filename.trim()) {
-    showToast('Enter a filename', 'error');
-    return;
-  }
-
-  // Make sure filename has extension
-  if (!filename.includes('.')) {
-    showToast(
-      'Add file extension (.js, .html etc)',
-      'error');
-    return;
-  }
-
-  const language = 
-    getLanguageFromFilename(filename);
-  const defaultContent = 
-    getDefaultContent(filename);
-
-  try {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    // Save to Firebase
-    const fileData = {
-      name: filename,
-      content: defaultContent,
-      language: language,
-      parentFolderId: parentFolderId || null,
-      createdBy: user.uid,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-
-    // Write to Realtime Database
-    const fileRef = ref(rtdb,
-      `rooms/${currentRoomId}/files/` +
-      `${Date.now()}_${filename}`);
-    await set(fileRef, fileData);
-
-    // Open the new file in editor
-    openFileInEditor({
-      name: filename,
-      content: defaultContent,
-      language: language
-    });
-
-    // Show preview tab for HTML files
-    if (language === 'html') {
-      const previewBtn = 
-        document.getElementById(
-          'preview-tab-btn');
-      if (previewBtn) {
-        previewBtn.style.display = 'flex';
-      }
-      // Auto show preview for HTML
-      if (typeof runHTMLPreview !== 'undefined') runHTMLPreview(defaultContent);
-    } else {
-      // Hide preview tab for non-HTML
-      const previewBtn = 
-        document.getElementById(
-          'preview-tab-btn');
-      if (previewBtn) {
-        previewBtn.style.display = 'none';
-      }
-    }
-
-    showToast(
-      `✓ ${filename} created`, 'success');
-
-  } catch (err) {
-    console.error(
-      'Create file error:', err);
-    showToast(
-      'Failed to create file', 'error');
-  }
-}
+function createNewFile(parentId = null) { showInlineInput(parentId, 'file', 'create'); }
 
 if(btnNewFolder) btnNewFolder.onclick = () => createNewFolder(null);
 if(btnNewFile) btnNewFile.onclick = () => createNewFile(null);
@@ -1129,14 +1059,17 @@ function showContextMenu(e, id, type) {
     ctxMenu.style.left = e.pageX + 'px';
     ctxMenu.style.top = e.pageY + 'px';
     
-    document.getElementById('ctx-new-file').style.display = type === 'folder' ? 'block' : 'none';
-    document.getElementById('ctx-new-folder').style.display = type === 'folder' ? 'block' : 'none';
+    const btnNewFileCtx = document.getElementById('ctx-new-file');
+    if (btnNewFileCtx) btnNewFileCtx.style.display = type === 'folder' ? 'block' : 'none';
+    
+    const btnNewFolderCtx = document.getElementById('ctx-new-folder');
+    if (btnNewFolderCtx) btnNewFolderCtx.style.display = type === 'folder' ? 'block' : 'none';
 }
 
 if(ctxMenu) {
-    document.getElementById('ctx-new-file').onclick = () => createNewFile(contextTargetId);
-    document.getElementById('ctx-new-folder').onclick = () => createNewFolder(contextTargetId);
-    document.getElementById('ctx-rename').onclick = () => {
+    const cnf = document.getElementById('ctx-new-file'); if (cnf) cnf.onclick = () => showInlineInput(contextTargetId, 'file', 'create');
+    const cnfld = document.getElementById('ctx-new-folder'); if (cnfld) cnfld.onclick = () => createNewFolder(contextTargetId);
+    const crn = document.getElementById('ctx-rename'); if (crn) crn.onclick = () => {
         const existingName = document.querySelector(`[data-id="${contextTargetId}"] .name`)?.innerText || '';
         showInlineInput(null, contextTargetType, 'rename', contextTargetId, existingName);
     };
@@ -1170,9 +1103,24 @@ function openFile(id) {
         if(editorInstance.getValue() !== file.content) {
             editorInstance.setValue(file.content || '');
         }
+
+        // Update global language tracker
+        window.currentLanguage = mappedLang;
+        
+        // Update compiler badge
+        updateCompilerBadges(mappedLang);
+        
+        // Update panel lang badge
+        if (typeof updatePanelLangBadge 
+            === 'function') {
+          updatePanelLangBadge(mappedLang);
+        }
+        
+        // Focus the editor
+        editorInstance.focus();
         
         const el = document.getElementById('sb-language'); if(el) el.innerText = mappedLang;
-        document.getElementById('status-file').innerText = file.name;
+        const sf = document.getElementById('status-file'); if(sf) sf.innerText = file.name;
     }
     
     renderFileTree();
@@ -1271,7 +1219,7 @@ function renderPaletteResults(query) {
         if(file.name.toLowerCase().includes(q)) {
             const div = document.createElement('div');
             div.className = 'palette-item';
-            div.innerHTML = `<span class="icon">${getFileIcon(file.name)}</span> <span style="flex:1;">${file.name}</span> <span class="path">ID: ${id}</span>`;
+            div.innerHTML = `<span class="icon">${getFileIconHTML(file.name)}</span> <span style="flex:1;">${file.name}</span> <span class="path">ID: ${id}</span>`;
             div.onclick = () => {
                 openFile(id);
                 paletteModal.style.display = 'none';
@@ -1289,19 +1237,25 @@ window.openShareModal = (roomName, code, url) => {
     const modal = document.getElementById('share-modal');
     if (!modal) return;
     
-    document.getElementById('share-room-name').textContent = roomName;
-    document.getElementById('share-room-code').textContent = code;
-    document.getElementById('share-room-url').value = url;
+    const srn = document.getElementById('share-room-name'); if (srn) srn.textContent = roomName;
+    const src = document.getElementById('share-room-code'); if (src) src.textContent = code;
+    const sru = document.getElementById('share-room-url'); if (sru) sru.value = url;
     
-    document.getElementById('btn-share-copy-code').onclick = () => {
+    const bcc = document.getElementById('btn-share-copy-code');
+    if (bcc) {
+      bcc.onclick = () => {
         navigator.clipboard.writeText(code);
         showToast('Room code copied!', 'success');
-    };
+      };
+    }
     
-    document.getElementById('btn-share-copy-url').onclick = () => {
+    const bcu = document.getElementById('btn-share-copy-url');
+    if (bcu) {
+      bcu.onclick = () => {
         navigator.clipboard.writeText(url);
         showToast('URL copied to clipboard!', 'success');
-    };
+      };
+    }
     
     document.getElementById('share-wa').onclick = () => {
         const text = encodeURIComponent(`ðŸš€ Join me on CodeSync!\n\nRoom: ${roomName}\nCode: ${code}\n\nJoin here: ${url}\n\nCodeSync â€” Real-time collaborative code editor`);
@@ -1631,40 +1585,70 @@ const runWithPiston = async (code, language, stdin) => {
 
 // Run HTML in preview panel
 const runHTMLPreview = (code) => {
-  // Switch to preview tab
-  switchTab('preview');
+  // Switch to OUTPUT tab
+  switchBottomTab('output');
   
-  // Find or create preview iframe
-  let previewFrame = document.getElementById(
-    'html-preview-frame');
+  const outputEl = document.getElementById(
+    'output-lines');
+  if (!outputEl) return { 
+    stdout: '', stderr: '' 
+  };
+
+  // Clear existing output
+  outputEl.innerHTML = '';
+
+  // Header line
+  const header = document.createElement('div');
+  header.className = 'output-line type-info';
+  header.textContent = 
+    '▶ HTML — Rendered Output';
+  outputEl.appendChild(header);
+
+  const divider = document.createElement('div');
+  divider.className = 'output-line type-divider';
+  divider.textContent = '─'.repeat(50);
+  outputEl.appendChild(divider);
+
+  // Create wrapper div
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `
+    flex: 1;
+    padding: 8px;
+    height: 150px;
+    min-height: 120px;
+  `;
+
+  // Create CORS-safe iframe using srcdoc ONLY
+  // NEVER use src= or contentDocument
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = `
+    width: 100%;
+    height: 100%;
+    border: 1px solid #2d2f45;
+    border-radius: 6px;
+    background: white;
+  `;
   
-  if (!previewFrame) {
-    const previewPanel = 
-      document.getElementById('panel-preview')
-      || document.querySelector(
-        '.panel-preview');
-    if (!previewPanel) {
-      return {
-        stdout: 'Preview panel not found',
-        stderr: ''
-      };
+  // srcdoc is CORS-safe — no cross-origin issue
+  iframe.srcdoc = code;
+  
+  wrapper.appendChild(iframe);
+  outputEl.appendChild(wrapper);
+
+  // Make panel taller for HTML preview
+  const panel = document.getElementById(
+    'bottom-panel');
+  if (panel) {
+    const currentH = parseInt(
+      window.getComputedStyle(panel).height);
+    if (currentH < 300) {
+      panel.style.height = '320px';
     }
-    previewFrame = document.createElement(
-      'iframe');
-    previewFrame.id = 'html-preview-frame';
-    previewFrame.style.cssText = 
-      'width:100%;height:100%;border:none;' +
-      'background:white;';
-    previewPanel.appendChild(previewFrame);
   }
 
-  // Use srcdoc to avoid CORS
-  // This is the ONLY safe way to inject HTML
-  previewFrame.srcdoc = code;
-  
-  return {
-    stdout: '✓ HTML rendered in Preview tab',
-    stderr: ''
+  return { 
+    stdout: 'HTML rendered', 
+    stderr: '' 
   };
 };
 
@@ -1759,8 +1743,12 @@ const terminal = {
   historyIndex: -1,
   
   init() {
-    const input = document.getElementById('terminal-input');
-    if (!input) return;
+    const input = document.getElementById(
+      'terminal-input-field');
+    if (!input) {
+      console.warn('Terminal input not found: terminal-input-field');
+      return;
+    }
 
     input.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter') {
@@ -1798,7 +1786,11 @@ const terminal = {
   },
 
   async execute(cmd) {
-    const lang = document.getElementById('sb-language')?.innerText.toLowerCase() || 'javascript';
+    const lang = window.currentLanguage 
+      || document.getElementById(
+        'sb-language')?.innerText
+        ?.toLowerCase() 
+      || 'javascript';
     const stdin = document.getElementById('stdin-input')?.value || '';
 
     this.appendLine('info', `Running ${lang}...`);
@@ -1931,6 +1923,11 @@ document.addEventListener('keydown', (e) => {
 // Wire Run buttons
 document.addEventListener('DOMContentLoaded', () => {
   terminal.init();
+
+  // Also init terminal after monaco ready
+  window.addEventListener('monaco-ready', () => {
+    terminal.init();
+  });
   
   document.querySelectorAll('.run-btn, #run-btn, [id*="run"]').forEach(btn => {
     btn.addEventListener('click', runCode);
@@ -2406,9 +2403,8 @@ const runCode = async () => {
     if (language === 'javascript') {
       result = await runJSLocally(code, stdin);
     } else if (language === 'html' || language === 'css') {
-      document.getElementById('preview-iframe').srcdoc = `<!DOCTYPE html><html><body>${code}</body></html>`;
-      switchBottomTab('preview');
-      setRunState('idle', language);
+      runHTMLPreview(code);
+      setRunState('success', language);
       return;
     } else {
       result = await runWithPiston(code, language, stdin);
@@ -2435,6 +2431,15 @@ const runCode = async () => {
     appendToOutput('divider', hasError ? `── ✕ Failed · ${secs}s ───────` : `── ✓ Completed · ${secs}s ────`);
     setRunState(hasError ? 'error' : 'success', language);
 
+    // Show errors in Problems tab
+    if (result.stderr?.trim()) {
+      parseAndShowProblems(
+        result.stderr, language);
+      switchBottomTab('problems');
+    } else {
+      showProblemsEmpty();
+    }
+
   } catch (err) {
     clearOutputPanel();
     appendToOutput('error', `✕ Compiler Error: ${err.message}`);
@@ -2445,6 +2450,246 @@ const runCode = async () => {
 
   setTimeout(() => setRunState('idle', language), 2500);
 };
+
+function parseAndShowProblems(stderr, language) {
+  if (!stderr || !stderr.trim()) {
+    showProblemsEmpty();
+    return;
+  }
+
+  const problems = [];
+  const lines = stderr.split('\n');
+
+  if (language === 'javascript' 
+      || language === 'typescript') {
+    lines.forEach(line => {
+      const m1 = line.match(
+        /<anonymous>:(\d+):(\d+)/);
+      const m2 = line.match(
+        /line (\d+)/i);
+      if (line.includes('Error') 
+          || line.includes('error')) {
+        problems.push({
+          type: 'error',
+          message: line.trim(),
+          line: m1 ? parseInt(m1[1]) 
+            : m2 ? parseInt(m2[1]) : 0,
+          col: m1 ? parseInt(m1[2]) : 0,
+          file: 'main.js'
+        });
+      }
+    });
+  }
+
+  if (language === 'python') {
+    let lineNum = 0;
+    lines.forEach(line => {
+      const m = line.match(/[Ll]ine (\d+)/);
+      if (m) lineNum = parseInt(m[1]);
+      if (line.includes('Error:') 
+          || line.includes('Exception:')) {
+        problems.push({
+          type: 'error',
+          message: line.trim(),
+          line: lineNum,
+          col: 0,
+          file: 'main.py'
+        });
+      }
+    });
+  }
+
+  if (language === 'java') {
+    const re = /\.java:(\d+):\s*(error|warning):\s*(.+)/gi;
+    let m;
+    while ((m = re.exec(stderr)) !== null) {
+      problems.push({
+        type: m[2].lower(),
+        message: m[3].trim(),
+        line: parseInt(m[1]),
+        col: 0,
+        file: 'Main.java'
+      });
+    }
+  }
+
+  if (language === 'cpp' 
+      || language === 'c') {
+    const re = /main\.\w+:(\d+):(\d+):\s*(error|warning|note):\s*(.+)/gi;
+    let m;
+    while ((m = re.exec(stderr)) !== null) {
+      problems.push({
+        type: m[3] === 'error' 
+          ? 'error' : 'warning',
+        message: m[4].trim(),
+        line: parseInt(m[1]),
+        col: parseInt(m[2]),
+        file: language === 'cpp'
+          ? 'main.cpp' : 'main.c'
+      });
+    }
+  }
+
+  // Generic fallback
+  if (problems.length === 0) {
+    lines.filter(l => l.trim()).forEach(l => {
+      problems.push({
+        type: 'error',
+        message: l.trim(),
+        line: 0, col: 0,
+        file: 'main'
+      });
+    });
+  }
+
+  renderProblems(problems);
+}
+
+function renderProblems(problems) {
+  const list = document.getElementById(
+    'problems-list');
+  if (!list) return;
+
+  const errCount = problems.filter(
+    p => p.type === 'error').length;
+  const warnCount = problems.filter(
+    p => p.type === 'warning').length;
+
+  // Update badge
+  const badge = document.getElementById(
+    'problems-badge');
+  if (badge) {
+    const total = errCount + warnCount;
+    badge.textContent = total;
+    badge.style.display = 
+      total > 0 ? 'inline-block' : 'none';
+    badge.style.background = 
+      errCount > 0 ? '#f7768e' : '#e0af68';
+  }
+
+  if (problems.length === 0) {
+    showProblemsEmpty();
+    return;
+  }
+
+  list.innerHTML = `
+    <div style="padding:6px 16px;
+      font-size:11px;color:#565f89;
+      border-bottom:1px solid #2d2f45;
+      display:flex;gap:12px;">
+      <span style="color:#f7768e">
+        ✕ ${errCount} error${errCount!==1?'s':''}
+      </span>
+      <span style="color:#e0af68">
+        ⚠ ${warnCount} warning${warnCount!==1?'s':''}
+      </span>
+    </div>
+  `;
+
+  problems.forEach(prob => {
+    const item = document.createElement('div');
+    const isErr = prob.type === 'error';
+    
+    item.style.cssText = `
+      display:flex;align-items:flex-start;
+      gap:8px;padding:6px 16px;
+      cursor:pointer;
+      transition:background 0.1s;
+      border-left:3px solid ${
+        isErr ? '#f7768e' : '#e0af68'};
+      font-family:'JetBrains Mono',monospace;
+      font-size:12px;line-height:1.5;
+    `;
+
+    item.innerHTML = `
+      <span style="color:${
+        isErr ? '#f7768e' : '#e0af68'};
+        flex-shrink:0;margin-top:1px;">
+        ${isErr ? '✕' : '⚠'}
+      </span>
+      <div style="flex:1;min-width:0;">
+        <div style="color:#c0caf5;
+          white-space:pre-wrap;
+          word-break:break-word;">
+          ${prob.message
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')}
+        </div>
+        <div style="color:#565f89;
+          font-size:11px;margin-top:2px;
+          display:flex;gap:12px;">
+          <span>📄 ${prob.file}</span>
+          ${prob.line > 0 
+            ? `<span>Ln ${prob.line}${
+              prob.col > 0 
+                ? ', Col '+prob.col : ''
+              }</span>` 
+            : ''}
+        </div>
+      </div>
+    `;
+
+    // Click jumps to line in Monaco
+    item.addEventListener('click', () => {
+      if (prob.line > 0 
+          && window.monacoEditor) {
+        window.monacoEditor
+          .revealLineInCenter(prob.line);
+        window.monacoEditor.setPosition({
+          lineNumber: prob.line,
+          column: prob.col || 1
+        });
+        window.monacoEditor.focus();
+
+        // Highlight error line 2s
+        const decs = window.monacoEditor
+          .deltaDecorations([], [{
+          range: new monaco.Range(
+            prob.line,1,prob.line,1),
+          options: {
+            isWholeLine: true,
+            className: 'error-line-hi'
+          }
+        }]);
+        setTimeout(() => {
+          window.monacoEditor
+            .deltaDecorations(decs, []);
+        }, 2000);
+      }
+      // Switch to problems tab
+      switchBottomTab('problems');
+    });
+
+    item.addEventListener('mouseenter',
+      () => item.style.background = 
+        'rgba(255,255,255,0.04)');
+    item.addEventListener('mouseleave',
+      () => item.style.background = '');
+
+    list.appendChild(item);
+  });
+}
+
+function showProblemsEmpty() {
+  const list = document.getElementById(
+    'problems-list');
+  if (!list) return;
+  list.innerHTML = `
+    <div style="display:flex;
+      align-items:center;
+      justify-content:center;
+      height:80px;color:#565f89;
+      font-size:12px;gap:6px;
+      font-family:'JetBrains Mono',monospace;">
+      <span style="color:#9ece6a">✓</span>
+      No problems detected
+    </div>
+  `;
+  const badge = document.getElementById(
+    'problems-badge');
+  if (badge) badge.style.display = 'none';
+}
 
 if (runBtn) {
   runBtn.addEventListener('click', runCode);
@@ -2471,10 +2716,7 @@ const updateCompilerBadges = (lang) => {
     terminalPrefix.textContent = lang.substring(0, 3);
     terminalPrefix.style.color = getLangColor(lang);
   }
-  const previewTabBtn = document.getElementById('preview-tab-btn');
-  if (previewTabBtn) {
-    previewTabBtn.style.display = (lang === 'html' || lang === 'css') ? 'flex' : 'none';
-  }
+
 };
 
 window.addEventListener('monaco-ready', () => {
@@ -2489,251 +2731,7 @@ window.addEventListener('monaco-ready', () => {
   if (elToObserve) {
     new MutationObserver(checkLang).observe(elToObserve, { childList: true, characterData: true, subtree: true });
   }
-});if (terminalInput) {
-  // Remove old listeners first
-  const newInput = terminalInput.cloneNode(
-    true);
-  terminalInput.parentNode.replaceChild(
-    newInput, terminalInput);
-
-  // Command history
-  const cmdHistory = [];
-  let historyIdx = -1;
-
-  newInput.addEventListener('keydown', 
-    async (e) => {
-
-    // ENTER KEY — Run the code
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const code = newInput.value.trim();
-      if (!code) return;
-
-      // Save to history
-      cmdHistory.unshift(code);
-      if (cmdHistory.length > 50) {
-        cmdHistory.pop();
-      }
-      historyIdx = -1;
-
-      // Clear input
-      newInput.value = '';
-
-      // Show command in terminal
-      terminalAppendLine('input', 
-        '❯ ' + code);
-
-      // Get language and stdin
-      const lang = window.currentLanguage 
-        || getCurrentLanguage()
-        || 'javascript';
-      const stdin = document.getElementById(
-        'stdin-input')?.value || '';
-
-      // Show running message
-      terminalAppendLine('info', 
-        `Running ${lang}...`);
-
-      try {
-        let result;
-
-        // JavaScript runs locally
-        if (lang === 'javascript' 
-            || lang === 'js') {
-          result = await runJSLocally(
-            code, stdin);
-        }
-        // All others use Piston API
-        else {
-          result = await runWithPiston(
-            code, lang, stdin);
-        }
-
-        // Show output
-        if (result.stdout?.trim()) {
-          result.stdout.trim()
-            .split('\n')
-            .forEach(line => {
-              terminalAppendLine(
-                'output', line);
-            });
-        }
-
-        // Show errors
-        if (result.stderr?.trim()) {
-          result.stderr.trim()
-            .split('\n')
-            .forEach(line => {
-              terminalAppendLine(
-                'error', line);
-            });
-        }
-
-        // No output
-        if (!result.stdout?.trim() 
-            && !result.stderr?.trim()) {
-          terminalAppendLine('muted',
-            '(no output)');
-        }
-
-        // Show execution time
-        if (result.time) {
-          terminalAppendLine('muted',
-            `Executed in ${result.time}s`);
-        }
-
-      } catch (err) {
-        terminalAppendLine('error',
-          '✕ ' + err.message);
-      }
-
-      // Add empty line for spacing
-      terminalAppendLine('muted', '');
-    }
-
-    // ARROW UP — previous command
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (historyIdx < 
-          cmdHistory.length - 1) {
-        historyIdx++;
-        newInput.value = 
-          cmdHistory[historyIdx];
-        // Move cursor to end
-        setTimeout(() => {
-          newInput.selectionStart = 
-            newInput.value.length;
-          newInput.selectionEnd = 
-            newInput.value.length;
-        }, 0);
-      }
-    }
-
-    // ARROW DOWN — next command
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (historyIdx > 0) {
-        historyIdx--;
-        newInput.value = 
-          cmdHistory[historyIdx];
-      } else {
-        historyIdx = -1;
-        newInput.value = '';
-      }
-    }
-
-    // CTRL+L — clear terminal
-    if (e.key === 'l' && e.ctrlKey) {
-      e.preventDefault();
-      clearTerminal();
-    }
-
-    // CTRL+C — cancel
-    if (e.key === 'c' && e.ctrlKey) {
-      e.preventDefault();
-      newInput.value = '';
-      terminalAppendLine('muted', '^C');
-    }
-  });
-
-  // Focus input when terminal tab clicked
-  const termTab = document.querySelector(
-    '[data-tab="terminal"]');
-  if (termTab) {
-    termTab.addEventListener('click', () => {
-      setTimeout(() => newInput.focus(), 50);
-    });
-  }
-
-  // Click anywhere in terminal = focus input
-  const termPanel = document.getElementById(
-    'tab-terminal')
-    || document.getElementById(
-      'panel-terminal');
-  if (termPanel) {
-    termPanel.addEventListener('click', 
-      (e) => {
-      if (e.target !== newInput) {
-        newInput.focus();
-      }
-    });
-  }
-}
-
-// TERMINAL APPEND LINE FUNCTION
-function terminalAppendLine(type, text) {
-  const termOut = 
-    document.getElementById(
-      'terminal-lines')
-    || document.getElementById(
-      'terminal-output')
-    || document.querySelector(
-      '.terminal-output')
-    || document.querySelector(
-      '#tab-terminal .output-lines');
-
-  if (!termOut) {
-    console.warn(
-      'Terminal output not found');
-    return;
-  }
-
-  const colors = {
-    input:   '#bb9af7',
-    output:  '#c0caf5',
-    error:   '#f7768e',
-    warn:    '#e0af68',
-    success: '#9ece6a',
-    info:    '#7aa2f7',
-    muted:   '#565f89',
-    return:  '#2ac3de'
-  };
-
-  const line = document.createElement('div');
-  line.style.cssText = `
-    color: ${colors[type] || '#c0caf5'};
-    padding: 1px 16px;
-    font-size: 13px;
-    line-height: 1.65;
-    font-family: 'JetBrains Mono',monospace;
-    white-space: pre-wrap;
-    word-break: break-word;
-    animation: lineIn 0.1s ease;
-  `;
-
-  if (type === 'error') {
-    line.style.background = 
-      'rgba(247,118,142,0.05)';
-    line.style.borderLeft = 
-      '2px solid #f7768e';
-    line.style.paddingLeft = '14px';
-  }
-
-  line.textContent = text;
-  termOut.appendChild(line);
-  termOut.scrollTop = termOut.scrollHeight;
-}
-
-// CLEAR TERMINAL FUNCTION
-function clearTerminal() {
-  const termOut = 
-    document.getElementById('terminal-lines')
-    || document.querySelector(
-      '.terminal-output');
-  if (termOut) {
-    termOut.innerHTML = `
-      <div style="color:#565f89;
-        padding:8px 16px;
-        font-size:12px;
-        font-family:'JetBrains Mono'">
-        Terminal cleared — 
-        type code + Enter to run
-      </div>
-    `;
-  }
-}
+});
 
 // GET CURRENT LANGUAGE HELPER
 function getLanguageFromFilename(filename) {
@@ -2810,7 +2808,8 @@ function getLanguageFromFilename(filename) {
 }
 
 function openFileInEditor(file) {
-  if (!window.monacoEditor) return;
+  const editor = window.monacoEditor || editorInstance;
+  if (!editor) return;
   
   const language = 
     getLanguageFromFilename(file.name)
@@ -2818,16 +2817,13 @@ function openFileInEditor(file) {
     || 'plaintext';
 
   // Set correct language in Monaco
-  const model = window.monacoEditor
-    .getModel();
+  const model = editor.getModel();
   if (model) {
-    monaco.editor.setModelLanguage(
-      model, language);
+    monaco.editor.setModelLanguage(model, language);
   }
 
   // Set file content
-  window.monacoEditor.setValue(
-    file.content || '');
+  editor.setValue(file.content || '');
 
   // Update current language globally
   window.currentLanguage = language;
@@ -2848,18 +2844,10 @@ function openFileInEditor(file) {
   // Update panel language badge
   updatePanelLangBadge(language);
 
-  // Show/hide preview tab
-  const previewBtn = document.getElementById(
-    'preview-tab-btn');
-  if (previewBtn) {
-    previewBtn.style.display = 
-      (language === 'html' || 
-       language === 'css') 
-      ? 'flex' : 'none';
-  }
+
 
   // Focus editor
-  window.monacoEditor.focus();
+  editor.focus();
 }
 
 function updatePanelLangBadge(language) {
@@ -2948,4 +2936,30 @@ function updateLanguageSelector(language) {
       }</span>
     `;
   }
+}
+
+// GET CURRENT LANGUAGE HELPER
+function getCurrentLanguage() {
+  return window.currentLanguage
+    || window.editorLanguage
+    || document.getElementById('sb-language')?.innerText?.toLowerCase()
+    || document.getElementById('language-select')?.value
+    || document.querySelector('[data-language]')?.dataset.language
+    || 'javascript';
+}
+
+function getFileIcon(filename) {
+  const ext = filename.toLowerCase()
+    .split('.').pop();
+  const icons = {
+    js: '🟡', ts: '🔵', py: '🐍',
+    java: '☕', cpp: '⚙️', c: '🔧',
+    cs: '#️⃣', go: '🔵', rs: '🦀',
+    php: '🐘', rb: '💎', html: '🌐',
+    css: '🎨', scss: '🎨', json: '📋',
+    md: '📝', sql: '🗄️', sh: '⬛',
+    yml: '⚙️', yaml: '⚙️', xml: '📄',
+    swift: '🍊', kt: '🟣', txt: '📄'
+  };
+  return icons[ext] || '📄';
 }

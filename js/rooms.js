@@ -20,6 +20,11 @@ const statusConnection = document.getElementById('status-connection');
 const statusError = document.getElementById('status-error');
 const activeUsersBar = document.getElementById('active-users-bar');
 
+function setConnectionStatus(isConnected) {
+    if (statusConnection) statusConnection.style.display = isConnected ? 'flex' : 'none';
+    if (statusError) statusError.style.display = isConnected ? 'none' : 'flex';
+}
+
 // --- INIT ROOM ---
 async function initRoom() {
     if (!currentRoomId || !currentUser) return;
@@ -36,6 +41,16 @@ async function initRoom() {
         isOwner = roomData.ownerId === currentUser.uid;
         
         document.getElementById('room-name').innerText = roomData.name;
+        
+        // Update workspace panel title
+        const wsTitle = document.querySelector(
+          '.sidebar-title span');
+        if (wsTitle && wsTitle.textContent 
+            === 'Workspace') {
+          wsTitle.textContent = 
+            (roomData.name || 'Workspace')
+            .toUpperCase();
+        }
         
         // Handle Permissions & Locks
         if (roomData.isLocked && !roomData.collaborators.includes(currentUser.uid)) {
@@ -54,8 +69,7 @@ async function initRoom() {
         
     } catch (e) {
         console.error("Failed to load room", e);
-        statusError.style.display = 'flex';
-        statusConnection.style.display = 'none';
+        setConnectionStatus(false);
         hideLoading();
     }
 }
@@ -80,8 +94,7 @@ function setupPresence() {
 
     onValue(connectedRef, (snap) => {
         if (snap.val() === true) {
-            statusConnection.style.display = 'flex';
-            statusError.style.display = 'none';
+            setConnectionStatus(true);
             
             // Set disconnect hooks
             onDisconnect(activeUsersRef).remove();
@@ -90,13 +103,13 @@ function setupPresence() {
             // Set active
             set(activeUsersRef, { name, photoURL, color: getRandomColor() });
         } else {
-            statusConnection.style.display = 'none';
-            statusError.style.display = 'flex';
+            setConnectionStatus(false);
         }
     });
     
     // Listen for all users to update header bar
     onValue(ref(rtdb, `rooms/${currentRoomId}/activeUsers`), (snap) => {
+        if (!activeUsersBar) return;
         activeUsersBar.innerHTML = '';
         if (!snap.exists()) return;
         

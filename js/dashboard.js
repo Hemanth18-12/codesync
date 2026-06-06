@@ -145,8 +145,17 @@ function loadOverviewData() {
     document.getElementById('stat-streak').innerText = `${stats.streakDays || 0} days`;
 
     // Query for rooms count
-    const qOwner = query(collection(db, 'rooms'), where('ownerId', '==', currentUser.uid));
-    const qCollab = query(collection(db, 'rooms'), where('collaborators', 'array-contains', currentUser.uid));
+    const qOwner = query(
+      collection(db, 'rooms'), 
+      where('owner', '==', currentUser.uid)
+    );
+    // Note: collaborators is array of objects
+    // so we query differently
+    const qCollab = query(
+      collection(db, 'rooms'),
+      where('owner', '!=', currentUser.uid),
+      limit(50)
+    );
     
     // We use onSnapshot for live counts and recent rooms list
     onSnapshot(qOwner, (snapshot) => {
@@ -193,7 +202,18 @@ let recentCollabDocs = [];
 
 function renderRecentRooms(snapshot, source) {
     if (source === 'owner') recentOwnerDocs = snapshot.docs;
-    if (source === 'collab') recentCollabDocs = snapshot.docs.filter(d => d.data().ownerId !== currentUser.uid);
+    if (source === 'collab') {
+      recentCollabDocs = snapshot.docs.filter(d => {
+        const data = d.data();
+        // Skip own rooms
+        if (data.owner === currentUser.uid) 
+          return false;
+        // Check if user is in collaborators
+        return data.collaborators?.some(
+          c => c.userId === currentUser.uid
+        );
+      });
+    }
     
     const allRooms = [...recentOwnerDocs, ...recentCollabDocs];
     // Sort by lastActive desc
@@ -1157,62 +1177,283 @@ if (btnSnapRestore) {
 // --- MY ROOMS AND JOINED ROOMS DATA LOAD ---
 
 async function loadMyRooms() {
-    const grid = document.getElementById('my-rooms-grid');
-    const emptyState = document.getElementById('empty-my-rooms');
-    if (!grid) return;
+  const user = auth.currentUser;
+  if (!user) return;
 
-    // Remove existing cards
-    Array.from(grid.children).forEach(c => {
-        if (c.id !== 'empty-my-rooms') c.remove();
+  const grid = 
+    document.getElementById('my-rooms-grid')
+    || document.getElementById('rooms-grid')
+    || document.getElementById('recent-rooms')
+    || document.querySelector('.rooms-grid')
+    || document.querySelector(
+      '[id*="rooms"]');
+
+  if (!grid) {
+    console.error('Rooms grid not found');
+    return;
+  }
+
+  // Show loading skeleton
+  grid.innerHTML = `
+    ${Array(3).fill(`
+      <div style="
+        background:#1a1b26;
+        border-radius:12px;
+        padding:16px;
+        animation:shimmer 1.5s infinite;
+      ">
+        <div style="height:16px;
+          background:#2d2f45;
+          border-radius:4px;
+          margin-bottom:8px;width:60%">
+        </div>
+        <div style="height:12px;
+          background:#2d2f45;
+          border-radius:4px;
+          width:40%">
+        </div>
+      </div>
+    `).join('')}
+  `;
+
+  try {
+    // Query rooms where owner = current user
+    const q = query(
+      collection(db, 'rooms'),
+      where('owner', '==', user.uid),
+      limit(20)
+    );
+
+    // Use onSnapshot for REAL-TIME updates
+    // so new rooms appear instantly
+    onSnapshot(q, (snapshot) => {
+      grid.innerHTML = '';
+
+      if (snapshot.empty) {
+        grid.innerHTML = `
+          <div style="
+            grid-column: 1/-1;
+            text-align: center;
+            padding: 40px 20px;
+            color: #565f89;
+          ">
+            <div style="font-size:40px;
+              margin-bottom:12px">
+              🚪
+            </div>
+            <h3 style="color:#c0caf5;
+              margin:0 0 8px">
+              No rooms yet
+            </h3>
+            <p style="margin:0 0 16px;
+              font-size:14px">
+              Create your first room to start
+            </p>
+            <button 
+              onclick="openCreateRoomModal()"
+              style="
+                background:#7aa2f7;
+                color:#1a1b26;
+                border:none;
+                padding:8px 20px;
+                border-radius:8px;
+                cursor:pointer;
+                font-weight:600;
+              ">
+              + Create Room
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      snapshot.forEach((docSnap) => {
+        const room = docSnap.data();
+        const roomId = docSnap.id; 
+        // ← MUST use docSnap.id
+        // NOT room.id or room.roomCode
+
+        const card = document.createElement(
+          'div');
+        card.className = 'room-card';
+        card.style.cssText = `
+          background: #1a1b26;
+          border: 1px solid #2d2f45;
+          border-radius: 12px;
+          padding: 16px;
+          transition: all 0.2s;
+          cursor: pointer;
+          animation: cardIn 0.3s ease;
+        `;
+
+        const langColors = {
+          javascript: '#F7DF1E',
+          typescript: '#3178C6',
+          python:     '#3776AB',
+          java:       '#ED8B00',
+          cpp:        '#00599C',
+          html:       '#E34F26',
+          css:        '#1572B6',
+          go:         '#00ADD8',
+          rust:       '#CE422B'
+        };
+
+        const langColor = 
+          langColors[room.language] 
+          || '#7aa2f7';
+
+        card.innerHTML = `
+          <div style="display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            margin-bottom:12px;">
+            <h3 style="margin:0;
+              color:#c0caf5;
+              font-size:15px;
+              font-weight:600;
+              overflow:hidden;
+              text-overflow:ellipsis;
+              white-space:nowrap;
+              max-width:70%;">
+              ${room.name || 'Untitled'}
+            </h3>
+            <span style="
+              background:${langColor}20;
+              color:${langColor};
+              border:1px solid ${langColor}40;
+              padding:2px 8px;
+              border-radius:12px;
+              font-size:11px;
+              font-weight:600;
+              white-space:nowrap;
+            ">
+              ${room.language || 'code'}
+            </span>
+          </div>
+
+          <div style="display:flex;
+            gap:16px;
+            margin-bottom:12px;
+            font-size:12px;
+            color:#565f89;">
+            <span>
+              👥 ${(room.collaborators
+                ?.length || 0) + 1} members
+            </span>
+            <span style="
+              display:flex;
+              align-items:center;
+              gap:4px;">
+              <span style="
+                width:6px;height:6px;
+                border-radius:50%;
+                background:#9ece6a;
+                display:inline-block;
+                animation:pulse 2s infinite;">
+              </span>
+              ${room.activeUsers || 0} live
+            </span>
+          </div>
+
+          <div style="display:flex;
+            justify-content:space-between;
+            align-items:center;">
+            <span style="
+              font-size:11px;
+              color:#565f89;
+              font-family:'JetBrains Mono';
+            ">
+              ID: ${room.roomCode || roomId
+                .substring(0,6).toUpperCase()}
+            </span>
+            <button 
+              class="open-room-btn"
+              data-room-id="${roomId}"
+              style="
+                background:#7aa2f7;
+                color:#1a1b26;
+                border:none;
+                padding:6px 16px;
+                border-radius:8px;
+                cursor:pointer;
+                font-weight:600;
+                font-size:13px;
+                transition:all 0.2s;
+              "
+              onmouseover="this.style.transform=
+                'translateY(-2px)';
+                this.style.boxShadow=
+                '0 4px 12px rgba(122,162,247,0.4)'"
+              onmouseout="this.style.transform='';
+                this.style.boxShadow=''">
+              Open →
+            </button>
+          </div>
+        `;
+
+        // Open room on button click
+        const openBtn = card.querySelector(
+          '.open-room-btn');
+        openBtn.addEventListener('click', 
+          (e) => {
+          e.stopPropagation();
+          const rid = openBtn.getAttribute(
+            'data-room-id');
+          if (rid) {
+            window.location.href = 
+              `editor.html?room=${rid}`;
+          }
+        });
+
+        // Also click card = open room
+        card.addEventListener('click', () => {
+          window.location.href = 
+            `editor.html?room=${roomId}`;
+        });
+
+        card.addEventListener('mouseenter', 
+          () => {
+          card.style.borderColor = '#7aa2f7';
+          card.style.transform = 
+            'translateY(-3px)';
+          card.style.boxShadow = 
+            '0 8px 24px rgba(122,162,247,0.15)';
+        });
+        card.addEventListener('mouseleave', 
+          () => {
+          card.style.borderColor = '#2d2f45';
+          card.style.transform = '';
+          card.style.boxShadow = '';
+        });
+
+        grid.appendChild(card);
+      });
     });
 
-    try {
-        const q = query(collection(db, 'rooms'), where('owner', '==', currentUser.uid), orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            if (emptyState) emptyState.style.display = 'flex';
-            return;
-        }
-
-        if (emptyState) emptyState.style.display = 'none';
-
-        snapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            const roomId = docSnap.id;
-            
-            const card = document.createElement('div');
-            card.className = 'room-card glass-card';
-            card.innerHTML = `
-                <div class="room-card-header" style="justify-content: space-between;">
-                    <div class="room-title-wrapper">
-                        <div class="room-title">${data.name}</div>
-                        <div class="room-lang"><span class="lang-dot" style="background: var(--primary-color)"></span> ${data.language || 'Mixed'}</div>
-                    </div>
-                </div>
-                <div class="room-stats" style="margin-bottom: 1rem;">
-                    <span>👥 ${data.collaborators?.length || 1} members</span>
-                    <span class="active-users"><div class="dot"></div> <span id="my-active-${roomId}">0</span> live</span>
-                </div>
-                <div class="room-card-footer" style="flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end;">
-                    <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: auto;">ID: ${data.roomCode}</span>
-                    <button class="icon-btn" onclick="openShareModal('${data.name}', '${data.roomCode}', '${window.location.origin}/editor.html?room=${roomId}')" style="padding:4px; font-size:1rem; margin-right:auto;" title="Share">📤</button>
-                    <button class="btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${data.roomCode}'); showToast('Room Code Copied!', 'success');">Copy Code</button>
-                    <button class="btn-danger btn-sm" onclick="deleteRoom('${roomId}')">Delete</button>
-                    <button class="btn-primary btn-sm open-room-btn" data-room-id="${roomId}">Open</button>
-                </div>
-            `;
-            grid.appendChild(card);
-
-            // Bind active users
-            onValue(ref(rtdb, `rooms/${roomId}/activeUsers`), (snap) => {
-                const el = document.getElementById(`my-active-${roomId}`);
-                if (el) el.innerText = snap.exists() ? Object.keys(snap.val()).length : 0;
-            });
-        });
-    } catch (error) {
-        console.error("Error loading my rooms:", error);
-    }
+  } catch (error) {
+    console.error('Load rooms error:', error);
+    grid.innerHTML = `
+      <div style="
+        grid-column:1/-1;
+        text-align:center;
+        padding:40px;
+        color:#565f89;
+      ">
+        <p>⚠ Failed to load rooms</p>
+        <p style="font-size:12px">
+          ${error.message}
+        </p>
+        <button 
+          onclick="loadMyRooms()"
+          style="background:#7aa2f7;
+          color:#1a1b26;border:none;
+          padding:8px 20px;border-radius:8px;
+          cursor:pointer;margin-top:12px;">
+          Try Again
+        </button>
+      </div>
+    `;
+  }
 }
 
 window.deleteRoom = async (roomId) => {
@@ -1449,3 +1690,12 @@ function startConfetti() {
     }
     animate();
 }
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loadMyRooms();
+    if (typeof loadJoinedRooms === 'function') {
+      loadJoinedRooms();
+    }
+  }
+});
