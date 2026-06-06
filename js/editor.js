@@ -372,35 +372,451 @@ function getFileLanguage(filename) {
     return langMapByExt[ext] || 'plaintext';
 }
 
-function getFileIcon(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
-    if (['js','jsx','mjs'].includes(ext)) return 'ðŸŸ¡';
-    if (['ts','tsx'].includes(ext)) return 'ðŸ”µ';
-    if (['py','pyw'].includes(ext)) return 'ðŸ';
-    if (['java'].includes(ext)) return 'â˜•';
-    if (['cpp','cxx','cc','c','h','hpp'].includes(ext)) return 'ðŸ”·';
-    if (['html','htm'].includes(ext)) return 'ðŸŸ ';
-    if (['css','scss','sass'].includes(ext)) return 'ðŸ”µ';
-    if (['json','jsonc'].includes(ext)) return 'ðŸŸ¡';
-    if (['md','mdx'].includes(ext)) return 'ðŸ“';
-    if (['txt'].includes(ext)) return 'ðŸ“„';
-    if (['go'].includes(ext)) return 'ðŸ”µ';
-    if (['rs'].includes(ext)) return 'ðŸ¦€';
-    if (['php'].includes(ext)) return 'ðŸ˜';
-    if (['rb'].includes(ext)) return 'ðŸ’Ž';
-    if (['swift'].includes(ext)) return 'ðŸŠ';
-    if (['kt'].includes(ext)) return 'ðŸŸ£';
-    if (['sh','bash','zsh'].includes(ext)) return 'â¬›';
-    if (['sql'].includes(ext)) return 'ðŸ—„ï¸';
-    return 'ðŸ“„';
+const langColors = {
+  javascript: '#F7DF1E',
+  typescript: '#3178C6',
+  python:     '#3776AB',
+  java:       '#ED8B00',
+  cpp:        '#00599C',
+  c:          '#A8B9CC',
+  csharp:     '#239120',
+  go:         '#00ADD8',
+  rust:       '#CE422B',
+  php:        '#777BB4',
+  ruby:       '#CC342D',
+  html:       '#E34F26',
+  css:        '#1572B6',
+  scss:       '#CC6699',
+  swift:      '#FA7343',
+  kotlin:     '#7F52FF',
+  bash:       '#4EAA25',
+  shell:      '#4EAA25',
+  sql:        '#336791',
+  markdown:   '#083FA1',
+  json:       '#CBCB41',
+  yaml:       '#CC1018',
+  xml:        '#F16529',
+  dockerfile: '#0DB7ED',
+  plaintext:  '#C5C5C5',
+  r:          '#198CE7'
+};
+
+const langToExt = {
+  javascript: 'js',
+  typescript: 'ts',
+  python:     'py',
+  java:       'java',
+  cpp:        'cpp',
+  c:          'c',
+  csharp:     'cs',
+  go:         'go',
+  rust:       'rs',
+  php:        'php',
+  ruby:       'rb',
+  html:       'html',
+  css:        'css',
+  scss:       'scss',
+  swift:      'swift',
+  kotlin:     'kt',
+  bash:       'sh',
+  shell:      'sh',
+  sql:        'sql',
+  markdown:   'md',
+  json:       'json',
+  yaml:       'yml',
+  xml:        'xml',
+  dockerfile: 'dockerfile',
+  r:          'r',
+  plaintext:  'txt'
+};
+
+function getLanguageDisplayName(lang) {
+  if (!lang) return 'Plaintext';
+  return lang.charAt(0).toUpperCase() + lang.slice(1);
 }
 
-function getDefaultContent(lang, name) {
-    if (lang === 'javascript') return `// CodeSync JavaScript Environment\n// File: ${name}\n\nconsole.log("Hello, World!");\n`;
-    if (lang === 'html') return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>${name}</title>\n</head>\n<body>\n  <h1>Hello from CodeSync!</h1>\n</body>\n</html>`;
-    if (lang === 'css') return `/* ${name} */\n\nbody {\n  margin: 0;\n  padding: 0;\n  background-color: #f0f0f0;\n}\n`;
-    if (lang === 'python') return `# CodeSync Python Environment\n# File: ${name}\n\nprint("Hello, World!")\n`;
-    return `// CodeSync - ${name}\n// Type your code here...\n`;
+function getFileIconHTML(filename) {
+  if (window.fileIcons) {
+    const iconClass = window.fileIcons
+      .getClassWithColor(filename);
+    if (iconClass) {
+      return `<i class="${iconClass}" 
+        style="font-size:14px;
+        width:16px;height:16px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        flex-shrink:0;"></i>`;
+    }
+  }
+
+  const ext = filename.toLowerCase()
+    .split('.').pop();
+
+  const svgIcons = {
+    js: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#F7DF1E"/>
+      <text x="3" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#000">JS</text>
+    </svg>`,
+
+    ts: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#3178C6"/>
+      <text x="3" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">TS</text>
+    </svg>`,
+
+    py: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#3776AB"/>
+      <text x="3" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">PY</text>
+    </svg>`,
+
+    java: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#ED8B00"/>
+      <text x="1" y="13" 
+        font-size="8" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">JAVA</text>
+    </svg>`,
+
+    cpp: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#00599C"/>
+      <text x="1" y="13" 
+        font-size="8" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">C++</text>
+    </svg>`,
+
+    c: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#A8B9CC"/>
+      <text x="4" y="13" 
+        font-size="10" font-weight="bold"
+        font-family="monospace" 
+        fill="#000">C</text>
+    </svg>`,
+
+    cs: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#239120"/>
+      <text x="2" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">C#</text>
+    </svg>`,
+
+    go: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#00ADD8"/>
+      <text x="2" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">GO</text>
+    </svg>`,
+
+    rs: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#CE422B"/>
+      <text x="2" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">RS</text>
+    </svg>`,
+
+    php: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#777BB4"/>
+      <text x="1" y="13" 
+        font-size="8" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">PHP</text>
+    </svg>`,
+
+    rb: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#CC342D"/>
+      <text x="2" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">RB</text>
+    </svg>`,
+
+    html: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#E34F26"/>
+      <text x="1" y="12" 
+        font-size="7" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">HTML</text>
+    </svg>`,
+
+    css: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#1572B6"/>
+      <text x="2" y="13" 
+        font-size="8" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">CSS</text>
+    </svg>`,
+
+    scss: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#CC6699"/>
+      <text x="1" y="12" 
+        font-size="7" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">SCSS</text>
+    </svg>`,
+
+    json: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#CBCB41"/>
+      <text x="1" y="13" 
+        font-size="8" font-weight="bold"
+        font-family="monospace" 
+        fill="#000">JSON</text>
+    </svg>`,
+
+    md: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#083FA1"/>
+      <text x="2" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">MD</text>
+    </svg>`,
+
+    sql: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#336791"/>
+      <text x="1" y="13" 
+        font-size="8" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">SQL</text>
+    </svg>`,
+
+    sh: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#4EAA25"/>
+      <text x="3" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">SH</text>
+    </svg>`,
+
+    yml: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#CC1018"/>
+      <text x="1" y="12" 
+        font-size="7" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">YAML</text>
+    </svg>`,
+
+    xml: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#F16529"/>
+      <text x="2" y="13" 
+        font-size="8" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">XML</text>
+    </svg>`,
+
+    swift: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#FA7343"/>
+      <text x="1" y="12" 
+        font-size="7" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">SWIFT</text>
+    </svg>`,
+
+    kt: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#7F52FF"/>
+      <text x="3" y="13" 
+        font-size="9" font-weight="bold"
+        font-family="monospace" 
+        fill="#fff">KT</text>
+    </svg>`,
+
+    txt: `<svg width="16" height="16" 
+      viewBox="0 0 16 16">
+      <rect width="16" height="16" 
+        rx="2" fill="#C5C5C5"/>
+      <text x="2" y="13" 
+        font-size="8" font-weight="bold"
+        font-family="monospace" 
+        fill="#333">TXT</text>
+    </svg>`
+  };
+
+  return svgIcons[ext] 
+    || `<svg width="16" height="16" 
+        viewBox="0 0 16 16">
+        <rect width="16" height="16" 
+          rx="2" fill="#C5C5C5"/>
+        <text x="2" y="13" 
+          font-size="8" font-weight="bold"
+          font-family="monospace" 
+          fill="#333">
+          ${ext.toUpperCase()
+            .substring(0,3)}
+        </text>
+      </svg>`;
+}
+
+function getDefaultContent(filename) {
+  const ext = filename
+    .toLowerCase()
+    .split('.')
+    .pop();
+
+  const defaults = {
+    'html': `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" 
+      content="width=device-width, 
+      initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Hello World</h1>
+</body>
+</html>`,
+
+    'css': `/* Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: sans-serif;
+}`,
+
+    'js': `// JavaScript
+console.log('Hello, World!');`,
+
+    'ts': `// TypeScript
+const message: string = 'Hello, World!';
+console.log(message);`,
+
+    'py': `# Python
+print("Hello, World!")`,
+
+    'java': `public class Main {
+    public static void main(
+        String[] args) {
+        System.out.println(
+            "Hello, World!");
+    }
+}`,
+
+    'cpp': `#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello, World!" << endl;
+    return 0;
+}`,
+
+    'c': `#include <stdio.h>
+
+int main() {
+    printf("Hello, World!\\n");
+    return 0;
+}`,
+
+    'cs': `using System;
+
+class Program {
+    static void Main() {
+        Console.WriteLine(
+            "Hello, World!");
+    }
+}`,
+
+    'go': `package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, World!")
+}`,
+
+    'rs': `fn main() {
+    println!("Hello, World!");
+}`,
+
+    'php': `<?php
+echo "Hello, World!";
+?>`,
+
+    'rb': `puts "Hello, World!"`,
+
+    'swift': `print("Hello, World!")`,
+
+    'kt': `fun main() {
+    println("Hello, World!")
+}`,
+
+    'sh': `#!/bin/bash
+echo "Hello, World!"`,
+
+    'sql': `-- SQL Query
+SELECT 'Hello, World!' AS message;`,
+
+    'json': `{
+    "message": "Hello, World!"
+}`,
+
+    'md': `# Title
+
+Hello, World!`,
+
+    'xml': `<?xml version="1.0" 
+  encoding="UTF-8"?>
+<root>
+    <message>Hello, World!</message>
+</root>`
+  };
+
+  return defaults[ext] 
+    || `// New file: ${filename}`;
 }
 
 // 1. Initialize Real-time Listeners
@@ -477,8 +893,29 @@ function createFileDOM(id, file) {
     const div = document.createElement('div');
     div.className = `tree-item file-item ${id === activeTabId ? 'active' : ''}`;
     div.dataset.id = id;
-    const icon = getFileIcon(file.name);
-    div.innerHTML = `<span class="icon">${icon}</span><span class="name">${file.name}</span>`;
+    const iconHTML = getFileIconHTML(file.name);
+    div.innerHTML = `
+      <div class="file-item" 
+        data-file-id="${id}"
+        style="display:flex;
+        align-items:center;
+        gap:6px;
+        padding:3px 8px 3px 8px;
+        cursor:pointer;
+        border-radius:4px;
+        transition:background 0.1s;
+        font-size:13px;
+        font-family:'Inter',sans-serif;
+        color:#c0caf5;">
+        ${iconHTML}
+        <span style="flex:1;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;">
+          ${file.name}
+        </span>
+      </div>
+    `;
     
     div.onclick = (e) => {
         e.stopPropagation();
@@ -595,7 +1032,85 @@ function showInlineInput(parentId, type, action, targetId = null, existingName =
 }
 
 function createNewFolder(parentId = null) { showInlineInput(parentId, 'folder', 'create'); }
-function createNewFile(parentId = null) { showInlineInput(parentId, 'file', 'create'); }
+async function createNewFile(
+  filename, parentFolderId) {
+
+  if (!filename || !filename.trim()) {
+    showToast('Enter a filename', 'error');
+    return;
+  }
+
+  // Make sure filename has extension
+  if (!filename.includes('.')) {
+    showToast(
+      'Add file extension (.js, .html etc)',
+      'error');
+    return;
+  }
+
+  const language = 
+    getLanguageFromFilename(filename);
+  const defaultContent = 
+    getDefaultContent(filename);
+
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Save to Firebase
+    const fileData = {
+      name: filename,
+      content: defaultContent,
+      language: language,
+      parentFolderId: parentFolderId || null,
+      createdBy: user.uid,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    // Write to Realtime Database
+    const fileRef = ref(rtdb,
+      `rooms/${currentRoomId}/files/` +
+      `${Date.now()}_${filename}`);
+    await set(fileRef, fileData);
+
+    // Open the new file in editor
+    openFileInEditor({
+      name: filename,
+      content: defaultContent,
+      language: language
+    });
+
+    // Show preview tab for HTML files
+    if (language === 'html') {
+      const previewBtn = 
+        document.getElementById(
+          'preview-tab-btn');
+      if (previewBtn) {
+        previewBtn.style.display = 'flex';
+      }
+      // Auto show preview for HTML
+      if (typeof runHTMLPreview !== 'undefined') runHTMLPreview(defaultContent);
+    } else {
+      // Hide preview tab for non-HTML
+      const previewBtn = 
+        document.getElementById(
+          'preview-tab-btn');
+      if (previewBtn) {
+        previewBtn.style.display = 'none';
+      }
+    }
+
+    showToast(
+      `✓ ${filename} created`, 'success');
+
+  } catch (err) {
+    console.error(
+      'Create file error:', err);
+    showToast(
+      'Failed to create file', 'error');
+  }
+}
 
 if(btnNewFolder) btnNewFolder.onclick = () => createNewFolder(null);
 if(btnNewFile) btnNewFile.onclick = () => createNewFile(null);
@@ -1974,40 +2489,463 @@ window.addEventListener('monaco-ready', () => {
   if (elToObserve) {
     new MutationObserver(checkLang).observe(elToObserve, { childList: true, characterData: true, subtree: true });
   }
-});
+});if (terminalInput) {
+  // Remove old listeners first
+  const newInput = terminalInput.cloneNode(
+    true);
+  terminalInput.parentNode.replaceChild(
+    newInput, terminalInput);
 
-// 6. TERMINAL JS
-const terminalLines = document.getElementById('terminal-lines');
-const terminalInput = document.getElementById('terminal-input-field');
+  // Command history
+  const cmdHistory = [];
+  let historyIdx = -1;
 
-const appendTerminal = (text, type = 'output', prefix = '') => {
-  if (!terminalLines) return;
-  const line = document.createElement('div');
-  line.className = `terminal-line terminal-line-${type}`;
-  line.innerHTML = `<span class="terminal-prefix">${prefix}</span><span class="terminal-text">${text}</span>`;
-  terminalLines.appendChild(line);
-  terminalLines.scrollTop = terminalLines.scrollHeight;
-};
+  newInput.addEventListener('keydown', 
+    async (e) => {
 
-if (terminalInput) {
-  terminalInput.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-      const val = terminalInput.value.trim();
-      if (!val) return;
-      appendTerminal(val, 'input', 'â¯ ');
-      terminalInput.value = '';
-      
-      const lang = window.currentLanguage;
-      if (lang === 'javascript') {
-        const res = await runJSLocally(val, '');
-        if (res.stdout) appendTerminal(res.stdout, 'output');
-        if (res.stderr) appendTerminal(res.stderr, 'error');
-      } else {
-        appendTerminal('Interactive terminal only supports JS locally right now.', 'warn');
-      }
-    } else if (e.key === 'l' && e.ctrlKey) {
+    // ENTER KEY — Run the code
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      terminalLines.innerHTML = '<div style="color:#565f89;padding:8px 16px;font-size:12px;font-family:\'JetBrains Mono\'">CodeSync Terminal â€” type code + Enter to run</div>';
+      e.stopPropagation();
+      
+      const code = newInput.value.trim();
+      if (!code) return;
+
+      // Save to history
+      cmdHistory.unshift(code);
+      if (cmdHistory.length > 50) {
+        cmdHistory.pop();
+      }
+      historyIdx = -1;
+
+      // Clear input
+      newInput.value = '';
+
+      // Show command in terminal
+      terminalAppendLine('input', 
+        '❯ ' + code);
+
+      // Get language and stdin
+      const lang = window.currentLanguage 
+        || getCurrentLanguage()
+        || 'javascript';
+      const stdin = document.getElementById(
+        'stdin-input')?.value || '';
+
+      // Show running message
+      terminalAppendLine('info', 
+        `Running ${lang}...`);
+
+      try {
+        let result;
+
+        // JavaScript runs locally
+        if (lang === 'javascript' 
+            || lang === 'js') {
+          result = await runJSLocally(
+            code, stdin);
+        }
+        // All others use Piston API
+        else {
+          result = await runWithPiston(
+            code, lang, stdin);
+        }
+
+        // Show output
+        if (result.stdout?.trim()) {
+          result.stdout.trim()
+            .split('\n')
+            .forEach(line => {
+              terminalAppendLine(
+                'output', line);
+            });
+        }
+
+        // Show errors
+        if (result.stderr?.trim()) {
+          result.stderr.trim()
+            .split('\n')
+            .forEach(line => {
+              terminalAppendLine(
+                'error', line);
+            });
+        }
+
+        // No output
+        if (!result.stdout?.trim() 
+            && !result.stderr?.trim()) {
+          terminalAppendLine('muted',
+            '(no output)');
+        }
+
+        // Show execution time
+        if (result.time) {
+          terminalAppendLine('muted',
+            `Executed in ${result.time}s`);
+        }
+
+      } catch (err) {
+        terminalAppendLine('error',
+          '✕ ' + err.message);
+      }
+
+      // Add empty line for spacing
+      terminalAppendLine('muted', '');
+    }
+
+    // ARROW UP — previous command
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (historyIdx < 
+          cmdHistory.length - 1) {
+        historyIdx++;
+        newInput.value = 
+          cmdHistory[historyIdx];
+        // Move cursor to end
+        setTimeout(() => {
+          newInput.selectionStart = 
+            newInput.value.length;
+          newInput.selectionEnd = 
+            newInput.value.length;
+        }, 0);
+      }
+    }
+
+    // ARROW DOWN — next command
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIdx > 0) {
+        historyIdx--;
+        newInput.value = 
+          cmdHistory[historyIdx];
+      } else {
+        historyIdx = -1;
+        newInput.value = '';
+      }
+    }
+
+    // CTRL+L — clear terminal
+    if (e.key === 'l' && e.ctrlKey) {
+      e.preventDefault();
+      clearTerminal();
+    }
+
+    // CTRL+C — cancel
+    if (e.key === 'c' && e.ctrlKey) {
+      e.preventDefault();
+      newInput.value = '';
+      terminalAppendLine('muted', '^C');
     }
   });
+
+  // Focus input when terminal tab clicked
+  const termTab = document.querySelector(
+    '[data-tab="terminal"]');
+  if (termTab) {
+    termTab.addEventListener('click', () => {
+      setTimeout(() => newInput.focus(), 50);
+    });
+  }
+
+  // Click anywhere in terminal = focus input
+  const termPanel = document.getElementById(
+    'tab-terminal')
+    || document.getElementById(
+      'panel-terminal');
+  if (termPanel) {
+    termPanel.addEventListener('click', 
+      (e) => {
+      if (e.target !== newInput) {
+        newInput.focus();
+      }
+    });
+  }
+}
+
+// TERMINAL APPEND LINE FUNCTION
+function terminalAppendLine(type, text) {
+  const termOut = 
+    document.getElementById(
+      'terminal-lines')
+    || document.getElementById(
+      'terminal-output')
+    || document.querySelector(
+      '.terminal-output')
+    || document.querySelector(
+      '#tab-terminal .output-lines');
+
+  if (!termOut) {
+    console.warn(
+      'Terminal output not found');
+    return;
+  }
+
+  const colors = {
+    input:   '#bb9af7',
+    output:  '#c0caf5',
+    error:   '#f7768e',
+    warn:    '#e0af68',
+    success: '#9ece6a',
+    info:    '#7aa2f7',
+    muted:   '#565f89',
+    return:  '#2ac3de'
+  };
+
+  const line = document.createElement('div');
+  line.style.cssText = `
+    color: ${colors[type] || '#c0caf5'};
+    padding: 1px 16px;
+    font-size: 13px;
+    line-height: 1.65;
+    font-family: 'JetBrains Mono',monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    animation: lineIn 0.1s ease;
+  `;
+
+  if (type === 'error') {
+    line.style.background = 
+      'rgba(247,118,142,0.05)';
+    line.style.borderLeft = 
+      '2px solid #f7768e';
+    line.style.paddingLeft = '14px';
+  }
+
+  line.textContent = text;
+  termOut.appendChild(line);
+  termOut.scrollTop = termOut.scrollHeight;
+}
+
+// CLEAR TERMINAL FUNCTION
+function clearTerminal() {
+  const termOut = 
+    document.getElementById('terminal-lines')
+    || document.querySelector(
+      '.terminal-output');
+  if (termOut) {
+    termOut.innerHTML = `
+      <div style="color:#565f89;
+        padding:8px 16px;
+        font-size:12px;
+        font-family:'JetBrains Mono'">
+        Terminal cleared — 
+        type code + Enter to run
+      </div>
+    `;
+  }
+}
+
+// GET CURRENT LANGUAGE HELPER
+function getLanguageFromFilename(filename) {
+  if (!filename) return 'plaintext';
+  
+  const ext = filename
+    .toLowerCase()
+    .split('.')
+    .pop();
+
+  const map = {
+    // Web
+    'html': 'html',
+    'htm':  'html',
+    'css':  'css',
+    'scss': 'scss',
+    'sass': 'scss',
+    'less': 'css',
+    // JavaScript
+    'js':   'javascript',
+    'jsx':  'javascript',
+    'mjs':  'javascript',
+    'cjs':  'javascript',
+    // TypeScript
+    'ts':   'typescript',
+    'tsx':  'typescript',
+    // Python
+    'py':   'python',
+    'pyw':  'python',
+    // Java
+    'java': 'java',
+    // C family
+    'c':    'c',
+    'h':    'c',
+    'cpp':  'cpp',
+    'cxx':  'cpp',
+    'cc':   'cpp',
+    'hpp':  'cpp',
+    'cs':   'csharp',
+    // Other languages
+    'go':   'go',
+    'rs':   'rust',
+    'php':  'php',
+    'rb':   'ruby',
+    'swift':'swift',
+    'kt':   'kotlin',
+    'kts':  'kotlin',
+    'r':    'r',
+    'sh':   'shell',
+    'bash': 'shell',
+    'zsh':  'shell',
+    'ps1':  'powershell',
+    // Data
+    'json': 'json',
+    'jsonc':'json',
+    'yaml': 'yaml',
+    'yml':  'yaml',
+    'xml':  'xml',
+    'svg':  'xml',
+    'toml': 'ini',
+    'ini':  'ini',
+    'env':  'ini',
+    // Docs
+    'md':   'markdown',
+    'mdx':  'markdown',
+    'txt':  'plaintext',
+    // DB
+    'sql':  'sql',
+    // Docker
+    'dockerfile': 'dockerfile'
+  };
+
+  return map[ext] || 'plaintext';
+}
+
+function openFileInEditor(file) {
+  if (!window.monacoEditor) return;
+  
+  const language = 
+    getLanguageFromFilename(file.name)
+    || file.language
+    || 'plaintext';
+
+  // Set correct language in Monaco
+  const model = window.monacoEditor
+    .getModel();
+  if (model) {
+    monaco.editor.setModelLanguage(
+      model, language);
+  }
+
+  // Set file content
+  window.monacoEditor.setValue(
+    file.content || '');
+
+  // Update current language globally
+  window.currentLanguage = language;
+  window.editorLanguage = language;
+
+  // Update language selector if exists
+  const langSelect = document.getElementById(
+    'language-select');
+  if (langSelect) {
+    langSelect.value = language;
+  }
+
+  // Update run button language
+  if (typeof updateRunButton !== 'undefined') {
+    updateRunButton(language);
+  }
+
+  // Update panel language badge
+  updatePanelLangBadge(language);
+
+  // Show/hide preview tab
+  const previewBtn = document.getElementById(
+    'preview-tab-btn');
+  if (previewBtn) {
+    previewBtn.style.display = 
+      (language === 'html' || 
+       language === 'css') 
+      ? 'flex' : 'none';
+  }
+
+  // Focus editor
+  window.monacoEditor.focus();
+}
+
+function updatePanelLangBadge(language) {
+  const badge = document.getElementById(
+    'panel-lang-badge');
+  if (!badge) return;
+
+  const color = langColors[language] 
+    || '#C5C5C5';
+  const ext = langToExt[language] 
+    || language;
+
+  // Get real icon class from file-icons-js
+  let iconClass = '';
+  if (window.fileIcons) {
+    iconClass = window.fileIcons
+      .getClassWithColor(
+        `main.${ext}`) || '';
+  }
+
+  // Build badge with real icon
+  if (iconClass) {
+    badge.innerHTML = `
+      <i class="${iconClass}" 
+        style="font-size:14px;
+        margin-right:5px;
+        vertical-align:middle;">
+      </i>
+      <span style="
+        font-size:11px;
+        font-weight:600;
+        font-family:'Inter',sans-serif;
+        color:${color};
+        letter-spacing:0.3px;">
+        ${getLanguageDisplayName(language)}
+      </span>
+    `;
+  } else {
+    // Fallback: colored dot + name
+    badge.innerHTML = `
+      <span style="
+        width:8px;height:8px;
+        border-radius:50%;
+        background:${color};
+        display:inline-block;
+        margin-right:6px;
+        flex-shrink:0;">
+      </span>
+      <span style="
+        font-size:11px;
+        font-weight:600;
+        color:${color};">
+        ${getLanguageDisplayName(language)}
+      </span>
+    `;
+  }
+
+  badge.style.borderColor = color + '50';
+  badge.style.background = color + '15';
+  badge.style.color = color;
+}
+
+function updateLanguageSelector(language) {
+  const sel = document.getElementById(
+    'language-select');
+  if (!sel) return;
+  
+  // Update selected option styling
+  const color = langColors[language] 
+    || '#c0caf5';
+  sel.style.borderColor = color + '60';
+  sel.style.color = color;
+  
+  // Update run button with SVG icon
+  const runBtn = document.getElementById(
+    'run-code-btn');
+  if (runBtn && !runBtn.classList
+      .contains('running')) {
+    const iconSVG = getFileIconHTML(
+      `main.${langToExt[language] 
+        || language}`);
+    runBtn.innerHTML = `
+      ${iconSVG}
+      <span>Run ${
+        getLanguageDisplayName(language)
+      }</span>
+    `;
+  }
 }
