@@ -1160,3 +1160,196 @@
 #output-lines iframe {
   display: block;
 }
+
+.__err-hi {
+  background: rgba(247,118,142,0.15) !important;
+}
+.__err-hi-inline {
+  color: #f7768e !important;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── VS CODE MONACO OVERRIDES ── */
+.monaco-wrapper {
+  background: #1e1e1e;
+}
+
+/* Remove padding on scrollbar so it sits flush like VS Code */
+.monaco-editor .scrollbar .slider {
+  border-radius: 4px;
+}
+
+.monaco-editor .margin {
+  background-color: #1e1e1e !important;
+}
+
+.monaco-editor .line-numbers {
+  color: #858585 !important;
+}
+
+.monaco-editor .current-line ~ .line-numbers {
+  color: #c6c6c6 !important;
+}
+
+.monaco-editor .cursors-layer .cursor {
+  background: #aeafad !important;
+  border-color: #aeafad !important;
+}
+
+/* VS Code-style selection */
+.monaco-editor .selected-text {
+  background: #264f78 !important;
+}
+
+/* Widget styling - VS Code dark */
+.monaco-editor .suggest-widget,
+.monaco-editor .hover-widget,
+.monaco-editor .editor-widget {
+  background: #252526 !important;
+  border: 1px solid #454545 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.36) !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused {
+  background: #264f78 !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row:hover {
+  background: #2a2d2e !important;
+}
+
+.monaco-editor .suggest-widget .details {
+  background: #252526 !important;
+  border-left: 1px solid #454545 !important;
+}
+
+/* Find widget */
+.monaco-editor .find-widget {
+  background: #252526 !important;
+  border: 1px solid #454545 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.36) !important;
+}
+
+.monaco-editor .find-widget .monaco-inputbox {
+  background: #1e1e1e !important;
+  border: 1px solid #454545 !important;
+}
+
+.monaco-editor .find-widget .monaco-inputbox input {
+  color: #cccccc !important;
+}
+
+/* Minimap */
+.monaco-editor .minimap {
+  background: #1e1e1e !important;
+}
+
+.monaco-editor .minimap .minimap-shadow-visible {
+  box-shadow: none !important;
+}
+
+.monaco-editor .minimap .minimap-slider {
+  background: rgba(255,255,255,0.1) !important;
+}
+
+.monaco-editor .minimap .minimap-slider .minimap-slider-horizontal {
+  background: rgba(255,255,255,0.15) !important;
+}
+
+/* Overview ruler */
+.monaco-editor .overview-ruler {
+  background: #1e1e1e !important;
+}
+
+/* Bracket match highlight */
+.monaco-editor .bracket-match {
+  background: rgba(13, 58, 88, 0.5) !important;
+  border: 1px solid #678991 !important;
+}
+
+/* Indentation guides */
+.monaco-editor .indent-guide {
+  box-shadow: inset 1px 0 0 0 #404040 !important;
+}
+
+.monaco-editor .indent-guide-active {
+  box-shadow: inset 1px 0 0 0 #707070 !important;
+}
+
+/* Line highlight */
+.monaco-editor .view-overlays .current-line {
+  background: #2a2a2a !important;
+  border: none !important;
+}
+
+/* Glyph margin */
+.monaco-editor .glyph-margin {
+  background: #1e1e1e !important;
+}
+
+/* Scrollbar styling */
+.monaco-editor .scrollbar .slider {
+  background: #424242 !important;
+}
+
+.monaco-editor .scrollbar .slider:hover {
+  background: #535353 !important;
+}
+
+.monaco-editor .scrollbar .slider.active {
+  background: #6e6e6e !important;
+}
+
+/* Editor error/warning squiggles */
+.monaco-editor .squiggly-error {
+  border-bottom: 2px solid #f48771 !important;
+}
+
+.monaco-editor .squiggly-warning {
+  border-bottom: 2px solid #cca700 !important;
+}
+
+.monaco-editor .squiggly-info {
+  border-bottom: 2px solid #75beff !important;
+}
+
+/* Link color */
+.monaco-editor .detected-link,
+.monaco-editor .detected-link-active {
+  color: #4e94ce !important;
+}
+
+/* Unused code opacity */
+.monaco-editor .unused {
+  opacity: 0.6;
+}
+
+/* Rename input */
+.monaco-editor .rename-box {
+  background: #252526 !important;
+  border: 1px solid #454545 !important;
+}
+
+.monaco-editor .rename-box input {
+  background: #1e1e1e !important;
+  color: #cccccc !important;
+}
+
+/* Floating action widget */
+.monaco-editor .monaco-editor .action-widget {
+  background: #252526 !important;
+  border: 1px solid #454545 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.36) !important;
+}
+
+/* Code action lightbulb */
+.monaco-editor .lightbulb {
+  color: #cca700 !important;
+}
+
+/* Editor area background fix */
+.editor-main > .split-view {
+  background: #1e1e1e;
+}

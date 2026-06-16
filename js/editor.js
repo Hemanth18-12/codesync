@@ -79,20 +79,300 @@ require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-e
 
 function initMonaco() {
     require(['vs/editor/editor.main'], function () {
-        
+
+        // VS Code Dark+ (default) theme
+        monaco.editor.defineTheme('vscode-dark-plus', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'comment', foreground: '6A9955' },
+                { token: 'comment.keyword', foreground: '6A9955' },
+                { token: 'comment.doc', foreground: '6A9955' },
+                { token: 'keyword', foreground: '569CD6' },
+                { token: 'keyword.control', foreground: '569CD6' },
+                { token: 'keyword.operator', foreground: 'D4D4D4' },
+                { token: 'keyword.other.important', foreground: '569CD6' },
+                { token: 'storage', foreground: '569CD6' },
+                { token: 'storage.type', foreground: '569CD6' },
+                { token: 'storage.modifier', foreground: '569CD6' },
+                { token: 'type', foreground: '4EC9B0' },
+                { token: 'type.identifier', foreground: '4EC9B0' },
+                { token: 'class', foreground: '4EC9B0' },
+                { token: 'identifier', foreground: 'D4D4D4' },
+                { token: 'identifier.js', foreground: 'D4D4D4' },
+                { token: 'variable', foreground: 'D4D4D4' },
+                { token: 'variable.other.readwrite', foreground: 'D4D4D4' },
+                { token: 'parameter', foreground: '9CDCFE' },
+                { token: 'function', foreground: 'DCDCAA' },
+                { token: 'function.declaration', foreground: 'DCDCAA' },
+                { token: 'method', foreground: 'DCDCAA' },
+                { token: 'number', foreground: 'B5CEA8' },
+                { token: 'string', foreground: 'CE9178' },
+                { token: 'string.key', foreground: 'CE9178' },
+                { token: 'string.value', foreground: 'CE9178' },
+                { token: 'regexp', foreground: 'D16969' },
+                { token: 'constant', foreground: '4FC1FF' },
+                { token: 'constant.language', foreground: '569CD6' },
+                { token: 'constant.numeric', foreground: 'B5CEA8' },
+                { token: 'constant.character', foreground: 'CE9178' },
+                { token: 'variable.language', foreground: '569CD6' },
+                { token: 'variable.other.constant', foreground: '4FC1FF' },
+                { token: 'variable.other.property', foreground: '9CDCFE' },
+                { token: 'entity.name', foreground: 'DCDCAA' },
+                { token: 'entity.name.type', foreground: '4EC9B0' },
+                { token: 'entity.name.function', foreground: 'DCDCAA' },
+                { token: 'entity.name.tag', foreground: '569CD6' },
+                { token: 'entity.other.attribute-name', foreground: '9CDCFE' },
+                { token: 'support.function', foreground: 'DCDCAA' },
+                { token: 'support.type', foreground: '4EC9B0' },
+                { token: 'support.constant', foreground: '4FC1FF' },
+                { token: 'meta.embedded', foreground: 'D4D4D4' },
+                { token: 'meta.tag', foreground: '569CD6' },
+                { token: 'meta.tag.js', foreground: '569CD6' },
+                { token: 'punctuation', foreground: 'D4D4D4' },
+                { token: 'punctuation.definition.tag', foreground: '808080' },
+                { token: 'punctuation.definition.string', foreground: 'CE9178' },
+                { token: 'punctuation.definition.comment', foreground: '6A9955' },
+                { token: 'string.quoted', foreground: 'CE9178' },
+                { token: 'string.quoted.variable', foreground: 'CE9178' },
+                { token: 'string.regexp', foreground: 'D16969' },
+                { token: 'markup.heading', foreground: '569CD6' },
+                { token: 'markup.list', foreground: '569CD6' },
+                { token: 'markup.bold', foreground: '569CD6', fontStyle: 'bold' },
+                { token: 'markup.italic', foreground: '569CD6', fontStyle: 'italic' },
+                { token: 'markup.inline.raw', foreground: 'CE9178' },
+                { token: 'delimiter', foreground: 'D4D4D4' },
+                { token: 'delimiter.html', foreground: '808080' },
+                { token: 'delimiter.xml', foreground: '808080' },
+                { token: 'tag', foreground: '569CD6' },
+                { token: 'tag.id', foreground: '569CD6' },
+                { token: 'tag.class', foreground: '9CDCFE' },
+                { token: 'attribute.name', foreground: '9CDCFE' },
+                { token: 'attribute.value', foreground: 'CE9178' },
+                { token: 'property.name', foreground: '9CDCFE' },
+                { token: 'property.value', foreground: 'CE9178' },
+                { token: 'css.keyword', foreground: '569CD6' },
+                { token: 'css.selector', foreground: 'D7BA7D' },
+                { token: 'css.property', foreground: '9CDCFE' },
+                { token: 'css.value', foreground: 'CE9178' },
+                { token: 'css.punctuation', foreground: 'D4D4D4' },
+                { token: 'css.class', foreground: 'D7BA7D' },
+                { token: 'css.id', foreground: '569CD6' },
+                { token: 'css.tag', foreground: '569CD6' },
+                { token: 'import.keyword', foreground: '569CD6' },
+                { token: 'export.keyword', foreground: '569CD6' },
+                { token: 'async', foreground: '569CD6' },
+                { token: 'await', foreground: '569CD6' },
+                { token: 'from', foreground: '569CD6' },
+                { token: 'of', foreground: '569CD6' },
+                { token: 'const', foreground: '569CD6' },
+                { token: 'let', foreground: '569CD6' },
+                { token: 'var', foreground: '569CD6' },
+                { token: 'function.js', foreground: 'DCDCAA' },
+                { token: 'this', foreground: '569CD6' },
+                { token: 'super', foreground: '569CD6' },
+                { token: 'class.js', foreground: '4EC9B0' },
+                { token: 'new', foreground: '569CD6' },
+                { token: 'delete', foreground: '569CD6' },
+                { token: 'typeof', foreground: '569CD6' },
+                { token: 'instanceof', foreground: '569CD6' },
+                { token: 'void', foreground: '569CD6' },
+                { token: 'return', foreground: '569CD6' },
+                { token: 'if', foreground: '569CD6' },
+                { token: 'else', foreground: '569CD6' },
+                { token: 'for', foreground: '569CD6' },
+                { token: 'while', foreground: '569CD6' },
+                { token: 'do', foreground: '569CD6' },
+                { token: 'switch', foreground: '569CD6' },
+                { token: 'case', foreground: '569CD6' },
+                { token: 'break', foreground: '569CD6' },
+                { token: 'continue', foreground: '569CD6' },
+                { token: 'try', foreground: '569CD6' },
+                { token: 'catch', foreground: '569CD6' },
+                { token: 'throw', foreground: '569CD6' },
+                { token: 'finally', foreground: '569CD6' },
+                { token: 'debugger', foreground: '569CD6' },
+                { token: 'export', foreground: '569CD6' },
+                { token: 'import', foreground: '569CD6' },
+                { token: 'default', foreground: '569CD6' },
+                { token: 'extends', foreground: '569CD6' },
+                { token: 'implements', foreground: '569CD6' },
+                { token: 'interface', foreground: '569CD6' },
+                { token: 'abstract', foreground: '569CD6' },
+                { token: 'static', foreground: '569CD6' },
+                { token: 'private', foreground: '569CD6' },
+                { token: 'protected', foreground: '569CD6' },
+                { token: 'public', foreground: '569CD6' },
+                { token: 'readonly', foreground: '569CD6' },
+                { token: 'enum', foreground: '569CD6' },
+                { token: 'type.keyword', foreground: '569CD6' },
+                { token: 'module', foreground: '569CD6' },
+                { token: 'namespace', foreground: '569CD6' },
+                { token: 'declare', foreground: '569CD6' },
+                { token: 'keyof', foreground: '569CD6' },
+                { token: 'unknown', foreground: '569CD6' },
+                { token: 'any', foreground: '569CD6' },
+                { token: 'boolean', foreground: '569CD6' },
+                { token: 'number.js', foreground: '569CD6' },
+                { token: 'string.js', foreground: '569CD6' },
+                { token: 'symbol', foreground: '569CD6' },
+                { token: 'undefined', foreground: '569CD6' },
+                { token: 'null', foreground: '569CD6' },
+                { token: 'never', foreground: '569CD6' },
+                { token: 'object', foreground: '569CD6' },
+            ],
+            colors: {
+                'editor.background': '#1e1e1e',
+                'editor.foreground': '#d4d4d4',
+                'editor.lineHighlightBackground': '#2a2a2a',
+                'editor.selectionBackground': '#264f78',
+                'editor.inactiveSelectionBackground': '#3a3d41',
+                'editorCursor.foreground': '#aeafad',
+                'editorCursor.background': '#1e1e1e',
+                'editor.selectionHighlightBackground': '#add6ff26',
+                'editor.wordHighlightBackground': '#575757',
+                'editor.wordHighlightStrongBackground': '#004972',
+                'editor.findMatchBackground': '#515c6a',
+                'editor.findMatchHighlightBackground': '#3a3d41',
+                'editor.findRangeHighlightBackground': '#3a3d4055',
+                'editor.hoverHighlightBackground': '#264f78',
+                'editorHoverWidget.background': '#252526',
+                'editorHoverWidget.border': '#454545',
+                'editorSuggestWidget.background': '#252526',
+                'editorSuggestWidget.border': '#454545',
+                'editorSuggestWidget.selectedBackground': '#264f78',
+                'editorSuggestWidget.foreground': '#d4d4d4',
+                'editorLink.activeForeground': '#4e94ce',
+                'editorLineNumber.foreground': '#858585',
+                'editorLineNumber.activeForeground': '#c6c6c6',
+                'editorGutter.background': '#1e1e1e',
+                'editorRuler.foreground': '#5a5a5a',
+                'editorCodeLens.foreground': '#999999',
+                'editorBracketMatch.background': '#0d3a58',
+                'editorBracketMatch.border': '#678991',
+                'editorOverviewRuler.background': '#1e1e1e',
+                'editorOverviewRuler.border': '#1e1e1e',
+                'editorWidget.background': '#252526',
+                'editorWidget.border': '#454545',
+                'editorError.foreground': '#f48771',
+                'editorError.border': '#e74847',
+                'editorWarning.foreground': '#cca700',
+                'editorWarning.border': '#cca700',
+                'editorInfo.foreground': '#75beff',
+                'editorInfo.border': '#75beff',
+                'editorHint.foreground': '#75beff',
+                'editorBracketPairGuide.background1': '#6b6b6b',
+                'editorBracketPairGuide.background2': '#6b6b6b',
+                'editorBracketPairGuide.activeBackground1': '#b4b4b4',
+                'editorBracketPairGuide.activeBackground2': '#b4b4b4',
+                'editorUnnecessaryCode.border': '#4b4b4b',
+                'editorUnnecessaryCode.opacity': '#00000066',
+                'editorIndentGuide.background': '#404040',
+                'editorIndentGuide.activeBackground': '#707070',
+                'minimap.background': '#1e1e1e',
+                'minimap.selectionHighlight': '#264f78',
+                'scrollbar.shadow': '#000000',
+                'scrollbarSlider.background': '#424242',
+                'scrollbarSlider.hoverBackground': '#535353',
+                'scrollbarSlider.activeBackground': '#6e6e6e',
+                'badge.background': '#4d4d4d',
+                'badge.foreground': '#ffffff',
+                'button.background': '#0e639c',
+                'button.hoverBackground': '#1177bb',
+                'dropdown.background': '#1e1e1e',
+                'dropdown.border': '#454545',
+                'list.activeSelectionBackground': '#264f78',
+                'list.hoverBackground': '#2a2d2e',
+                'list.highlightForeground': '#4e94ce',
+                'menu.background': '#1e1e1e',
+                'menu.foreground': '#cccccc',
+                'menu.selectionBackground': '#264f78',
+                'menu.separatorBackground': '#454545',
+                'titleBar.activeBackground': '#1e1e1e',
+                'titleBar.activeForeground': '#cccccc',
+                'titleBar.inactiveBackground': '#1e1e1e',
+                'titleBar.inactiveForeground': '#6b6b6b',
+                'activityBar.background': '#1e1e1e',
+                'activityBar.foreground': '#ffffff',
+                'activityBar.inactiveForeground': '#6b6b6b',
+                'activityBar.border': '#1e1e1e',
+                'sideBar.background': '#252526',
+                'sideBar.foreground': '#cccccc',
+                'sideBar.border': '#1e1e1e',
+                'sideBarTitle.foreground': '#bbbbbb',
+                'sideBarSectionHeader.background': '#2d2d2d',
+                'sideBarSectionHeader.foreground': '#cccccc',
+                'statusBar.background': '#007acc',
+                'statusBar.foreground': '#ffffff',
+                'tab.activeBackground': '#1e1e1e',
+                'tab.inactiveBackground': '#2d2d2d',
+                'tab.activeForeground': '#ffffff',
+                'tab.inactiveForeground': '#8a8a8a',
+                'tab.border': '#1e1e1e',
+                'tab.activeBorder': '#1e1e1e',
+                'tab.activeBorderTop': '#007acc',
+                'editorGroupHeader.tabsBackground': '#252526',
+                'editorGroupHeader.tabsBorder': '#1e1e1e',
+                'panel.background': '#1e1e1e',
+                'panel.border': '#1e1e1e',
+                'panelTitle.activeForeground': '#ffffff',
+                'panelTitle.inactiveForeground': '#8a8a8a',
+                'panelTitle.border': '#1e1e1e',
+                'input.background': '#1e1e1e',
+                'input.foreground': '#cccccc',
+                'input.border': '#454545',
+                'input.placeholderForeground': '#6b6b6b',
+                'inputOption.activeBackground': '#264f78',
+                'inputOption.activeBorder': '#264f78',
+                'focusBorder': '#007acc',
+                'widget.shadow': '#00000066',
+                'progressBar.background': '#007acc',
+                'debugIcon.breakpointForeground': '#e51400',
+                'editorMarkerNavigation.background': '#1e1e1e',
+                'editorMarkerNavigationError.background': '#f48771',
+                'editorMarkerNavigationWarning.background': '#cca700',
+                'editorMarkerNavigationInfo.background': '#75beff',
+            }
+        });
+
         editorInstance = monaco.editor.create(monacoContainer, {
             value: "// Loading...",
             language: "javascript",
-            theme: userPreferences.theme || "vs-dark",
+            theme: userPreferences.theme === 'vs-dark' ? 'vscode-dark-plus' : (userPreferences.theme || 'vscode-dark-plus'),
             fontSize: userPreferences.fontSize || 14,
+            fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
+            fontLigatures: true,
             minimap: { enabled: userPreferences.minimap !== false },
             wordWrap: userPreferences.wordWrap !== false ? "on" : "off",
             automaticLayout: true,
             readOnly: isReadOnly,
             padding: { top: 16 },
             scrollBeyondLastLine: false,
-            fontFamily: "'JetBrains Mono', monospace",
-            renderWhitespace: "selection"
+            renderWhitespace: "selection",
+            smoothScrolling: true,
+            cursorBlinking: 'smooth',
+            cursorSmoothCaretAnimation: true,
+            selectionHighlight: true,
+            renderLineHighlight: 'all',
+            overviewRulerBorder: false,
+            glyphMargin: true,
+            folding: true,
+            foldingStrategy: 'indentation',
+            autoClosingBrackets: 'always',
+            autoClosingQuotes: 'always',
+            autoIndent: 'full',
+            formatOnPaste: false,
+            matchBrackets: 'always',
+            bracketPairColorization: { enabled: true },
+            guides: { indentationGuides: true, bracketPairs: true, highlightActiveIndentation: true },
+            colorDecorators: true,
+            inlineSuggest: { enabled: true },
+            suggest: { showKeywords: true, showSnippets: true, preview: true },
+            suggestFontSize: 13,
+            suggestLineHeight: 22,
+            wordBasedSuggestions: true,
+            parameterHints: { enabled: true, cycle: true },
+            hover: { enabled: true, delay: 300, sticky: true },
         });
 
         // Update status bar cursor pos â€” update both visible and legacy hidden elements
@@ -2232,367 +2512,793 @@ window.addEventListener('monaco-ready', () => {
 });
 
 // ============================================================================
-// ðŸ†• COMPILER & TERMINAL LOGIC
+// 🆕 PROFESSIONAL COMPILER ENGINE v3.0
 // ============================================================================
 
-window.currentLanguage = 'javascript'; // Default
+// ── CONSTANTS ────────────────────────────────
+const PISTON_API = 
+  'https://emkc.org/api/v2/piston/execute';
 
-// 1. UTILS
-const runBtn = document.getElementById('run-code-btn');
-const headerRunBtn = document.getElementById('btn-run-code');
-const outputLines = document.getElementById('output-lines');
-const progressBar = document.getElementById('run-progress-bar');
-const langBadge = document.getElementById('panel-lang-badge');
-
-const getLangName = (lang) => {
-  const map = {
-    'javascript': 'JavaScript', 'typescript': 'TypeScript', 'python': 'Python',
-    'java': 'Java', 'cpp': 'C++', 'c': 'C', 'csharp': 'C#', 'go': 'Go',
-    'rust': 'Rust', 'php': 'PHP', 'ruby': 'Ruby', 'swift': 'Swift',
-    'kotlin': 'Kotlin', 'html': 'HTML', 'css': 'CSS', 'bash': 'Bash',
-    'sql': 'SQL', 'r': 'R'
-  };
-  return map[lang] || lang;
+const PISTON_LANGS = {
+  javascript: { 
+    language: 'javascript', 
+    version: '18.15.0', 
+    file: 'main.js' 
+  },
+  typescript: { 
+    language: 'typescript', 
+    version: '5.0.3', 
+    file: 'main.ts' 
+  },
+  python: { 
+    language: 'python', 
+    version: '3.10.0', 
+    file: 'main.py' 
+  },
+  java: { 
+    language: 'java', 
+    version: '15.0.2', 
+    file: 'Main.java' 
+  },
+  cpp: { 
+    language: 'c++', 
+    version: '10.2.0', 
+    file: 'main.cpp' 
+  },
+  c: { 
+    language: 'c', 
+    version: '10.2.0', 
+    file: 'main.c' 
+  },
+  csharp: { 
+    language: 'csharp', 
+    version: '6.12.0', 
+    file: 'main.cs' 
+  },
+  go: { 
+    language: 'go', 
+    version: '1.16.2', 
+    file: 'main.go' 
+  },
+  rust: { 
+    language: 'rust', 
+    version: '1.50.0', 
+    file: 'main.rs' 
+  },
+  php: { 
+    language: 'php', 
+    version: '8.0.2', 
+    file: 'main.php' 
+  },
+  ruby: { 
+    language: 'ruby', 
+    version: '3.0.1', 
+    file: 'main.rb' 
+  },
+  swift: { 
+    language: 'swift', 
+    version: '5.3.3', 
+    file: 'main.swift' 
+  },
+  kotlin: { 
+    language: 'kotlin', 
+    version: '1.4.31', 
+    file: 'main.kt' 
+  },
+  bash: { 
+    language: 'bash', 
+    version: '5.1.0', 
+    file: 'main.sh' 
+  },
+  r: { 
+    language: 'r', 
+    version: '4.1.1', 
+    file: 'main.r' 
+  },
+  sql: { 
+    language: 'sqlite3', 
+    version: '3.36.0', 
+    file: 'main.sql' 
+  }
 };
 
-const getLangColor = (lang) => {
-  const map = {
-    'javascript': '#F7DF1E', 'typescript': '#3178C6', 'python': '#3776AB',
-    'java': '#ED8B00', 'cpp': '#00599C', 'c': '#A8B9CC', 'csharp': '#239120',
-    'go': '#00ADD8', 'rust': '#CE422B', 'php': '#777BB4', 'ruby': '#CC342D',
-    'swift': '#FA7343', 'kotlin': '#7F52FF', 'html': '#E34F26', 'css': '#1572B6',
-    'bash': '#4EAA25', 'sql': '#336791', 'r': '#276DC3'
-  };
-  return map[lang] || '#c0caf5';
+const LANG_NAMES = {
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  python: 'Python 3.10',
+  java: 'Java 15',
+  cpp: 'C++ (GCC 10)',
+  c: 'C (GCC 10)',
+  csharp: 'C# Mono',
+  go: 'Go 1.16',
+  rust: 'Rust 1.50',
+  php: 'PHP 8.0',
+  ruby: 'Ruby 3.0',
+  swift: 'Swift 5.3',
+  kotlin: 'Kotlin 1.4',
+  bash: 'Bash 5.1',
+  html: 'HTML5',
+  css: 'CSS3',
+  r: 'R 4.1',
+  sql: 'SQLite 3'
 };
 
-// 2. TABS LOGIC
-const switchBottomTab = (tabId) => {
-  document.querySelectorAll('.panel-tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.panel-tab-content').forEach(content => content.classList.remove('active'));
-  
-  const targetBtn = document.querySelector(`.panel-tab-btn[data-tab="${tabId}"]`);
-  const targetContent = document.getElementById(`tab-${tabId}`);
-  
-  if (targetBtn) targetBtn.classList.add('active');
-  if (targetContent) targetContent.classList.add('active');
+const LANG_COLORS = {
+  javascript: '#F7DF1E',
+  typescript: '#3178C6',
+  python: '#3776AB',
+  java: '#ED8B00',
+  cpp: '#00599C',
+  c: '#A8B9CC',
+  csharp: '#239120',
+  go: '#00ADD8',
+  rust: '#CE422B',
+  php: '#777BB4',
+  ruby: '#CC342D',
+  html: '#E34F26',
+  css: '#1572B6',
+  swift: '#FA7343',
+  kotlin: '#7F52FF',
+  bash: '#4EAA25',
+  r: '#276DC3',
+  sql: '#336791'
 };
 
-document.querySelectorAll('.panel-tab-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    switchBottomTab(e.currentTarget.dataset.tab);
-  });
-});
+// ── STATE ────────────────────────────────────
+let __runCount = 0;
+let __isRunning = false;
+window.currentLanguage = 'javascript';
 
-// 3. RESIZE HANDLE JS
-const panel = document.getElementById('bottom-panel');
-const handle = document.getElementById('panel-resize-handle');
-let isResizing = false;
-
-if(handle) {
-    handle.addEventListener('mousedown', (e) => {
-    isResizing = true;
-    handle.classList.add('dragging');
-    document.body.style.cursor = 'ns-resize';
-    });
-
-    window.addEventListener('mousemove', (e) => {
-    if (!isResizing) return;
-    const newHeight = window.innerHeight - e.clientY;
-    if (newHeight >= 120 && newHeight <= window.innerHeight * 0.8) {
-        panel.style.height = `${newHeight}px`;
-    }
-    });
-
-    window.addEventListener('mouseup', () => {
-    if (isResizing) {
-        isResizing = false;
-        handle.classList.remove('dragging');
-        document.body.style.cursor = 'default';
-    }
-    });
-
-    handle.addEventListener('dblclick', () => {
-    const currentHeight = parseInt(window.getComputedStyle(panel).height);
-    if (currentHeight > 250) {
-        panel.style.height = '200px';
-    } else {
-        panel.style.height = '50vh';
-    }
-    });
+// ── HELPER: GET CURRENT LANGUAGE ─────────────
+function __getLang() {
+  return window.currentLanguage
+    || document.getElementById('sb-language')
+       ?.innerText?.toLowerCase()
+       ?.trim()
+    || 'javascript';
 }
 
-// Maximize/Close Actions
-document.getElementById('maximize-panel-btn')?.addEventListener('click', () => {
-  if(panel) panel.style.height = '80vh';
-});
-document.getElementById('close-panel-btn')?.addEventListener('click', () => {
-  if(panel) panel.style.display = 'none'; // Or set height to 0
-});
+// ── HELPER: GET EDITOR CODE ───────────────────
+function __getCode() {
+  const editor = window.monacoEditor 
+    || window.editorInstance;
+  if (!editor) return '';
+  return editor.getValue() || '';
+}
 
-// 4. RUN COMPILER LOGIC
-const clearOutputPanel = () => {
-  if (outputLines) outputLines.innerHTML = '';
-};
+// ── HELPER: LANG NAME ─────────────────────────
+function __langName(lang) {
+  return LANG_NAMES[lang] || lang;
+}
 
-const appendToOutput = (type, text) => {
-  if (!outputLines) return;
+// ── HELPER: LANG COLOR ────────────────────────
+function __langColor(lang) {
+  return LANG_COLORS[lang] || '#c0caf5';
+}
+
+// ── OUTPUT PANEL ──────────────────────────────
+function __getOutputEl() {
+  return document.getElementById('output-lines');
+}
+
+function __clearOutput() {
+  const el = __getOutputEl();
+  if (el) el.innerHTML = '';
+}
+
+function __appendOutput(type, text) {
+  const el = __getOutputEl();
+  if (!el) return;
+
+  if (type === 'divider') {
+    const div = document.createElement('div');
+    div.style.cssText = `
+      color:#2d2f45;
+      padding:2px 16px;
+      font-size:11px;
+      font-family:'JetBrains Mono',monospace;
+      user-select:none;
+      white-space:pre;
+    `;
+    div.textContent = text;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
+
+  const styles = {
+    output:  { color:'#c0caf5', bg:'',
+                border:'transparent', pre:'' },
+    error:   { color:'#f7768e',
+                bg:'rgba(247,118,142,0.06)',
+                border:'#f7768e', pre:'✕ ' },
+    warn:    { color:'#e0af68', bg:'',
+                border:'transparent', pre:'⚠ ' },
+    success: { color:'#9ece6a', bg:'',
+                border:'transparent', pre:'✓ ' },
+    info:    { color:'#7aa2f7', bg:'',
+                border:'transparent', pre:'ℹ ' },
+    muted:   { color:'#565f89', bg:'',
+                border:'transparent', pre:'' },
+    input:   { color:'#bb9af7', bg:'',
+                border:'transparent', pre:'❯ ' }
+  };
+
+  const s = styles[type] || styles.output;
   const line = document.createElement('div');
-  line.className = `output-line type-${type}`;
-  line.textContent = text;
-  outputLines.appendChild(line);
-  outputLines.scrollTop = outputLines.scrollHeight;
-};
+  line.style.cssText = `
+    color:${s.color};
+    background:${s.bg || 'transparent'};
+    padding:1px 16px;
+    font-size:13px;
+    line-height:1.7;
+    font-family:'JetBrains Mono',monospace;
+    white-space:pre-wrap;
+    word-break:break-word;
+    border-left:2px solid ${s.border};
+    animation:lineIn 0.08s ease;
+  `;
+  line.textContent = s.pre + text;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
 
-const showOutputMessage = (type, msg) => {
-  clearOutputPanel();
-  appendToOutput(type, msg);
-  switchBottomTab('output');
-};
+// ── SWITCH BOTTOM TAB ─────────────────────────
+function __switchTab(tabId) {
+  document.querySelectorAll('.panel-tab-btn')
+    .forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel-tab-content')
+    .forEach(c => c.classList.remove('active'));
 
-const setRunState = (state, lang) => {
-  if (!runBtn) return;
-  runBtn.className = '';
-  if (state === 'running') {
-    runBtn.classList.add('running');
-    runBtn.innerHTML = `â³ Running...`;
-    progressBar?.classList.add('running');
-  } else if (state === 'success') {
-    runBtn.classList.add('success');
-    runBtn.innerHTML = `✓ Done`;
-    progressBar?.classList.remove('running');
-  } else if (state === 'error') {
-    runBtn.classList.add('error');
-    runBtn.innerHTML = `✕ Error`;
-    progressBar?.classList.remove('running');
-  } else {
-    runBtn.innerHTML = `▶ Run`;
-    progressBar?.classList.remove('running');
+  const btn = document.querySelector(
+    `.panel-tab-btn[data-tab="${tabId}"]`);
+  const content = document.getElementById(
+    `tab-${tabId}`);
+
+  if (btn) btn.classList.add('active');
+  if (content) content.classList.add('active');
+}
+
+// ── SET RUN BUTTON STATE ──────────────────────
+function __setRunState(state, lang) {
+  const btns = [
+    document.getElementById('run-code-btn'),
+    document.getElementById('btn-run-code')
+  ].filter(Boolean);
+
+  const bar = document.getElementById(
+    'run-progress-bar');
+
+  btns.forEach(btn => {
+    btn.disabled = state === 'running';
+    btn.className = state === 'running' 
+      ? 'running' 
+      : state === 'success' 
+        ? 'success' 
+        : state === 'error' 
+          ? 'error' : '';
+
+    switch(state) {
+      case 'running':
+        btn.innerHTML = 
+          '<span style="display:inline-block;'
+          +'width:12px;height:12px;'
+          +'border:2px solid #e0af68;'
+          +'border-top-color:transparent;'
+          +'border-radius:50%;'
+          +'animation:spin 0.6s linear infinite;'
+          +'vertical-align:middle;'
+          +'margin-right:6px;"></span>'
+          +'Running...';
+        if (bar) bar.classList.add('running');
+        break;
+      case 'success':
+        btn.textContent = '✓ Done';
+        if (bar) bar.classList.remove('running');
+        setTimeout(() => {
+          btn.textContent = '▶ Run';
+          btn.className = '';
+        }, 2000);
+        break;
+      case 'error':
+        btn.textContent = '✕ Error';
+        if (bar) bar.classList.remove('running');
+        setTimeout(() => {
+          btn.textContent = '▶ Run';
+          btn.className = '';
+        }, 2000);
+        break;
+      default:
+        btn.textContent = '▶ Run';
+        if (bar) bar.classList.remove('running');
+    }
+  });
+}
+
+// ── UPDATE LANG BADGE ─────────────────────────
+function __updateLangBadge(lang) {
+  window.currentLanguage = lang;
+  const badge = document.getElementById(
+    'panel-lang-badge');
+  if (badge) {
+    const color = __langColor(lang);
+    badge.innerHTML = `
+      <span style="
+        width:8px;height:8px;
+        border-radius:50%;
+        background:${color};
+        display:inline-block;
+        margin-right:5px;
+        flex-shrink:0;">
+      </span>
+      <span style="
+        font-size:11px;
+        font-weight:600;
+        color:${color};">
+        ${__langName(lang)}
+      </span>
+    `;
+    badge.style.borderColor = color + '50';
+    badge.style.background = color + '12';
   }
-};
 
-let runCount = 0;
+  // Update terminal prefix
+  const prefix = document.getElementById(
+    'terminal-lang-prefix');
+  if (prefix) {
+    prefix.textContent = 
+      lang.substring(0,2).toUpperCase();
+    prefix.style.color = __langColor(lang);
+  }
+}
 
-const runCode = async () => {
-  if (!window.monacoEditor) return;
+// ── JS SANDBOX (CORS-SAFE) ────────────────────
+// Uses srcdoc + postMessage ONLY
+// NEVER accesses iframe.contentDocument
+// NEVER accesses iframe.contentWindow.document
+function __runJS(code, stdin) {
+  return new Promise((resolve) => {
+    const logs = [];
+    const errors = [];
+    const t0 = performance.now();
+    let done = false;
 
-  const code = window.monacoEditor.getValue();
-  if (!code.trim()) {
-    showOutputMessage('warn', 'Editor is empty!');
+    // Create hidden iframe
+    const iframe = document.createElement(
+      'iframe');
+    iframe.setAttribute('sandbox', 
+      'allow-scripts');
+    iframe.style.cssText = 
+      'display:none;position:absolute;'
+      + 'left:-9999px;width:1px;height:1px;';
+    document.body.appendChild(iframe);
+
+    // Cleanup
+    const finish = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener(
+        'message', handler);
+      clearTimeout(timer);
+      try {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      } catch(e) {}
+      resolve({
+        stdout: logs.join('\n'),
+        stderr: errors.join('\n'),
+        time: (
+          (performance.now()-t0)/1000
+        ).toFixed(3),
+        status: errors.length 
+          ? 'Runtime Error' : 'Accepted'
+      });
+    };
+
+    // Message handler
+    const handler = (e) => {
+      if (e.source !== iframe.contentWindow) 
+        return;
+      if (!e.data?.__cs) return;
+      if (e.data.type === 'log') 
+        logs.push(String(e.data.v ?? ''));
+      if (e.data.type === 'err') 
+        errors.push(String(e.data.v ?? ''));
+      if (e.data.type === 'done') finish();
+    };
+    window.addEventListener('message', handler);
+
+    // Timeout 10s
+    const timer = setTimeout(() => {
+      errors.push(
+        '⏱ Timed out after 10 seconds.\n'
+        + 'Hint: Check for infinite loops.');
+      finish();
+    }, 10000);
+
+    // Build stdin array
+    const stdinLines = stdin
+      ? stdin.split('\n') : [];
+
+    // Format values
+    const fmt = `
+      function __fmt(v){
+        if(v===null)return'null';
+        if(v===undefined)return'undefined';
+        if(typeof v==='function')
+          return'[Function: '+v.name+']';
+        if(typeof v==='object'){
+          try{return JSON.stringify(v,null,2);}
+          catch(e){return String(v);}
+        }
+        return String(v);
+      }
+      function __fmtA(a){
+        return Array.from(a).map(__fmt).join(' ');
+      }
+    `;
+
+    // CORS-safe iframe code
+    // srcdoc is the ONLY safe injection method
+    iframe.srcdoc = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+</head><body><script>
+(function(){
+  var P=window.parent;
+  var S=function(t,v){
+    try{P.postMessage(
+      {__cs:true,type:t,v:v},'*');
+    }catch(e){}
+  };
+  ${fmt}
+  // Override console
+  window.console={
+    log:function(){S('log',__fmtA(arguments));},
+    error:function(){S('err',__fmtA(arguments));},
+    warn:function(){S('log',
+      '\u26a0 '+__fmtA(arguments));},
+    info:function(){S('log',
+      '\u2139 '+__fmtA(arguments));},
+    table:function(d){
+      try{S('log',JSON.stringify(d,null,2));}
+      catch(e){S('log',String(d));}
+    },
+    dir:function(d){S('log',__fmt(d));},
+    assert:function(c){
+      if(!c)S('err',
+        'Assertion failed: '
+        +__fmtA(Array.prototype.slice
+          .call(arguments,1)));
+    },
+    clear:function(){},
+    group:function(){},
+    groupEnd:function(){},
+    time:function(l){
+      S('log','timer: '+(l||'default'));},
+    timeEnd:function(l){
+      S('log','timer end: '+(l||'default'));}
+  };
+  // Override globals
+  window.alert=function(m){
+    S('log','[alert] '+String(m));};
+  window.confirm=function(){return true;};
+  window.prompt=function(msg){
+    if(msg)S('log',String(msg));
+    return ${JSON.stringify(stdinLines)}
+      .shift()||'';
+  };
+  // process.stdout shim
+  window.process={
+    stdout:{write:function(s){S('log',s);}},
+    stderr:{write:function(s){S('err',s);}},
+    exit:function(){}
+  };
+  // Run user code
+  try{
+    ${code.replace(/<\/script>/gi,
+      '<\\/script>')}
+    S('done',null);
+  }catch(e){
+    S('err',(e.name||'Error')
+      +': '+e.message);
+    // Parse stack for line number
+    if(e.stack){
+      var st=e.stack.split('\n')
+        .slice(1,4)
+        .map(function(l){
+          return l.trim()
+            .replace(
+              /at eval.+<anonymous>:/,
+              'at line ');
+        })
+        .filter(Boolean);
+      st.forEach(function(l){S('err',l);});
+    }
+    S('done',null);
+  }
+})();
+<\/script></body></html>`;
+  });
+}
+
+// ── PISTON API (all other languages) ─────────
+async function __runPiston(code, lang, stdin) {
+  const cfg = PISTON_LANGS[lang];
+  if (!cfg) {
+    return {
+      stdout: '',
+      stderr: `Language "${lang}" not supported.\nSupported: ${Object.keys(PISTON_LANGS).join(', ')}`,
+      time: '0'
+    };
+  }
+
+  const res = await fetch(PISTON_API, {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json' 
+    },
+    body: JSON.stringify({
+      language: cfg.language,
+      version: cfg.version,
+      files: [{ 
+        name: cfg.file, 
+        content: code 
+      }],
+      stdin: stdin || '',
+      args: [],
+      compile_timeout: 15000,
+      run_timeout: 10000,
+      compile_memory_limit: -1,
+      run_memory_limit: -1
+    })
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(
+      `Piston API ${res.status}: ${txt}`);
+  }
+
+  const data = await res.json();
+
+  // Handle compile errors (Java, C++, etc)
+  const compileErr = 
+    data.compile?.stderr?.trim() || '';
+  const runOut = data.run?.stdout?.trim() || '';
+  const runErr = data.run?.stderr?.trim() || '';
+
+  return {
+    stdout: runOut,
+    stderr: compileErr 
+      ? `Compile Error:\n${compileErr}` 
+      : runErr,
+    time: data.run?.code === 0 
+      ? 'Success' : 'Error',
+    exitCode: data.run?.code ?? -1
+  };
+}
+
+// ── HTML PREVIEW IN OUTPUT TAB ────────────────
+function __runHTML(code) {
+  // Show in OUTPUT tab — NOT preview tab
+  __switchTab('output');
+  const el = __getOutputEl();
+  if (!el) return;
+
+  el.innerHTML = '';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'output-line type-info';
+  hdr.style.cssText = `
+    color:#7aa2f7;padding:6px 16px;
+    font-size:12px;
+    font-family:'JetBrains Mono',monospace;
+    border-bottom:1px solid #2d2f45;
+  `;
+  hdr.textContent = '▶ HTML5 — Live Rendered Output';
+  el.appendChild(hdr);
+
+  // Wrapper div
+  const wrap = document.createElement('div');
+  wrap.style.cssText = `
+    padding:8px;
+    height:calc(100% - 36px);
+    min-height:140px;
+    display:flex;
+    flex-direction:column;
+  `;
+
+  // CORS-safe iframe
+  // srcdoc ONLY — never src=
+  const frame = document.createElement('iframe');
+  frame.style.cssText = `
+    width:100%;flex:1;
+    border:1px solid #2d2f45;
+    border-radius:6px;
+    background:white;
+    min-height:120px;
+  `;
+  frame.srcdoc = code;
+
+  wrap.appendChild(frame);
+  el.appendChild(wrap);
+
+  // Expand panel for HTML
+  const panel = document.getElementById(
+    'bottom-panel');
+  if (panel) {
+    const h = parseInt(
+      window.getComputedStyle(panel).height);
+    if (h < 280) panel.style.height = '300px';
+  }
+}
+
+// ── PROBLEMS TAB ──────────────────────────────
+function __parseProblems(stderr, lang) {
+  if (!stderr?.trim()) {
+    __showProblemsEmpty();
     return;
   }
 
-  const language = window.currentLanguage || 'javascript';
-  const stdin = document.getElementById('stdin-input')?.value || '';
-
-  runCount++;
-  const runNum = runCount;
-  const runTime = new Date().toLocaleTimeString();
-
-  setRunState('running', language);
-  switchBottomTab('output');
-  clearOutputPanel();
-
-  appendToOutput('divider', `── Run #${runNum} · ${getLangName(language)} · ${runTime} ─────────────────`);
-  appendToOutput('info', `▶ Running ${getLangName(language)}...`);
-
-  const startMs = performance.now();
-
-  try {
-    let result;
-    if (language === 'javascript') {
-      result = await runJSLocally(code, stdin);
-    } else if (language === 'html' || language === 'css') {
-      runHTMLPreview(code);
-      setRunState('success', language);
-      return;
-    } else {
-      result = await runWithPiston(code, language, stdin);
-    }
-
-    const ms = performance.now() - startMs;
-    const secs = (ms / 1000).toFixed(3);
-
-    clearOutputPanel();
-    appendToOutput('divider', `── Run #${runNum} · ${getLangName(language)} · ${runTime} ─────────────────`);
-
-    if (result.stdout?.trim()) {
-      result.stdout.trim().split('\n').forEach(line => appendToOutput('output', line));
-    }
-    if (result.stderr?.trim()) {
-      appendToOutput('divider', '');
-      result.stderr.trim().split('\n').forEach(line => appendToOutput('error', line));
-    }
-    if (!result.stdout?.trim() && !result.stderr?.trim()) {
-      appendToOutput('muted', '(Program produced no output)');
-    }
-
-    const hasError = !!result.stderr?.trim();
-    appendToOutput('divider', hasError ? `── ✕ Failed · ${secs}s ───────` : `── ✓ Completed · ${secs}s ────`);
-    setRunState(hasError ? 'error' : 'success', language);
-
-    // Show errors in Problems tab
-    if (result.stderr?.trim()) {
-      parseAndShowProblems(
-        result.stderr, language);
-      switchBottomTab('problems');
-    } else {
-      showProblemsEmpty();
-    }
-
-  } catch (err) {
-    clearOutputPanel();
-    appendToOutput('error', `✕ Compiler Error: ${err.message}`);
-    appendToOutput('muted', 'Check your internet connection');
-    appendToOutput('divider', '── ✕ Failed ─────────────────');
-    setRunState('error', language);
-  }
-
-  setTimeout(() => setRunState('idle', language), 2500);
-};
-
-function parseAndShowProblems(stderr, language) {
-  if (!stderr || !stderr.trim()) {
-    showProblemsEmpty();
-    return;
-  }
-
-  const problems = [];
+  const probs = [];
   const lines = stderr.split('\n');
 
-  if (language === 'javascript' 
-      || language === 'typescript') {
-    lines.forEach(line => {
-      const m1 = line.match(
-        /<anonymous>:(\d+):(\d+)/);
-      const m2 = line.match(
-        /line (\d+)/i);
-      if (line.includes('Error') 
-          || line.includes('error')) {
-        problems.push({
-          type: 'error',
-          message: line.trim(),
-          line: m1 ? parseInt(m1[1]) 
-            : m2 ? parseInt(m2[1]) : 0,
-          col: m1 ? parseInt(m1[2]) : 0,
+  // JavaScript / TypeScript
+  if (lang === 'javascript' 
+      || lang === 'typescript') {
+    lines.forEach(l => {
+      if (!l.trim()) return;
+      const m = l.match(
+        /<anonymous>:(\d+):(\d+)/
+      ) || l.match(/line (\d+)/i);
+      if (l.match(
+        /Error|error|Warning|warning/)) {
+        probs.push({
+          type: l.toLowerCase()
+            .includes('warning') 
+            ? 'warning' : 'error',
+          msg: l.trim(),
+          line: m ? parseInt(m[1]) : 0,
+          col: m?.[2] ? parseInt(m[2]) : 0,
           file: 'main.js'
         });
       }
     });
   }
 
-  if (language === 'python') {
-    let lineNum = 0;
-    lines.forEach(line => {
-      const m = line.match(/[Ll]ine (\d+)/);
-      if (m) lineNum = parseInt(m[1]);
-      if (line.includes('Error:') 
-          || line.includes('Exception:')) {
-        problems.push({
-          type: 'error',
-          message: line.trim(),
-          line: lineNum,
-          col: 0,
+  // Python
+  if (lang === 'python') {
+    let ln = 0;
+    lines.forEach(l => {
+      const m = l.match(/line (\d+)/i);
+      if (m) ln = parseInt(m[1]);
+      if (l.match(/Error:|Exception:/)) {
+        probs.push({
+          type: 'error', msg: l.trim(),
+          line: ln, col: 0,
           file: 'main.py'
         });
       }
     });
   }
 
-  if (language === 'java') {
-    const re = /\.java:(\d+):\s*(error|warning):\s*(.+)/gi;
+  // Java
+  if (lang === 'java') {
+    const re = 
+      /\.java:(\d+):\s*(error|warning):\s*(.+)/gi;
     let m;
     while ((m = re.exec(stderr)) !== null) {
-      problems.push({
-        type: m[2].lower(),
-        message: m[3].trim(),
-        line: parseInt(m[1]),
-        col: 0,
+      probs.push({
+        type: m[2].toLowerCase(),
+        msg: m[3].trim(),
+        line: parseInt(m[1]), col: 0,
         file: 'Main.java'
       });
     }
   }
 
-  if (language === 'cpp' 
-      || language === 'c') {
-    const re = /main\.\w+:(\d+):(\d+):\s*(error|warning|note):\s*(.+)/gi;
+  // C / C++
+  if (lang === 'cpp' || lang === 'c') {
+    const ext = lang === 'cpp' 
+      ? 'cpp' : 'c';
+    const re = new RegExp(
+      `main\\.${ext}:(\\d+):(\\d+):`
+      + `\\s*(error|warning|note):\\s*(.+)`,
+      'gi'
+    );
     let m;
     while ((m = re.exec(stderr)) !== null) {
-      problems.push({
-        type: m[3] === 'error' 
+      probs.push({
+        type: m[3]==='error' 
           ? 'error' : 'warning',
-        message: m[4].trim(),
+        msg: m[4].trim(),
         line: parseInt(m[1]),
         col: parseInt(m[2]),
-        file: language === 'cpp'
-          ? 'main.cpp' : 'main.c'
+        file: `main.${ext}`
       });
     }
   }
 
+  // Compile errors (generic prefix)
+  if (probs.length === 0 
+      && stderr.includes('Compile Error:')) {
+    stderr.replace('Compile Error:\n','')
+      .split('\n')
+      .filter(l => l.trim())
+      .forEach(l => {
+        probs.push({
+          type: 'error',
+          msg: l.trim(),
+          line: 0, col: 0,
+          file: 'source'
+        });
+      });
+  }
+
   // Generic fallback
-  if (problems.length === 0) {
+  if (probs.length === 0) {
     lines.filter(l => l.trim()).forEach(l => {
-      problems.push({
-        type: 'error',
-        message: l.trim(),
-        line: 0, col: 0,
-        file: 'main'
+      probs.push({
+        type: 'error', msg: l.trim(),
+        line: 0, col: 0, file: 'source'
       });
     });
   }
 
-  renderProblems(problems);
+  __renderProblems(probs);
 }
 
-function renderProblems(problems) {
+function __renderProblems(probs) {
   const list = document.getElementById(
     'problems-list');
   if (!list) return;
 
-  const errCount = problems.filter(
+  const errs = probs.filter(
     p => p.type === 'error').length;
-  const warnCount = problems.filter(
+  const warns = probs.filter(
     p => p.type === 'warning').length;
 
-  // Update badge
+  // Badge
   const badge = document.getElementById(
     'problems-badge');
   if (badge) {
-    const total = errCount + warnCount;
-    badge.textContent = total;
+    badge.textContent = errs + warns;
     badge.style.display = 
-      total > 0 ? 'inline-block' : 'none';
+      (errs+warns) > 0 
+        ? 'inline-block' : 'none';
     badge.style.background = 
-      errCount > 0 ? '#f7768e' : '#e0af68';
+      errs > 0 ? '#f7768e' : '#e0af68';
   }
 
-  if (problems.length === 0) {
-    showProblemsEmpty();
+  if (probs.length === 0) {
+    __showProblemsEmpty();
     return;
   }
 
   list.innerHTML = `
-    <div style="padding:6px 16px;
-      font-size:11px;color:#565f89;
+    <div style="
+      padding:5px 16px;
+      font-size:11px;
+      color:#565f89;
       border-bottom:1px solid #2d2f45;
-      display:flex;gap:12px;">
+      display:flex;gap:12px;
+      font-family:'JetBrains Mono',monospace;">
       <span style="color:#f7768e">
-        ✕ ${errCount} error${errCount!==1?'s':''}
+        ✕ ${errs} error${errs!==1?'s':''}
       </span>
       <span style="color:#e0af68">
-        ⚠ ${warnCount} warning${warnCount!==1?'s':''}
+        ⚠ ${warns} warning${warns!==1?'s':''}
       </span>
     </div>
   `;
 
-  problems.forEach(prob => {
-    const item = document.createElement('div');
-    const isErr = prob.type === 'error';
-    
-    item.style.cssText = `
+  probs.forEach(p => {
+    const isErr = p.type === 'error';
+    const row = document.createElement('div');
+    row.style.cssText = `
       display:flex;align-items:flex-start;
-      gap:8px;padding:6px 16px;
+      gap:8px;padding:5px 16px;
       cursor:pointer;
       transition:background 0.1s;
       border-left:3px solid ${
@@ -2601,365 +3307,718 @@ function renderProblems(problems) {
       font-size:12px;line-height:1.5;
     `;
 
-    item.innerHTML = `
+    row.innerHTML = `
       <span style="color:${
-        isErr ? '#f7768e' : '#e0af68'};
-        flex-shrink:0;margin-top:1px;">
+        isErr?'#f7768e':'#e0af68'};
+        flex-shrink:0;font-size:13px;">
         ${isErr ? '✕' : '⚠'}
       </span>
       <div style="flex:1;min-width:0;">
         <div style="color:#c0caf5;
           white-space:pre-wrap;
           word-break:break-word;">
-          ${prob.message
+          ${p.msg
             .replace(/&/g,'&amp;')
             .replace(/</g,'&lt;')
             .replace(/>/g,'&gt;')}
         </div>
         <div style="color:#565f89;
           font-size:11px;margin-top:2px;
-          display:flex;gap:12px;">
-          <span>📄 ${prob.file}</span>
-          ${prob.line > 0 
-            ? `<span>Ln ${prob.line}${
-              prob.col > 0 
-                ? ', Col '+prob.col : ''
+          display:flex;gap:10px;">
+          <span>📄 ${p.file}</span>
+          ${p.line > 0 
+            ? `<span>Ln ${p.line}${
+                p.col>0
+                  ? ', Col '+p.col:''
               }</span>` 
             : ''}
         </div>
       </div>
     `;
 
-    // Click jumps to line in Monaco
-    item.addEventListener('click', () => {
-      if (prob.line > 0 
-          && window.monacoEditor) {
-        window.monacoEditor
-          .revealLineInCenter(prob.line);
-        window.monacoEditor.setPosition({
-          lineNumber: prob.line,
-          column: prob.col || 1
+    // Click → jump to line in Monaco
+    row.addEventListener('click', () => {
+      const ed = window.monacoEditor;
+      if (p.line > 0 && ed) {
+        ed.revealLineInCenter(p.line);
+        ed.setPosition({
+          lineNumber: p.line,
+          column: p.col || 1
         });
-        window.monacoEditor.focus();
+        ed.focus();
 
-        // Highlight error line 2s
-        const decs = window.monacoEditor
-          .deltaDecorations([], [{
+        // Flash the error line red
+        const decs = ed.deltaDecorations(
+          [], [{
           range: new monaco.Range(
-            prob.line,1,prob.line,1),
+            p.line,1,p.line,9999),
           options: {
             isWholeLine: true,
-            className: 'error-line-hi'
+            className: '__err-hi',
+            inlineClassName: '__err-hi-inline'
           }
         }]);
         setTimeout(() => {
-          window.monacoEditor
-            .deltaDecorations(decs, []);
+          ed.deltaDecorations(decs, []);
         }, 2000);
       }
-      // Switch to problems tab
-      switchBottomTab('problems');
     });
 
-    item.addEventListener('mouseenter',
-      () => item.style.background = 
-        'rgba(255,255,255,0.04)');
-    item.addEventListener('mouseleave',
-      () => item.style.background = '');
+    row.addEventListener('mouseenter', () => {
+      row.style.background = 
+        'rgba(255,255,255,0.04)';
+    });
+    row.addEventListener('mouseleave', () => {
+      row.style.background = '';
+    });
 
-    list.appendChild(item);
+    list.appendChild(row);
   });
 }
 
-function showProblemsEmpty() {
+function __showProblemsEmpty() {
   const list = document.getElementById(
     'problems-list');
-  if (!list) return;
-  list.innerHTML = `
-    <div style="display:flex;
-      align-items:center;
-      justify-content:center;
-      height:80px;color:#565f89;
-      font-size:12px;gap:6px;
-      font-family:'JetBrains Mono',monospace;">
-      <span style="color:#9ece6a">✓</span>
-      No problems detected
-    </div>
-  `;
+  if (list) {
+    list.innerHTML = `
+      <div style="
+        display:flex;align-items:center;
+        justify-content:center;
+        height:70px;color:#565f89;
+        font-size:12px;gap:6px;
+        font-family:'JetBrains Mono',monospace;">
+        <span style="color:#9ece6a">✓</span>
+        No problems detected
+      </div>
+    `;
+  }
   const badge = document.getElementById(
     'problems-badge');
   if (badge) badge.style.display = 'none';
 }
 
-if (runBtn) {
-  runBtn.addEventListener('click', runCode);
-}
-if (headerRunBtn) {
-  headerRunBtn.addEventListener('click', runCode);
-}
-document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key === 'Enter') {
-    e.preventDefault();
-    runCode();
-  }
-});
-
-// 5. UPDATE COMPILER BADGES ON LANGUAGE CHANGE
-const updateCompilerBadges = (lang) => {
-  window.currentLanguage = lang;
-  if (langBadge) {
-    langBadge.innerHTML = `<span style="color:${getLangColor(lang)}">â—</span> ${getLangName(lang)}`;
-    langBadge.style.borderColor = getLangColor(lang);
-  }
-  const terminalPrefix = document.getElementById('terminal-lang-prefix');
-  if (terminalPrefix) {
-    terminalPrefix.textContent = lang.substring(0, 3);
-    terminalPrefix.style.color = getLangColor(lang);
+// ── MAIN RUN CODE FUNCTION ────────────────────
+async function runCode() {
+  // Guard: only one run at a time
+  if (__isRunning) {
+    __appendOutput('warn', 
+      '⚠ Already running. Please wait...');
+    return;
   }
 
+  // Get editor instance
+  const ed = window.monacoEditor 
+    || window.editorInstance;
+  if (!ed) {
+    alert('Editor not ready yet.');
+    return;
+  }
+
+  // Get code from editor
+  const code = ed.getValue();
+  if (!code || !code.trim()) {
+    __switchTab('output');
+    __clearOutput();
+    __appendOutput('warn', 
+      '⚠ Editor is empty!');
+    __appendOutput('muted', 
+      'Write some code first then click Run.');
+    return;
+  }
+
+  // Get language
+  const lang = __getLang();
+  const stdin = document.getElementById(
+    'stdin-input')?.value || '';
+
+  __isRunning = true;
+  __runCount++;
+  const num = __runCount;
+  const time = new Date().toLocaleTimeString();
+
+  // Update UI
+  __setRunState('running', lang);
+  __switchTab('output');
+  __clearOutput();
+
+  // Show run header
+  __appendOutput('divider',
+    `── Run #${num} · `
+    + `${__langName(lang)} · `
+    + `${time} `
+    + '─'.repeat(20));
+  __appendOutput('info',
+    `▶ Compiling and running ${
+      __langName(lang)}...`);
+
+  const t0 = performance.now();
+
+  try {
+    let result;
+
+    // Route by language
+    if (lang === 'javascript' 
+        || lang === 'js') {
+      result = await __runJS(code, stdin);
+    }
+    else if (lang === 'html' 
+        || lang === 'css') {
+      __runHTML(code);
+      __setRunState('success', lang);
+      __isRunning = false;
+      return;
+    }
+    else {
+      result = await __runPiston(
+        code, lang, stdin);
+    }
+
+    const ms = performance.now() - t0;
+    const secs = (ms/1000).toFixed(3);
+
+    // Clear loading message
+    __clearOutput();
+    __appendOutput('divider',
+      `── Run #${num} · `
+      + `${__langName(lang)} · `
+      + `${time} `
+      + '─'.repeat(20));
+
+    // Show stdout
+    if (result.stdout?.trim()) {
+      result.stdout.trim()
+        .split('\n')
+        .forEach(l => __appendOutput(
+          'output', l));
+    }
+
+    // Show stderr
+    if (result.stderr?.trim()) {
+      __appendOutput('divider', '');
+      result.stderr.trim()
+        .split('\n')
+        .forEach(l => __appendOutput(
+          'error', l));
+    }
+
+    // No output at all
+    if (!result.stdout?.trim() 
+        && !result.stderr?.trim()) {
+      __appendOutput('muted',
+        '(Program produced no output)');
+    }
+
+    const failed = !!result.stderr?.trim();
+
+    // Footer
+    __appendOutput('divider',
+      failed
+        ? `── ✕ Failed in ${secs}s ──────`
+        : `── ✓ Completed in ${secs}s ───`);
+
+    // Update run state
+    __setRunState(
+      failed ? 'error' : 'success', lang);
+
+    // Update Problems tab
+    if (result.stderr?.trim()) {
+      __parseProblems(result.stderr, lang);
+    } else {
+      __showProblemsEmpty();
+    }
+
+  } catch (err) {
+    __clearOutput();
+    __appendOutput('error',
+      `✕ Compiler Error: ${err.message}`);
+    __appendOutput('muted',
+      'Make sure you are connected to internet.');
+    __appendOutput('muted',
+      'Piston API: emkc.org/api/v2/piston');
+    __appendOutput('divider',
+      '── ✕ Failed ──────────────────');
+    __setRunState('error', lang);
+    console.error('RunCode error:', err);
+  }
+
+  __isRunning = false;
+}
+
+// Make runCode globally available
+window.runCode = runCode;
+
+// ── TERMINAL IMPLEMENTATION ───────────────────
+const CodeTerminal = {
+  _history: [],
+  _histIdx: -1,
+  _running: false,
+  _input: null,
+
+  init() {
+    // Find terminal input — matches editor.html
+    // which has id="terminal-input-field"
+    this._input = document.getElementById(
+      'terminal-input-field');
+
+    if (!this._input) {
+      console.warn(
+        '[Terminal] input#terminal-input-field'
+        + ' not found in DOM');
+      return;
+    }
+
+    // Clone to remove any old listeners
+    const fresh = this._input.cloneNode(true);
+    this._input.parentNode.replaceChild(
+      fresh, this._input);
+    this._input = fresh;
+
+    // ── KEYDOWN HANDLER ──
+    this._input.addEventListener(
+      'keydown', async (e) => {
+
+      // ENTER → run code
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const code = this._input.value.trim();
+        if (!code) return;
+        if (this._running) {
+          this._print('warn',
+            '⚠ Already running...');
+          return;
+        }
+
+        // History
+        if (this._history[0] !== code) {
+          this._history.unshift(code);
+          if (this._history.length > 100) {
+            this._history.pop();
+          }
+        }
+        this._histIdx = -1;
+        this._input.value = '';
+
+        await this._execute(code);
+      }
+
+      // ARROW UP → history back
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (this._histIdx < 
+            this._history.length - 1) {
+          this._histIdx++;
+          this._input.value = 
+            this._history[this._histIdx];
+          requestAnimationFrame(() => {
+            this._input.selectionStart = 
+              this._input.value.length;
+            this._input.selectionEnd = 
+              this._input.value.length;
+          });
+        }
+      }
+
+      // ARROW DOWN → history forward
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (this._histIdx > 0) {
+          this._histIdx--;
+          this._input.value = 
+            this._history[this._histIdx];
+        } else {
+          this._histIdx = -1;
+          this._input.value = '';
+        }
+      }
+
+      // CTRL+L → clear
+      if (e.ctrlKey && 
+          e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        this.clear();
+      }
+
+      // CTRL+C → cancel / clear input
+      if (e.ctrlKey && 
+          e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        this._input.value = '';
+        this._print('muted', '^C');
+        this._running = false;
+      }
+    });
+
+    // Click terminal area → focus input
+    const panel = document.getElementById(
+      'tab-terminal');
+    if (panel) {
+      panel.addEventListener('click', (e) => {
+        if (e.target !== this._input) {
+          this._input.focus();
+        }
+      });
+    }
+
+    // Focus when terminal tab clicked
+    document.querySelectorAll(
+      '.panel-tab-btn[data-tab="terminal"]')
+      .forEach(btn => {
+      btn.addEventListener('click', () => {
+        setTimeout(() => {
+          this._input?.focus();
+        }, 80);
+      });
+    });
+
+    // Show welcome message
+    this._welcome();
+    console.log('[Terminal] ✅ Initialized');
+  },
+
+  _welcome() {
+    const lang = __getLang();
+    this._print('success',
+      '╔══════════════════════════════════╗');
+    this._print('success',
+      '║   CodeSync Terminal v3.0         ║');
+    this._print('success',
+      '╚══════════════════════════════════╝');
+    this._print('info',
+      `Language: ${__langName(lang)}`);
+    this._print('muted',
+      'Type code + Enter to compile and run');
+    this._print('muted',
+      '↑↓ history | Ctrl+L clear | Ctrl+C cancel');
+    this._print('divider', '─'.repeat(44));
+  },
+
+  async _execute(code) {
+    if (this._running) return;
+    this._running = true;
+
+    const lang = __getLang();
+    const stdin = document.getElementById(
+      'stdin-input')?.value || '';
+
+    // Show what was typed
+    this._print('input', '❯ ' + code);
+
+    // Show compiling message
+    this._print('info',
+      `⚙ Compiling ${__langName(lang)}...`);
+
+    const t0 = performance.now();
+
+    try {
+      let result;
+
+      if (lang === 'javascript' 
+          || lang === 'js') {
+        result = await __runJS(code, stdin);
+      }
+      else if (lang === 'html' 
+          || lang === 'css') {
+        __runHTML(code);
+        this._print('success',
+          '✓ HTML rendered in Output tab');
+        this._running = false;
+        this._updatePrompt();
+        return;
+      }
+      else {
+        result = await __runPiston(
+          code, lang, stdin);
+      }
+
+      const secs = (
+        (performance.now()-t0)/1000
+      ).toFixed(3);
+
+      // Divider
+      this._print('divider', '─'.repeat(44));
+
+      // Stdout
+      if (result.stdout?.trim()) {
+        result.stdout.trim()
+          .split('\n')
+          .forEach(l => this._print('output',l));
+      }
+
+      // Stderr
+      if (result.stderr?.trim()) {
+        result.stderr.trim()
+          .split('\n')
+          .forEach(l => this._print('error',
+            '✕ ' + l));
+        __parseProblems(result.stderr, lang);
+      }
+
+      // No output
+      if (!result.stdout?.trim() 
+          && !result.stderr?.trim()) {
+        this._print('muted', '(no output)');
+      }
+
+      // Time
+      const failed = !!result.stderr?.trim();
+      this._print('muted',
+        failed
+          ? `✗ Failed in ${secs}s`
+          : `✓ Done in ${secs}s`);
+
+    } catch (err) {
+      this._print('error',
+        '✕ Error: ' + err.message);
+    }
+
+    this._print('divider', '─'.repeat(44));
+    this._running = false;
+    this._updatePrompt();
+  },
+
+  _print(type, text) {
+    const out = document.getElementById(
+      'terminal-lines');
+    if (!out) return;
+
+    if (type === 'divider') {
+      const el = document.createElement('div');
+      el.style.cssText = `
+        color:#2d2f45;padding:2px 12px;
+        font-size:11px;user-select:none;
+        font-family:'JetBrains Mono',monospace;
+        white-space:pre;
+      `;
+      el.textContent = text;
+      out.appendChild(el);
+      out.scrollTop = out.scrollHeight;
+      return;
+    }
+
+    const cfg = {
+      input:   {c:'#bb9af7',bg:''},
+      output:  {c:'#c0caf5',bg:''},
+      error:   {c:'#f7768e',
+                bg:'rgba(247,118,142,0.05)',
+                bl:'2px solid #f7768e'},
+      warn:    {c:'#e0af68',bg:''},
+      success: {c:'#9ece6a',bg:''},
+      info:    {c:'#7aa2f7',bg:''},
+      muted:   {c:'#565f89',bg:''}
+    }[type] || {c:'#c0caf5',bg:''};
+
+    const el = document.createElement('div');
+    el.style.cssText = `
+      color:${cfg.c};
+      background:${cfg.bg||'transparent'};
+      ${cfg.bl
+        ? `border-left:${cfg.bl};
+           padding:1px 12px 1px 10px;`
+        : 'padding:1px 12px;'}
+      font-size:13px;
+      line-height:1.65;
+      font-family:'JetBrains Mono',monospace;
+      white-space:pre-wrap;
+      word-break:break-word;
+      animation:lineIn 0.08s ease;
+    `;
+    el.textContent = text;
+    out.appendChild(el);
+    out.scrollTop = out.scrollHeight;
+  },
+
+  _updatePrompt() {
+    const lang = __getLang();
+    const pfx = document.getElementById(
+      'terminal-lang-prefix');
+    if (pfx) {
+      pfx.textContent = 
+        lang.substring(0,2).toUpperCase();
+      pfx.style.color = __langColor(lang);
+    }
+  },
+
+  clear() {
+    const out = document.getElementById(
+      'terminal-lines');
+    if (out) {
+      out.innerHTML = '';
+      this._welcome();
+    }
+  }
 };
 
-window.addEventListener('monaco-ready', () => {
-  const checkLang = () => {
-    const statusLangEl = document.getElementById('sb-language');
-    if (statusLangEl) {
-      updateCompilerBadges(statusLangEl.innerText.toLowerCase());
+// ── WIRE UP ALL BUTTONS ───────────────────────
+function __wireCompilerUI() {
+
+  // Run buttons
+  ['run-code-btn', 'btn-run-code']
+    .forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        runCode();
+      });
     }
-  };
-  checkLang();
-  const elToObserve = document.getElementById('sb-language');
-  if (elToObserve) {
-    new MutationObserver(checkLang).observe(elToObserve, { childList: true, characterData: true, subtree: true });
+  });
+
+  // Ctrl+Enter → run
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      runCode();
+    }
+  });
+
+  // Tab switching
+  document.querySelectorAll('.panel-tab-btn')
+    .forEach(btn => {
+    btn.addEventListener('click', () => {
+      __switchTab(btn.dataset.tab);
+    });
+  });
+
+  // Panel resize
+  const panel = document.getElementById(
+    'bottom-panel');
+  const handle = document.getElementById(
+    'panel-resize-handle');
+  if (panel && handle) {
+    let isResizing = false;
+    handle.addEventListener('mousedown', () => {
+      isResizing = true;
+      handle.classList.add('dragging');
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const h = window.innerHeight - e.clientY;
+      if (h >= 100 && 
+          h <= window.innerHeight * 0.8) {
+        panel.style.height = h + 'px';
+      }
+    });
+    window.addEventListener('mouseup', () => {
+      if (!isResizing) return;
+      isResizing = false;
+      handle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+    handle.addEventListener('dblclick', () => {
+      const cur = parseInt(
+        window.getComputedStyle(panel).height);
+      panel.style.height = 
+        cur > 250 ? '200px' : '50vh';
+    });
   }
+
+  // Maximize button
+  document.getElementById('maximize-panel-btn')
+    ?.addEventListener('click', () => {
+    if (panel) panel.style.height = '75vh';
+  });
+
+  // Close/collapse button
+  document.getElementById('close-panel-btn')
+    ?.addEventListener('click', () => {
+    if (panel) {
+      const cur = parseInt(
+        window.getComputedStyle(panel).height);
+      panel.style.height = 
+        cur > 50 ? '35px' : '220px';
+    }
+  });
+
+  // Copy Output button
+  document.getElementById('btn-copy-output')?.addEventListener('click', () => {
+    const isTerminal = document.getElementById('tab-terminal')?.classList.contains('active');
+    const targetId = isTerminal ? 'terminal-lines' : 'output-lines';
+    const el = document.getElementById(targetId);
+    
+    if (el) {
+      const text = el.innerText || el.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        if (typeof showToast !== 'undefined') showToast('📋 Output copied!', 'success');
+      }).catch(err => {
+        console.error('Copy failed:', err);
+        if (typeof showToast !== 'undefined') showToast('❌ Failed to copy', 'error');
+      });
+    }
+  });
+
+  // Stdin clear
+  document.querySelector(
+    '#stdin-wrapper .panel-action-btn')
+    ?.addEventListener('click', () => {
+    const el = document.getElementById(
+      'stdin-input');
+    if (el) el.value = '';
+  });
+
+  // Language badge observer
+  // Watch sb-language element for changes
+  const sbLang = document.getElementById(
+    'sb-language');
+  if (sbLang) {
+    __updateLangBadge(
+      sbLang.innerText.toLowerCase().trim()
+      || 'javascript');
+
+    new MutationObserver(() => {
+      const lang = sbLang.innerText
+        .toLowerCase().trim();
+      if (lang) __updateLangBadge(lang);
+    }).observe(sbLang, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  }
+}
+
+// ── INIT ON DOM READY ─────────────────────────
+// Use multiple hooks to guarantee init runs
+// whether DOM is already ready or not
+
+const __doInit = () => {
+  __wireCompilerUI();
+  CodeTerminal.init();
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener(
+    'DOMContentLoaded', __doInit);
+} else {
+  // DOM already ready
+  __doInit();
+}
+
+// Also re-init terminal after monaco ready
+window.addEventListener('monaco-ready', () => {
+  CodeTerminal.init();
+  const lang = __getLang();
+  __updateLangBadge(lang);
 });
 
-// GET CURRENT LANGUAGE HELPER
-function getLanguageFromFilename(filename) {
-  if (!filename) return 'plaintext';
-  
-  const ext = filename
-    .toLowerCase()
-    .split('.')
-    .pop();
-
-  const map = {
-    // Web
-    'html': 'html',
-    'htm':  'html',
-    'css':  'css',
-    'scss': 'scss',
-    'sass': 'scss',
-    'less': 'css',
-    // JavaScript
-    'js':   'javascript',
-    'jsx':  'javascript',
-    'mjs':  'javascript',
-    'cjs':  'javascript',
-    // TypeScript
-    'ts':   'typescript',
-    'tsx':  'typescript',
-    // Python
-    'py':   'python',
-    'pyw':  'python',
-    // Java
-    'java': 'java',
-    // C family
-    'c':    'c',
-    'h':    'c',
-    'cpp':  'cpp',
-    'cxx':  'cpp',
-    'cc':   'cpp',
-    'hpp':  'cpp',
-    'cs':   'csharp',
-    // Other languages
-    'go':   'go',
-    'rs':   'rust',
-    'php':  'php',
-    'rb':   'ruby',
-    'swift':'swift',
-    'kt':   'kotlin',
-    'kts':  'kotlin',
-    'r':    'r',
-    'sh':   'shell',
-    'bash': 'shell',
-    'zsh':  'shell',
-    'ps1':  'powershell',
-    // Data
-    'json': 'json',
-    'jsonc':'json',
-    'yaml': 'yaml',
-    'yml':  'yaml',
-    'xml':  'xml',
-    'svg':  'xml',
-    'toml': 'ini',
-    'ini':  'ini',
-    'env':  'ini',
-    // Docs
-    'md':   'markdown',
-    'mdx':  'markdown',
-    'txt':  'plaintext',
-    // DB
-    'sql':  'sql',
-    // Docker
-    'dockerfile': 'dockerfile'
-  };
-
-  return map[ext] || 'plaintext';
+// ── CSS to add to editor.css ──────────────────
+// (Copy these styles into your editor.css file)
+/*
+.__err-hi {
+  background: rgba(247,118,142,0.15) !important;
 }
-
-function openFileInEditor(file) {
-  const editor = window.monacoEditor || editorInstance;
-  if (!editor) return;
-  
-  const language = 
-    getLanguageFromFilename(file.name)
-    || file.language
-    || 'plaintext';
-
-  // Set correct language in Monaco
-  const model = editor.getModel();
-  if (model) {
-    monaco.editor.setModelLanguage(model, language);
-  }
-
-  // Set file content
-  editor.setValue(file.content || '');
-
-  // Update current language globally
-  window.currentLanguage = language;
-  window.editorLanguage = language;
-
-  // Update language selector if exists
-  const langSelect = document.getElementById(
-    'language-select');
-  if (langSelect) {
-    langSelect.value = language;
-  }
-
-  // Update run button language
-  if (typeof updateRunButton !== 'undefined') {
-    updateRunButton(language);
-  }
-
-  // Update panel language badge
-  updatePanelLangBadge(language);
-
-
-
-  // Focus editor
-  editor.focus();
+.__err-hi-inline {
+  color: #f7768e !important;
 }
-
-function updatePanelLangBadge(language) {
-  const badge = document.getElementById(
-    'panel-lang-badge');
-  if (!badge) return;
-
-  const color = langColors[language] 
-    || '#C5C5C5';
-  const ext = langToExt[language] 
-    || language;
-
-  // Get real icon class from file-icons-js
-  let iconClass = '';
-  if (window.fileIcons) {
-    iconClass = window.fileIcons
-      .getClassWithColor(
-        `main.${ext}`) || '';
-  }
-
-  // Build badge with real icon
-  if (iconClass) {
-    badge.innerHTML = `
-      <i class="${iconClass}" 
-        style="font-size:14px;
-        margin-right:5px;
-        vertical-align:middle;">
-      </i>
-      <span style="
-        font-size:11px;
-        font-weight:600;
-        font-family:'Inter',sans-serif;
-        color:${color};
-        letter-spacing:0.3px;">
-        ${getLanguageDisplayName(language)}
-      </span>
-    `;
-  } else {
-    // Fallback: colored dot + name
-    badge.innerHTML = `
-      <span style="
-        width:8px;height:8px;
-        border-radius:50%;
-        background:${color};
-        display:inline-block;
-        margin-right:6px;
-        flex-shrink:0;">
-      </span>
-      <span style="
-        font-size:11px;
-        font-weight:600;
-        color:${color};">
-        ${getLanguageDisplayName(language)}
-      </span>
-    `;
-  }
-
-  badge.style.borderColor = color + '50';
-  badge.style.background = color + '15';
-  badge.style.color = color;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
-
-function updateLanguageSelector(language) {
-  const sel = document.getElementById(
-    'language-select');
-  if (!sel) return;
-  
-  // Update selected option styling
-  const color = langColors[language] 
-    || '#c0caf5';
-  sel.style.borderColor = color + '60';
-  sel.style.color = color;
-  
-  // Update run button with SVG icon
-  const runBtn = document.getElementById(
-    'run-code-btn');
-  if (runBtn && !runBtn.classList
-      .contains('running')) {
-    const iconSVG = getFileIconHTML(
-      `main.${langToExt[language] 
-        || language}`);
-    runBtn.innerHTML = `
-      ${iconSVG}
-      <span>Run ${
-        getLanguageDisplayName(language)
-      }</span>
-    `;
-  }
+@keyframes lineIn {
+  from { opacity:0; transform:translateY(2px); }
+  to   { opacity:1; transform:translateY(0); }
 }
-
-// GET CURRENT LANGUAGE HELPER
-function getCurrentLanguage() {
-  return window.currentLanguage
-    || window.editorLanguage
-    || document.getElementById('sb-language')?.innerText?.toLowerCase()
-    || document.getElementById('language-select')?.value
-    || document.querySelector('[data-language]')?.dataset.language
-    || 'javascript';
-}
-
-function getFileIcon(filename) {
-  const ext = filename.toLowerCase()
-    .split('.').pop();
-  const icons = {
-    js: '🟡', ts: '🔵', py: '🐍',
-    java: '☕', cpp: '⚙️', c: '🔧',
-    cs: '#️⃣', go: '🔵', rs: '🦀',
-    php: '🐘', rb: '💎', html: '🌐',
-    css: '🎨', scss: '🎨', json: '📋',
-    md: '📝', sql: '🗄️', sh: '⬛',
-    yml: '⚙️', yaml: '⚙️', xml: '📄',
-    swift: '🍊', kt: '🟣', txt: '📄'
-  };
-  return icons[ext] || '📄';
-}
+*/
