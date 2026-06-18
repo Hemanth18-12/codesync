@@ -2516,8 +2516,7 @@ window.addEventListener('monaco-ready', () => {
 // ============================================================================
 
 // ── CONSTANTS ────────────────────────────────
-const PISTON_API = 
-  'https://emkc.org/api/v2/piston/execute';
+// PISTON_API is defined at top of file
 
 const PISTON_LANGS = {
   javascript: { 
